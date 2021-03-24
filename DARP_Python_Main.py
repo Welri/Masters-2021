@@ -3,17 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
 import os
+import random
 
-path = pathlib.Path(__file__).parent.absolute()
-os.chdir(path)
-print("The current working directory is:",os.getcwd())
 
-from cpp_algorithms import dist_fill
-from cpp_algorithms import darp, stc, bcd, wavefront
-from cpp_algorithms import get_drone_map, get_random_coords
-from cpp_algorithms import get_all_area_maps, plot, imshow, imshow_scatter
-from cpp_algorithms.darp.darp_helpers import get_assigned_count
-from cpp_algorithms.coverage_path.pathing_helpers import has_isolated_areas
+## DIRECTORY MANAGEMENT
+path = pathlib.Path(__file__).parent.absolute() 
+os.chdir(path)  # Changing current working directory to directory this file is in (avoid directory conflict with subprocess) 
+print("CURRENT WORKING DIRECTORY:",os.getcwd()) 
 
 class DARP:
     def __init__(self,EnvironmentGrid,maxIter,dcells,cc,rl,Imp):
@@ -37,8 +33,10 @@ class DARP:
             self.read_output()
             self.print_DARP_graph()
         elif self.abort == True:
+            ## Cancels program if any errors occurred in error handling
             print("Aborting Algorithm...")
     def enclosed_space_handler(self):
+        ## Enclosed spaces (unreachable areas) are classified as obstacles
         ES = enclosed_space_check(self.n_r,self.rows,self.cols,self.Grid,self.rip)
         if ES.max_label > 1:
             print("WARNING: Automatic removal of enclosed space (it is considered an obstacle) ....")
@@ -66,6 +64,7 @@ class DARP:
             print("WARNING: Maximum Iterations Needs to be a Positive Integer...\n")
             self.abort = True
     def write_input(self):
+        ## Writes relevant inputs for java code to file
         # print(pathlib.Path("Input.txt").absolute())
         # file_in = open("DARP_Java/Input.txt", "w")
         file_in = open("Input.txt", "w")
@@ -89,19 +88,21 @@ class DARP:
         file_in.write(str(self.Imp))
         file_in.close()
     def run_subprocess(self):
+        ## Runs the OS appropriate script to run the java program
         # subprocess.call([r'DARP_Java\Run_Java.bat'])
         # print(pathlib.Path('Run_Java.bat').absolute())
         if (os.name == 'nt'):
-            print("The current operation system is WINDOWS")
+            print("The current operating system is WINDOWS")
             subprocess.call([r'Run_Java.bat'])
         elif (os.name == 'posix'):
-            print("The current operation system is UBUNTU")
+            print("The current operating system is UBUNTU")
             subprocess.call("./Run_Java.sh")
         else:
             print("WARNING: Unrecognised operating system")
     def read_output(self):
+        ## Read file containing outputs that were wrote to file by Java file
         self.A = np.zeros([self.rows, self.cols])
-        print(pathlib.Path("Output_A.txt").absolute())
+        # print(pathlib.Path("Output_A.txt").absolute())
         # file_out = open("DARP_Java/Output_A.txt", "r")
         file_out = open("Output_A.txt", "r")
         for i in range(self.rows):
@@ -109,6 +110,7 @@ class DARP:
                 self.A[i][j] = int(file_out.readline())
         file_out.close()
     def print_DARP_graph(self):
+        ## Prints the DARP divisions
         plt.figure(figsize=(5,5))
         # Initialize cell colours
         colours = ["C0", "C1", "C2", "C3", "C4", "C5","C6","C7","C8","C9"]
@@ -246,6 +248,32 @@ class enclosed_space_check:
             self.next_label += 1
         return self.labels[r]
 
+class generate_grid:
+    def __init__(self,rows,cols,robots,obs):
+        self.rows = rows
+        self.cols = cols
+        self.GRID = np.zeros([rows,cols])
+        self.n_r = robots
+        self.obs = obs
+        self.possible_indexes = np.argwhere(self.GRID==0)
+        np.random.shuffle(self.possible_indexes)
+    def randomise_robots(self):
+        if self.n_r < self.rows*self.cols:
+            indices=self.possible_indexes[0:self.n_r]
+            val1 = indices[:,0]
+            val2 = indices[:,1]
+            self.GRID[val1,val2] = 2
+        else:
+            print("MADNESS! Why do you have so many robots?")
+    def randomise_obs(self):
+        if self.obs < (self.rows*self.cols-self.n_r):
+            indices = self.possible_indexes[self.n_r:self.n_r+self.obs]
+            val1 = indices[:,0]
+            val2 = indices[:,1]
+            self.GRID[val1,val2] = 1
+        else:
+            print("MADNESS! Why so many obstacles?")
+
 if __name__ == "__main__":
     maxIter = 1000
     dcells = 30
@@ -293,67 +321,56 @@ if __name__ == "__main__":
     #                             [0,0,0,1,0,0],
     #                             [0,0,0,2,0,0]])
 
-    EnvironmentGrid = np.array([[0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 0,0,0,0,0 ,0,1,1,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,0,0,1,0, 0,0,0,0,0 ,1,1,1,1,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,0,1,0, 0,0,0,0,0 ,1,1,1,1,0, 0,0,0,0,0],
+    # EnvironmentGrid = np.array([[0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 0,0,0,0,0 ,0,1,1,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,0,0,1,0, 0,0,0,0,0 ,1,1,1,1,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,0,1,0, 0,0,0,0,0 ,1,1,1,1,0, 0,0,0,0,0],
 
-                                [0,0, 0,0,0,0,0, 2,0,0,0,0, 0,1,0,1,0, 0,0,0,0,0 ,0,0,1,1,1, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,0,1,0, 0,0,0,0,0 ,0,0,1,0,1, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,0,1,0, 0,0,0,0,0 ,0,1,1,0,1, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,0,0,0,0 ,0,0,1,1,1, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,1,0,0, 0,0,0,0,0 ,0,0,0,1,1, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 2,0,0,0,0, 0,1,0,1,0, 0,0,0,0,0 ,0,0,1,1,1, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,0,1,0, 0,0,0,0,0 ,0,0,1,0,1, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,0,1,0, 0,0,0,0,0 ,0,1,1,0,1, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,0,0,0,0 ,0,0,1,1,1, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,1,1,0,0, 0,0,0,0,0 ,0,0,0,1,1, 0,0,0,0,0],
                                 
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,1,1, 1,1,1,1,1, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,1,1, 1,1,1,1,1, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
                                 
-                                [0,0, 0,0,0,1,1, 1,0,0,1,1, 0,0,0,1,1, 0,0,0,0,0 ,0,1,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,1,0, 0,0,0,1,1, 0,0,0,1,1, 0,0,1,0,0 ,0,1,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,1,1,1, 0,0,0,1,1, 0,0,0,1,1, 1,1,1,1,0 ,1,1,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,1,1, 0,0,0,1,1, 1,1,1,1,1, 1,1,1,1,1 ,1,1,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,0,0,1, 0,0,0,1,1 ,1,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,1,1, 1,0,0,1,1, 0,0,0,1,1, 0,0,0,0,0 ,0,1,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,1,0, 0,0,0,1,1, 0,0,0,1,1, 0,0,1,0,0 ,0,1,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,1,1,1, 0,0,0,1,1, 0,0,0,1,1, 1,1,1,1,0 ,1,1,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,1,1, 0,0,0,1,1, 1,1,1,1,1, 1,1,1,1,1 ,1,1,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,0,0,1, 0,0,0,1,1 ,1,0,0,0,0, 0,0,0,0,0],
                                 
-                                [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
-                                [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,2,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,0,0],
+    #                             [1,1, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,2,0 ,0,0,0,0,0, 0,0,0,0,0],
                                 
-                                [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,1,1],
-                                [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,1,0,0],
-                                [1,1, 0,0,2,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,1,1,1, 1,1,0,0,0],
-                                [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,1,0,0,0, 0,0,0,0,0],
-                                [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0],
+    #                             [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,0,1,1],
+    #                             [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,0,0,0, 0,0,1,0,0],
+    #                             [1,1, 0,0,2,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,0,1,1,1, 1,1,0,0,0],
+    #                             [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,0,1,0,0,0, 0,0,0,0,0],
+    #                             [1,1, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0],
                                 
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0],
-                                [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0]])
-    Imp = False
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0],
+    #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0]])
+    # Imp = False
 
-    dp = DARP(EnvironmentGrid,maxIter,dcells,cc,rl,Imp)
-    dp.main_DARP()
+    # dp = DARP(EnvironmentGrid,maxIter,dcells,cc,rl,Imp)
+    # dp.main_DARP()
     
-    drone_maps = np.ones([dp.n_r,dp.rows,dp.cols],dtype='int64')*-1
+    # plt.show()
 
-    for r in range(dp.n_r):
-        ind = dp.A == r
-        drone_maps[r][ind] = 0
+    grid_class = generate_grid(10,10,3,50)
+    grid_class.randomise_robots()
+    grid_class.randomise_obs()
+    print(grid_class.GRID)
 
-    for r in range(dp.n_r):
-        DM = drone_maps[r]
-        RIP = tuple(dp.rip[r])
-        mat = stc(DM,RIP)
-        # print("hi")
-    
-    coverage_paths = [stc(drone_maps[r],tuple(dp.rip[r])) for r in range(dp.n_r)]
-    imshow(dp.A,1,1,1, figsize=(5,5))
-    for i in range(dp.n_r):
-        # imshow(dist_maps[i],1,4,i+2)
-        plot(coverage_paths[i],color="white",alpha=0.6)
-        end_point = coverage_paths[i][-1]
-        imshow_scatter(tuple(dp.rip[i]), color="green")
-        imshow_scatter(end_point, color="red")
-    plt.show()
+    # need to check for trapped robots
+    # need to remember that filling up enclosed spaces can remove robots AND/OR increase obstacles 
+    # so those cases make a simulation's parameters different
