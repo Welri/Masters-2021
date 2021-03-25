@@ -46,6 +46,7 @@ public class Main {
         DARP problem = new DARP(rows, cols, EnvironmentGrid, MaxIter, CCvariation, randomLevel, dcells, imp);
         problem.constructAssignmentM();
         A1 = problem.getAssignmentMatrix();
+        discr_achieved = problem.getAchievedDiscr();
         return A1;
     }
 }
