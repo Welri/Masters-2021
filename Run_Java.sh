@@ -1,3 +1,3 @@
 #!/bin/bash
-javac DARP_Java_Main.java
-java DARP_Java_Main
+javac DARP_Java_New.java
+java DARP_Java_New
