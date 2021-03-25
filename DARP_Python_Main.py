@@ -24,6 +24,7 @@ class DARP:
         self.rip = np.argwhere(self.Grid==2)
         self.n_r = len(self.rip)  
         self.abort = False
+        self.es_flag = False
     def main_DARP(self):
         self.enclosed_space_handler()
         self.general_error_handling()
@@ -39,6 +40,7 @@ class DARP:
         ## Enclosed spaces (unreachable areas) are classified as obstacles
         ES = enclosed_space_check(self.n_r,self.rows,self.cols,self.Grid,self.rip)
         if ES.max_label > 1:
+            self.es_flag = True
             print("WARNING: Automatic removal of enclosed space (it is considered an obstacle) ....")
             self.label_matrix = ES.final_labels
             inds = np.argwhere(self.label_matrix > 1)
@@ -252,16 +254,17 @@ class generate_grid:
     def __init__(self,rows,cols,robots,obs):
         self.rows = rows
         self.cols = cols
-        self.GRID = np.zeros([rows,cols])
+        self.GRID = np.zeros([rows,cols],dtype=int)
         self.n_r = robots
         self.obs = obs
         self.possible_indexes = np.argwhere(self.GRID==0)
         np.random.shuffle(self.possible_indexes)
+        self.es_flag = False
     def randomise_robots(self):
         if self.n_r < self.rows*self.cols:
-            indices=self.possible_indexes[0:self.n_r]
-            val1 = indices[:,0]
-            val2 = indices[:,1]
+            self.rip=self.possible_indexes[0:self.n_r]
+            val1 = self.rip[:,0]
+            val2 = self.rip[:,1]
             self.GRID[val1,val2] = 2
         else:
             print("MADNESS! Why do you have so many robots?")
@@ -273,12 +276,14 @@ class generate_grid:
             self.GRID[val1,val2] = 1
         else:
             print("MADNESS! Why so many obstacles?")
+    def flag_enclosed_space(self):
+        ## Note that DARP re-does this, so co-ordinate them because enclosed_space_check is an expensive process
+        ES = enclosed_space_check(self.n_r,self.rows,self.cols,self.GRID,self.rip)
+        if ES.max_label > 1:
+            self.es_flag = True
 
 if __name__ == "__main__":
-    maxIter = 1000
-    dcells = 30
-    cc = 0.01
-    rl = 0.0001
+    
     # EnvironmentGrid = np.array([[0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     #                             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0],
     #                             [0,1,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -359,18 +364,25 @@ if __name__ == "__main__":
                                 
     #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0],
     #                             [0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0 ,1,0,0,0,0, 0,0,0,0,0]])
-    # Imp = False
+    Imp = False
 
-    # dp = DARP(EnvironmentGrid,maxIter,dcells,cc,rl,Imp)
-    # dp.main_DARP()
-    
-    # plt.show()
+    maxIter = 1000
+    dcells = 30
+    cc = 0.01
+    rl = 0.0001
 
-    grid_class = generate_grid(10,10,3,50)
+    grid_class = generate_grid(6,6,3,2)
     grid_class.randomise_robots()
     grid_class.randomise_obs()
+    grid_class.flag_enclosed_space()
     print(grid_class.GRID)
+    print(grid_class.es_flag)
 
-    # need to check for trapped robots
-    # need to remember that filling up enclosed spaces can remove robots AND/OR increase obstacles 
-    # so those cases make a simulation's parameters different
+    EnvironmentGrid = grid_class.GRID
+
+    dp = DARP(EnvironmentGrid,maxIter,dcells,cc,rl,Imp)
+    dp.main_DARP()
+    
+    plt.show()
+
+
