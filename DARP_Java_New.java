@@ -3,26 +3,15 @@ import java.io.*;
 import java.util.*;
 
 public class DARP_Java_New{
-    public int rows, cols, MaxIter, dcells,i,j;
-    public boolean imp;
+    public int rows, cols, MaxIter, dcells,i,j,discr_achieved,obs,iterations;
+    public boolean imp,success;
     public int[][] EnvironmentGrid,A;
+    public ArrayList<boolean[][]> robotBinaryRegions;
     public double CCvariation;
     public double randomLevel;
+    
     public static void main(String[] args){
         DARP_Java_New t = new DARP_Java_New();
-        // t.rows = 6;
-        // t.cols = 6;
-        // t.MaxIter = 1000;
-        // t.dcells = 30;
-        // t.CCvariation = 0.001;
-        // t.randomLevel = 0.0001;
-        // t.imp = false;
-        // t.EnvironmentGrid = new int[][]{{0,0,0,2,0,0},{0,0,0,0,0,0},{0,0,0,0,0,0},{0,0,0,0,0,0},{0,0,0,2,0,0},{0,0,0,0,0,0}};
-     
-        // DARP problem = new DARP(t.rows, t.cols, t.EnvironmentGrid, t.MaxIter, t.CCvariation, t.randomLevel, t.dcells, t.imp);
-        // problem.constructAssignmentM();
-        // t.A = problem.getAssignmentMatrix();
-
         // Read Input
         try {
             File file_in = new File("Input.txt");
@@ -41,6 +30,7 @@ public class DARP_Java_New{
             if ((st = br.readLine()) != null) {
                 t.dcells = Integer.parseInt(st);
             }
+
             if ((st = br.readLine()) != null) {
                 t.CCvariation = Double.parseDouble(st);
             }
@@ -62,7 +52,13 @@ public class DARP_Java_New{
 
             DARP problem = new DARP(t.rows, t.cols, t.EnvironmentGrid, t.MaxIter, t.CCvariation, t.randomLevel, t.dcells, t.imp);
             problem.constructAssignmentM();
+            // Collecting outputs
             t.A = problem.getAssignmentMatrix();
+            t.discr_achieved = problem.getAchievedDiscr();
+            t.success = problem.getSuccess();
+            t.robotBinaryRegions = problem.getBinrayRobotRegions();
+            t.obs = problem.getNumOB();
+            t.iterations = problem.getIterations();
             
             br.close();
             System.out.println("hi");
@@ -73,7 +69,7 @@ public class DARP_Java_New{
 
         // Write Output
         try {
-            File file_out = new File("Output_A.txt");
+            File file_out = new File("Output.txt");
             BufferedWriter brw = new BufferedWriter(new FileWriter(file_out));
             for (t.i = 0; t.i < t.rows; t.i++) {
                 for (t.j = 0; t.j < t.cols; t.j++) {
@@ -81,6 +77,13 @@ public class DARP_Java_New{
                     brw.write("\n");
                 }
             }
+            brw.write(String.valueOf(t.discr_achieved));
+            brw.write("\n");
+            brw.write(String.valueOf(t.success));
+            brw.write("\n");
+            brw.write(String.valueOf(t.obs));
+            brw.write("\n");
+            brw.write(String.valueOf(t.iterations));
             brw.close();
         } catch (IOException e) {
             System.out.println("An error occurred.");

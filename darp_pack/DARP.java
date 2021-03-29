@@ -24,6 +24,11 @@ public class DARP {
     private boolean canceled;
     private boolean UseImportance;
 
+    // variables I added
+    private int final_iterations;
+    private int[][] Ilabel_final;
+    private boolean connected_bool;
+
     // Constructor
     public DARP(int r, int c, int[][] src, int iters, double vWeight, double rLevel, int discr, boolean imp) {
         this.rows = r; // input - rows
@@ -127,6 +132,11 @@ public class DARP {
 
                     ConnectComponent cc = new ConnectComponent();
                     int[][] Ilabel = cc.compactLabeling(BWlist.get(r), new Dimension(cols, rows), true);
+                    
+                    // code I added
+                    this.Ilabel_final = Ilabel;
+                    this.connected_bool = (cc.getMaxLabel() > 1);
+                    
                     if (cc.getMaxLabel() > 1) { // At least one unconnected regions among r-robot's regions is found
                         ConnectedRobotRegions[r] = false;
 
@@ -191,6 +201,8 @@ public class DARP {
 
                 iter++;
             }
+            // code I added
+            this.final_iterations = iter;
 
             if (iter >= maxIter) {
                 maxIter = maxIter / 2;
@@ -201,6 +213,7 @@ public class DARP {
 
         elapsedTime = (double) (System.nanoTime() - startTime) / Math.pow(10, 9);
         calculateRobotBinaryArrays();
+        
     }
 
     private void calculateRobotBinaryArrays() {
@@ -539,5 +552,18 @@ public class DARP {
 
     public int getAchievedDiscr() {
         return maxCellsAss - minCellsAss;
+    }
+
+    // Functions I added
+    public int getIterations(){
+        return final_iterations;
+    }
+
+    public boolean getConnectedBool(){
+        return connected_bool;
+    }
+
+    public int[][] getIlabel(){
+        return Ilabel_final;
     }
 }
