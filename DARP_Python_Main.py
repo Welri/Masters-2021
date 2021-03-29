@@ -312,8 +312,8 @@ if __name__ == "__main__":
     rl = 0.0001
     rows = 10
     cols = 10
-    robots = 3
-    obstacles = 10
+    robots = 2
+    obstacles = 0
     
     number_of_sims = 100
 
