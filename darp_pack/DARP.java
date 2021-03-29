@@ -24,10 +24,11 @@ public class DARP {
     private boolean canceled;
     private boolean UseImportance;
 
-    // variables I added
+    // USER CODER START
     private int final_iterations;
-    private int[][] Ilabel_final;
-    private boolean connected_bool;
+    private int[][][] Ilabel_final;
+    private boolean[] connected_bool;
+    // USER CODE END
 
     // Constructor
     public DARP(int r, int c, int[][] src, int iters, double vWeight, double rLevel, int discr, boolean imp) {
@@ -49,6 +50,10 @@ public class DARP {
     }
 
     public void constructAssignmentM() {
+        // USER CODE START
+        connected_bool = new boolean[nr];
+        Ilabel_final = new int[nr][rows][cols];
+        // USER CODE END
 
         long startTime = System.nanoTime();
         // Constant Initializations
@@ -133,9 +138,10 @@ public class DARP {
                     ConnectComponent cc = new ConnectComponent();
                     int[][] Ilabel = cc.compactLabeling(BWlist.get(r), new Dimension(cols, rows), true);
                     
-                    // code I added
-                    this.Ilabel_final = Ilabel;
-                    this.connected_bool = (cc.getMaxLabel() > 1);
+                    // USER CODE START
+                    Ilabel_final[r] = Ilabel;
+                    connected_bool[r] = (cc.getMaxLabel() <= 1);
+                    // USER CODE END
                     
                     if (cc.getMaxLabel() > 1) { // At least one unconnected regions among r-robot's regions is found
                         ConnectedRobotRegions[r] = false;
@@ -201,8 +207,9 @@ public class DARP {
 
                 iter++;
             }
-            // code I added
+            // USER CODE START
             this.final_iterations = iter;
+            // USER CODE END
 
             if (iter >= maxIter) {
                 maxIter = maxIter / 2;
@@ -554,16 +561,17 @@ public class DARP {
         return maxCellsAss - minCellsAss;
     }
 
-    // Functions I added
+    // USER CODE START
     public int getIterations(){
         return final_iterations;
     }
 
-    public boolean getConnectedBool(){
+    public boolean[] getConnectedBool(){
         return connected_bool;
     }
 
-    public int[][] getIlabel(){
+    public int[][][] getIlabel(){
         return Ilabel_final;
     }
+    // USER CODE END
 }

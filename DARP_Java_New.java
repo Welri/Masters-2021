@@ -3,9 +3,11 @@ import java.io.*;
 import java.util.*;
 
 public class DARP_Java_New{
-    public int rows, cols, MaxIter, dcells,i,j,discr_achieved,obs,iterations;
+    public int rows, cols, MaxIter, dcells,i,j,discr_achieved,obs,iterations,nr,r;
     public boolean imp,success;
+    public boolean[] connected_bool;
     public int[][] EnvironmentGrid,A;
+    public int[][][] Ilabel_final;
     public ArrayList<boolean[][]> robotBinaryRegions;
     public double CCvariation;
     public double randomLevel;
@@ -18,6 +20,9 @@ public class DARP_Java_New{
             // System.out.println(new File("DARP_JPype//Value.txt").getAbsolutePath());
             BufferedReader br = new BufferedReader(new FileReader(file_in));
             String st;
+            if ((st = br.readLine()) != null) {
+                t.nr = Integer.parseInt(st);
+            }
             if ((st = br.readLine()) != null) {
                 t.rows = Integer.parseInt(st);
             }
@@ -59,9 +64,9 @@ public class DARP_Java_New{
             t.robotBinaryRegions = problem.getBinrayRobotRegions();
             t.obs = problem.getNumOB();
             t.iterations = problem.getIterations();
-            
+            t.connected_bool = problem.getConnectedBool();
+            t.Ilabel_final = problem.getIlabel();
             br.close();
-            System.out.println("hi");
         } catch (IOException e) {
             System.out.println("An error occurred.");
             e.printStackTrace();
@@ -84,6 +89,19 @@ public class DARP_Java_New{
             brw.write(String.valueOf(t.obs));
             brw.write("\n");
             brw.write(String.valueOf(t.iterations));
+            brw.write("\n");
+            for(t.r = 0;t.r < t.nr;t.r++){
+                brw.write(String.valueOf(t.connected_bool[t.r]));
+                brw.write("\n");
+            }
+            for(t.r = 0;t.r < t.nr;t.r++){
+                for (t.i = 0; t.i < t.rows; t.i++) {
+                    for (t.j = 0; t.j < t.cols; t.j++) {
+                        brw.write(String.valueOf(t.Ilabel_final[t.r][t.i][t.j]));
+                        brw.write("\n");
+                    }
+                }
+            }
             brw.close();
         } catch (IOException e) {
             System.out.println("An error occurred.");
