@@ -137,12 +137,12 @@ public class DARP {
 
                     ConnectComponent cc = new ConnectComponent();
                     int[][] Ilabel = cc.compactLabeling(BWlist.get(r), new Dimension(cols, rows), true);
-                    
+
                     // USER CODE START
                     Ilabel_final[r] = Ilabel;
                     connected_bool[r] = (cc.getMaxLabel() <= 1);
                     // USER CODE END
-                    
+
                     if (cc.getMaxLabel() > 1) { // At least one unconnected regions among r-robot's regions is found
                         ConnectedRobotRegions[r] = false;
 
@@ -220,7 +220,7 @@ public class DARP {
 
         elapsedTime = (double) (System.nanoTime() - startTime) / Math.pow(10, 9);
         calculateRobotBinaryArrays();
-        
+
     }
 
     private void calculateRobotBinaryArrays() {
@@ -562,15 +562,15 @@ public class DARP {
     }
 
     // USER CODE START
-    public int getIterations(){
+    public int getIterations() {
         return final_iterations;
     }
 
-    public boolean[] getConnectedBool(){
+    public boolean[] getConnectedBool() {
         return connected_bool;
     }
 
-    public int[][][] getIlabel(){
+    public int[][][] getIlabel() {
         return Ilabel_final;
     }
     // USER CODE END
