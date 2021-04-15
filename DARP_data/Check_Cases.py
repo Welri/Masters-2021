@@ -3,28 +3,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pathlib
 import os
+import sys
 import random
 import time
 
 # # DIRECTORY MANAGEMENT
-# path = pathlib.Path(__file__).parent.absolute()
-# # Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
-# path = pathlib.Path(path).parent.absolute()
-# os.chdir(path)
-# print("CURRENT WORKING DIRECTORY:", os.getcwd())
+path = pathlib.Path(__file__).parent.absolute()
+# Changing current working directory to be able to import DARP module
+# need to tell pylint to ignore import error beause it can't tell that it's all good now
+path = pathlib.Path(path).parent.absolute()
+os.chdir(path)
+sys.path.append(str(path))
 
-# import DARP_Python_Main
-
+import DARP_Python_Main as DPM # pylint: disable=import-error
 
 class check_cases:
-    def __init__(self):
-        # DIRECTORY MANAGEMENT
-        path = pathlib.Path(__file__).parent.absolute()
-        # Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
-        os.chdir(path)
-        print("CURRENT WORKING DIRECTORY:", os.getcwd())
-
     def get_values(self, filename, print=False):
+        # # DIRECTORY MANAGEMENT
+        path = pathlib.Path(__file__).parent.absolute()
+        # Changing current working directory to be able to find Case**.txt files
+        os.chdir(path)
+
         file = open(filename, "r")
 
         self.abort = bool(file.readline())
@@ -92,7 +91,7 @@ class check_cases:
                     c = A_string[i+e]
                 if e > 0:
                     if e > 1:
-                        for ee in range(e-1):
+                        for ee in range(e-1): # pylint: disable=unused-variable
                             next(iter_var)
                     self.A[el] = value
                     el += 1
@@ -125,11 +124,9 @@ class check_cases:
 
         # Print grid
         if print == True:
-            self.print_DARP_graph(self.n_r, self.rows,
-                                  self.cols, self.A, self.Grid)
+            self.print_DARP_graph(self.n_r, self.rows,self.cols, self.A, self.Grid)
 
         file.close()
-
     def print_DARP_graph(self, n_r, rows, cols, A, EG):
         rip = np.argwhere(EG == 2)
 
@@ -162,14 +159,18 @@ class check_cases:
                 else:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
                              colour_assignments[A[j][i]])
-        # plt.show()
 
-    # def rerun_DARP(self,log_filename,print_rerun=False):
-    #     dp = DARP(self.Grid,self.max_iter,self.dcells,self.cc,self.rl,self.Imp,log_filename,print_rerun)
-    #     dp.main_DARP()
+        plt.title("Figure generated from DARP data")
+    def rerun_DARP(self,log_filename,print_rerun=False):
+         # This will change the input and output text files again so you can run in Java if need be
+         dp = DPM.DARP(self.Grid,self.max_iter,self.dcells,self.cc,self.rl,self.Imp,log_filename,print_rerun)
+         dp.main_DARP()
+         
 checker = check_cases()
 checker.get_values("Case01.txt", True)
-# checker.get_values("Case02.txt", True)
+checker.rerun_DARP("Checker_Logging.txt",True)
+checker.get_values("Case02.txt", True)
+checker.rerun_DARP("Checker_Logging.txt",True)
 # checker.get_values("Case03.txt", True)
 # checker.get_values("Case04.txt", True)
 # checker.get_values("Case05.txt", True)
@@ -180,7 +181,5 @@ checker.get_values("Case01.txt", True)
 # checker.get_values("Case10.txt", True)
 # checker.get_values("Case11.txt", True)
 # checker.get_values("Case12.txt", True)
-plt.show()
-# checker.rerun_DARP("Checker_Logging.txt",True)
 
-# make it possible to rerun DARP
+plt.show()

@@ -6,15 +6,14 @@ import os
 import random
 import time
 
-# DIRECTORY MANAGEMENT
-path = pathlib.Path(__file__).parent.absolute()
-# Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
-os.chdir(path)
-print("CURRENT WORKING DIRECTORY:", os.getcwd())
-
-
 class DARP:
     def __init__(self, EnvironmentGrid, maxIter, dcells, cc, rl, Imp, log_filename, show_grid=False):
+        # DIRECTORY MANAGEMENT
+        path = pathlib.Path(__file__).parent.absolute()
+        # Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
+        os.chdir(path)
+        # print("CURRENT WORKING DIRECTORY:", os.getcwd())
+        
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
@@ -43,7 +42,6 @@ class DARP:
             self.read_output()
             if self.show_grid == True:
                 self.print_DARP_graph()
-                plt.show()
         elif self.abort == True:
             # Cancels program if any errors occurred in error handling
             # Calculate the obstacles seen as they aren't returned by Java algorithm
@@ -215,10 +213,10 @@ class DARP:
         # subprocess.call([r'DARP_Java\Run_Java.bat'])
         # print(pathlib.Path('Run_Java.bat').absolute())
         if (os.name == 'nt'):
-            print("The current operating system is WINDOWS")
+            # print("The current operating system is WINDOWS")
             subprocess.call([r'Run_Java.bat'])
         elif (os.name == 'posix'):
-            print("The current operating system is UBUNTU")
+            # print("The current operating system is UBUNTU")
             subprocess.call("./Run_Java.sh")
         else:
             print("WARNING: Unrecognised operating system")
@@ -248,6 +246,7 @@ class DARP:
     def print_DARP_graph(self):
         # Prints the DARP divisions
         plt.figure(figsize=(5, 5))
+        
         # Initialize cell colours
         colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
         c = 0
@@ -275,8 +274,9 @@ class DARP:
                 else:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
                              colour_assignments[self.A[j][i]])
+        
+        plt.title("Figure generated from DARP run")
         # plt.show()
-
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -391,7 +391,6 @@ class enclosed_space_check:
             self.next_label += 1
         return self.labels[r]
 
-
 class generate_grid:
     def __init__(self, rows, cols, robots, obs):
         self.rows = rows
@@ -441,7 +440,7 @@ if __name__ == "__main__":
     robots = 4
     obstacles = 0
 
-    number_of_sims = 100
+    number_of_sims = 2
 
     for sim in range(number_of_sims):
         print("SIMULATION: ", sim+1)
@@ -453,98 +452,9 @@ if __name__ == "__main__":
         # print(grid_class.es_flag)
 
         EnvironmentGrid = grid_class.GRID
-
+        print_graph = True
         dp = DARP(EnvironmentGrid, maxIter, dcells,
-                  cc, rl, Imp, "Logging.txt", False)
+                  cc, rl, Imp, "Logging.txt", print_graph)
+        if print_graph == True:
+            plt.show()
         dp.main_DARP()
-
-        # Logging
-        # file_log = open("Logging.txt", "a")
-        # if(dp.abort == False):
-        #     file_log.write(str(dp.abort))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.rows))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.cols))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.n_r))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.es_flag))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.cc))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.rl))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.maxIter))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.obs))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.discr_achieved))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.iterations))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.time_elapsed))
-        #     file_log.write(",")
-        #     conBoolstring = str(dp.connected_bool)
-        #     conBoolstring = conBoolstring.replace('\n','')
-        #     conBoolstring = conBoolstring.replace('[','')
-        #     conBoolstring = conBoolstring.replace(']','')
-        #     file_log.write(conBoolstring)
-        #     file_log.write(",")
-        #     ilabelstring = str(dp.Ilabel_final)
-        #     ilabelstring = ilabelstring.replace('\n','')
-        #     ilabelstring = ilabelstring.replace('[','')
-        #     ilabelstring = ilabelstring.replace(']','')
-        #     file_log.write(ilabelstring)
-        #     file_log.write(",")
-        #     gridstring = str(dp.Grid.reshape(1,dp.rows*dp.cols))
-        #     gridstring = gridstring.replace('\n','')
-        #     gridstring = gridstring.replace('[','')
-        #     gridstring = gridstring.replace(']','')
-        #     file_log.write(gridstring)
-        #     file_log.write(",")
-        #     Astring = str(dp.A.reshape(1,dp.rows*dp.cols))
-        #     Astring = Astring.replace('\n','')
-        #     Astring = Astring.replace('[','')
-        #     Astring = Astring.replace(']','')
-        #     file_log.write(Astring)
-        #     file_log.write('\n')
-        # else:
-        #     file_log.write(str(dp.abort))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.rows))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.cols))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.n_r))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.es_flag))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.cc))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.rl))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.maxIter))
-        #     file_log.write(",")
-        #     file_log.write(str(dp.obs))
-        #     file_log.write(",")
-        #     file_log.write("None")
-        #     file_log.write(",")
-        #     file_log.write("None")
-        #     file_log.write(",")
-        #     file_log.write(str(dp.time_elapsed))
-        #     file_log.write(",")
-        #     file_log.write("None")
-        #     file_log.write(",")
-        #     file_log.write("None")
-        #     file_log.write(",")
-        #     gridstring = str(dp.Grid.reshape(1,dp.rows*dp.cols))
-        #     gridstring = gridstring.replace('\n','')
-        #     gridstring = gridstring.replace('[','')
-        #     gridstring = gridstring.replace(']','')
-        #     file_log.write(gridstring)
-        #     file_log.write(",")
-        #     file_log.write("None")
-        #     file_log.write('\n')
-
-        # file_log.close()
