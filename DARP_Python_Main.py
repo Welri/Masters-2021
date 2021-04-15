@@ -6,13 +6,15 @@ import os
 import random
 import time
 
-## DIRECTORY MANAGEMENT
-path = pathlib.Path(__file__).parent.absolute() 
-os.chdir(path)  # Changing current working directory to directory this file is in (avoid directory conflict with subprocess) 
-print("CURRENT WORKING DIRECTORY:",os.getcwd()) 
+# DIRECTORY MANAGEMENT
+path = pathlib.Path(__file__).parent.absolute()
+# Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
+os.chdir(path)
+print("CURRENT WORKING DIRECTORY:", os.getcwd())
+
 
 class DARP:
-    def __init__(self,EnvironmentGrid,maxIter,dcells,cc,rl,Imp,log_filename,show_grid=False):
+    def __init__(self, EnvironmentGrid, maxIter, dcells, cc, rl, Imp, log_filename, show_grid=False):
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
@@ -21,18 +23,20 @@ class DARP:
         self.Imp = Imp
         self.rows = len(self.Grid)
         self.cols = len(self.Grid[0])
-        self.rip = np.argwhere(self.Grid==2)
-        self.n_r = len(self.rip)  
+        self.rip = np.argwhere(self.Grid == 2)
+        self.n_r = len(self.rip)
         self.abort = False
         self.es_flag = False
-        self.show_grid=show_grid
+        self.show_grid = show_grid
         self.log_filename = log_filename
+
     def main_DARP(self):
         timestart = time.time_ns()
         self.enclosed_space_handler()
         self.general_error_handling()
-        self.connected_bool = np.zeros(self.n_r,dtype=bool)
-        self.Ilabel_final = np.zeros([self.n_r,self.rows,self.cols],dtype=int)
+        self.connected_bool = np.zeros(self.n_r, dtype=bool)
+        self.Ilabel_final = np.zeros(
+            [self.n_r, self.rows, self.cols], dtype=int)
         if self.abort == False:
             self.write_input()
             self.run_subprocess()
@@ -41,12 +45,13 @@ class DARP:
                 self.print_DARP_graph()
                 plt.show()
         elif self.abort == True:
-            ## Cancels program if any errors occurred in error handling
-            self.obs = len(np.argwhere(self.Grid == 1)) # Calculate the obstacles seen as they aren't returned by Java algorithm
+            # Cancels program if any errors occurred in error handling
+            # Calculate the obstacles seen as they aren't returned by Java algorithm
+            self.obs = len(np.argwhere(self.Grid == 1))
             print("Aborting Algorithm...")
         self.time_elapsed = time.time_ns() - timestart
 
-        ## Logging
+        # Logging
         file_log = open(self.log_filename, "a")
         if(self.abort == False):
             file_log.write(str(self.abort))
@@ -78,27 +83,27 @@ class DARP:
             file_log.write(str(self.time_elapsed))
             file_log.write(",")
             conBoolstring = str(self.connected_bool)
-            conBoolstring = conBoolstring.replace('\n','')
-            conBoolstring = conBoolstring.replace('[','')
-            conBoolstring = conBoolstring.replace(']','')
+            conBoolstring = conBoolstring.replace('\n', '')
+            conBoolstring = conBoolstring.replace('[', '')
+            conBoolstring = conBoolstring.replace(']', '')
             file_log.write(conBoolstring)
             file_log.write(",")
             ilabelstring = str(self.Ilabel_final)
-            ilabelstring = ilabelstring.replace('\n','')
-            ilabelstring = ilabelstring.replace('[','')
-            ilabelstring = ilabelstring.replace(']','')
+            ilabelstring = ilabelstring.replace('\n', '')
+            ilabelstring = ilabelstring.replace('[', '')
+            ilabelstring = ilabelstring.replace(']', '')
             file_log.write(ilabelstring)
             file_log.write(",")
-            gridstring = str(self.Grid.reshape(1,self.rows*self.cols))
-            gridstring = gridstring.replace('\n','')
-            gridstring = gridstring.replace('[','')
-            gridstring = gridstring.replace(']','')
+            gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
+            gridstring = gridstring.replace('\n', '')
+            gridstring = gridstring.replace('[', '')
+            gridstring = gridstring.replace(']', '')
             file_log.write(gridstring)
             file_log.write(",")
-            Astring = str(self.A.reshape(1,self.rows*self.cols))
-            Astring = Astring.replace('\n','')
-            Astring = Astring.replace('[','')
-            Astring = Astring.replace(']','')
+            Astring = str(self.A.reshape(1, self.rows*self.cols))
+            Astring = Astring.replace('\n', '')
+            Astring = Astring.replace('[', '')
+            Astring = Astring.replace(']', '')
             file_log.write(Astring)
             file_log.write('\n')
         else:
@@ -134,22 +139,25 @@ class DARP:
             file_log.write(",")
             file_log.write("None")
             file_log.write(",")
-            gridstring = str(self.Grid.reshape(1,self.rows*self.cols))
-            gridstring = gridstring.replace('\n','')
-            gridstring = gridstring.replace('[','')
-            gridstring = gridstring.replace(']','')
+            gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
+            gridstring = gridstring.replace('\n', '')
+            gridstring = gridstring.replace('[', '')
+            gridstring = gridstring.replace(']', '')
             file_log.write(gridstring)
             file_log.write(",")
             file_log.write("None")
             file_log.write('\n')
-            
+
         file_log.close()
+
     def enclosed_space_handler(self):
-        ## Enclosed spaces (unreachable areas) are classified as obstacles
-        ES = enclosed_space_check(self.n_r,self.rows,self.cols,self.Grid,self.rip)
+        # Enclosed spaces (unreachable areas) are classified as obstacles
+        ES = enclosed_space_check(
+            self.n_r, self.rows, self.cols, self.Grid, self.rip)
         if ES.max_label > 1:
             self.es_flag = True
-            print("WARNING: Automatic removal of enclosed space (it is considered an obstacle) ....")
+            print(
+                "WARNING: Automatic removal of enclosed space (it is considered an obstacle) ....")
             self.label_matrix = ES.final_labels
             inds = np.argwhere(self.label_matrix > 1)
             temp = False
@@ -161,8 +169,9 @@ class DARP:
                 else:
                     self.Grid[ind[0]][ind[1]] = 1
             if temp == True:
-                self.rip = np.argwhere(self.Grid==2)
+                self.rip = np.argwhere(self.Grid == 2)
                 self.n_r = len(self.rip)
+
     def general_error_handling(self):
         if(self.n_r < 1):
             print("WARNING: No Robot Initial Positions Given....\n")
@@ -173,8 +182,9 @@ class DARP:
         if(self.maxIter < 1):
             print("WARNING: Maximum Iterations Needs to be a Positive Integer...\n")
             self.abort = True
+
     def write_input(self):
-        ## Writes relevant inputs for java code to file
+        # Writes relevant inputs for java code to file
         # print(pathlib.Path("Input.txt").absolute())
         # file_in = open("DARP_Java/Input.txt", "w")
         file_in = open("Input.txt", "w")
@@ -199,8 +209,9 @@ class DARP:
                 file_in.write('\n')
         file_in.write(str(self.Imp))
         file_in.close()
+
     def run_subprocess(self):
-        ## Runs the OS appropriate script to run the java program
+        # Runs the OS appropriate script to run the java program
         # subprocess.call([r'DARP_Java\Run_Java.bat'])
         # print(pathlib.Path('Run_Java.bat').absolute())
         if (os.name == 'nt'):
@@ -211,13 +222,14 @@ class DARP:
             subprocess.call("./Run_Java.sh")
         else:
             print("WARNING: Unrecognised operating system")
+
     def read_output(self):
-        ## Read file containing outputs that were wrote to file by Java file
-        self.A = np.zeros([self.rows, self.cols],dtype=int)
+        # Read file containing outputs that were wrote to file by Java file
+        self.A = np.zeros([self.rows, self.cols], dtype=int)
         # print(pathlib.Path("Output_A.txt").absolute())
         # file_out = open("DARP_Java/Output_A.txt", "r")
         file_out = open("Output.txt", "r")
-        ## Extracting variables from Output file generated by Java
+        # Extracting variables from Output file generated by Java
         for i in range(self.rows):
             for j in range(self.cols):
                 self.A[i][j] = int(file_out.readline())
@@ -232,11 +244,12 @@ class DARP:
                 for j in range(self.cols):
                     self.Ilabel_final[r][i][j] = int(file_out.readline())
         file_out.close()
+
     def print_DARP_graph(self):
-        ## Prints the DARP divisions
-        plt.figure(figsize=(5,5))
+        # Prints the DARP divisions
+        plt.figure(figsize=(5, 5))
         # Initialize cell colours
-        colours = ["C0", "C1", "C2", "C3", "C4", "C5","C6","C7","C8","C9"]
+        colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
         c = 0
         colour_assignments = {}
         for i in range(self.n_r):
@@ -261,11 +274,12 @@ class DARP:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
                 else:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
-                            colour_assignments[self.A[j][i]])
+                             colour_assignments[self.A[j][i]])
         # plt.show()
 
+
 class enclosed_space_check:
-    def __init__(self,n_r,n_rows,n_cols,EnvironmentGrid,rip):
+    def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
         self.n_r = n_r
         self.n_rows = n_rows
         self.n_cols = n_cols
@@ -273,6 +287,7 @@ class enclosed_space_check:
         self.rip = rip
         self.create_binary_grid()
         self.final_labels = self.compact_labeling()
+
     def create_binary_grid(self):
         for ind in self.rip:
             self.binary_grid[ind[0]][ind[1]] = 0
@@ -280,29 +295,31 @@ class enclosed_space_check:
         indices_zero = self.binary_grid == 0
         self.binary_grid[indices_one] = 0
         self.binary_grid[indices_zero] = 1
-    def transform2Dto1D(self,array2D):
+
+    def transform2Dto1D(self, array2D):
         length = len(array2D)*len(array2D[0])
-        array1D = np.reshape(array2D,length)
+        array1D = np.reshape(array2D, length)
         return(array1D)
-    def labeling(self,bin1D):
+
+    def labeling(self, bin1D):
         rst = np.zeros([self.n_rows*self.n_cols], dtype=int)
         self.parent = np.zeros([self.MAX_LABELS], dtype=int)
         self.labels = np.zeros([self.MAX_LABELS])
 
         next_region = 1
-        for i in range(self.n_rows): # height
-            for j in range(self.n_cols): # width
+        for i in range(self.n_rows):  # height
+            for j in range(self.n_cols):  # width
                 if (bin1D[i*self.n_cols+j] == 0):
                     continue
                 k = 0
                 connected = False
-               
+
                 # Check if connected to the left
-                if ( (j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j]) ):
+                if ((j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j])):
                     k = rst[i*self.n_cols+j-1]
                     connected = True
                 # Check if connected to the top
-                if ( (i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and ( (connected == False) or ( bin1D[(i-1)*self.n_cols+j] < k ) ) ):
+                if ((i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and ((connected == False) or (bin1D[(i-1)*self.n_cols+j] < k))):
                     k = rst[(i-1)*self.n_cols+j]
                     connected = True
                 if(connected == False):
@@ -310,27 +327,28 @@ class enclosed_space_check:
                     next_region += 1
 
                 rst[i*self.n_cols+j] = k
-                if ( (j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j]) and  rst[i*self.n_cols+j-1] != k ):
-                    self.uf_union(k,rst[i*self.n_cols+j-1])
-                if ( (i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and rst[(i-1)*self.n_cols+j] != k ):
-                    self.uf_union(k,rst[(i-1)*self.n_cols+j])
-        
+                if ((j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j]) and rst[i*self.n_cols+j-1] != k):
+                    self.uf_union(k, rst[i*self.n_cols+j-1])
+                if ((i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and rst[(i-1)*self.n_cols+j] != k):
+                    self.uf_union(k, rst[(i-1)*self.n_cols+j])
+
         self.next_label = 1
         for ind in range(self.n_cols*self.n_rows):
-            if ( (bin1D[ind] != 0) ):
-                rst[ind] = self.uf_find( rst[ind] )
+            if ((bin1D[ind] != 0)):
+                rst[ind] = self.uf_find(rst[ind])
         self.next_label -= 1
         return(rst)
+
     def compact_labeling(self):
         bin_1D = self.transform2Dto1D(self.binary_grid)
         self.MAX_LABELS = self.n_rows * self.n_cols
-        
+
         # Label the different regions
         label1D = self.labeling(bin_1D)
         self.max_label = self.next_label
 
         stat = np.zeros(self.max_label+1)
-        for l in range(0,self.max_label+1):
+        for l in range(0, self.max_label+1):
             stat[l] = len(np.argwhere(label1D == l))
         if sum(stat) != self.n_cols*self.n_rows:
             print("WARNING: labelling error - line 63-69")
@@ -348,60 +366,68 @@ class enclosed_space_check:
             self.max_label == counter - 1
             for ind in range(len(bin_1D)):
                 label1D[ind] = stat[label1D[ind]]
-        
-        label2D = np.reshape(label1D,[self.n_rows,self.n_cols])
+
+        label2D = np.reshape(label1D, [self.n_rows, self.n_cols])
         return(label2D)
-    def uf_union(self,a,b):
+
+    def uf_union(self, a, b):
         a = int(a)
         b = int(b)
         while (self.parent[a] > 0):
             a = self.parent[a]
         while (self.parent[b] > 0):
             b = self.parent[b]
-        if ( a != b ):
-            if ( a > b ):
+        if (a != b):
+            if (a > b):
                 self.parent[a] = b
             else:
                 self.parent[b] = a
-    def uf_find(self,r):
-        while ( self.parent[r] > 0 ):
+
+    def uf_find(self, r):
+        while (self.parent[r] > 0):
             r = self.parent[r]
-        if ( self.labels[r] == 0 ):
+        if (self.labels[r] == 0):
             self.labels[r] = self.next_label
             self.next_label += 1
         return self.labels[r]
 
+
 class generate_grid:
-    def __init__(self,rows,cols,robots,obs):
+    def __init__(self, rows, cols, robots, obs):
         self.rows = rows
         self.cols = cols
-        self.GRID = np.zeros([rows,cols],dtype=int)
+        self.GRID = np.zeros([rows, cols], dtype=int)
         self.n_r = robots
         self.obs = obs
-        self.possible_indexes = np.argwhere(self.GRID==0)
+        self.possible_indexes = np.argwhere(self.GRID == 0)
         np.random.shuffle(self.possible_indexes)
         self.es_flag = False
+
     def randomise_robots(self):
         if self.n_r < self.rows*self.cols:
-            self.rip=self.possible_indexes[0:self.n_r]
-            val1 = self.rip[:,0]
-            val2 = self.rip[:,1]
-            self.GRID[val1,val2] = 2
+            self.rip = self.possible_indexes[0:self.n_r]
+            val1 = self.rip[:, 0]
+            val2 = self.rip[:, 1]
+            self.GRID[val1, val2] = 2
         else:
             print("MADNESS! Why do you have so many robots?")
+
     def randomise_obs(self):
         if self.obs < (self.rows*self.cols-self.n_r):
             indices = self.possible_indexes[self.n_r:self.n_r+self.obs]
-            val1 = indices[:,0]
-            val2 = indices[:,1]
-            self.GRID[val1,val2] = 1
+            val1 = indices[:, 0]
+            val2 = indices[:, 1]
+            self.GRID[val1, val2] = 1
         else:
             print("MADNESS! Why so many obstacles?")
+
     def flag_enclosed_space(self):
-        ## Note that DARP re-does this, so co-ordinate them because enclosed_space_check is an expensive process
-        ES = enclosed_space_check(self.n_r,self.rows,self.cols,self.GRID,self.rip)
+        # Note that DARP re-does this, so co-ordinate them because enclosed_space_check is an expensive process
+        ES = enclosed_space_check(
+            self.n_r, self.rows, self.cols, self.GRID, self.rip)
         if ES.max_label > 1:
             self.es_flag = True
+
 
 if __name__ == "__main__":
     Imp = False
@@ -412,26 +438,27 @@ if __name__ == "__main__":
     rl = 0.0001
     rows = 10
     cols = 10
-    robots = 2
+    robots = 4
     obstacles = 0
-    
+
     number_of_sims = 100
 
     for sim in range(number_of_sims):
-        print("SIMULATION: ",sim+1)
-        grid_class = generate_grid(rows,cols,robots,obstacles)
+        print("SIMULATION: ", sim+1)
+        grid_class = generate_grid(rows, cols, robots, obstacles)
         grid_class.randomise_robots()
         grid_class.randomise_obs()
-        #grid_class.flag_enclosed_space()
-        #print(grid_class.GRID)
-        #print(grid_class.es_flag)
+        # grid_class.flag_enclosed_space()
+        # print(grid_class.GRID)
+        # print(grid_class.es_flag)
 
         EnvironmentGrid = grid_class.GRID
 
-        dp = DARP(EnvironmentGrid,maxIter,dcells,cc,rl,Imp,"Logging.txt",False)
+        dp = DARP(EnvironmentGrid, maxIter, dcells,
+                  cc, rl, Imp, "Logging.txt", False)
         dp.main_DARP()
-        
-        ## Logging
+
+        # Logging
         # file_log = open("Logging.txt", "a")
         # if(dp.abort == False):
         #     file_log.write(str(dp.abort))
@@ -519,5 +546,5 @@ if __name__ == "__main__":
         #     file_log.write(",")
         #     file_log.write("None")
         #     file_log.write('\n')
-            
+
         # file_log.close()

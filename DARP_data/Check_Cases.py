@@ -15,6 +15,7 @@ import time
 
 # import DARP_Python_Main
 
+
 class check_cases:
     def __init__(self):
         # DIRECTORY MANAGEMENT
@@ -22,7 +23,8 @@ class check_cases:
         # Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
         os.chdir(path)
         print("CURRENT WORKING DIRECTORY:", os.getcwd())
-    def get_values(self,filename,print=False):
+
+    def get_values(self, filename, print=False):
         file = open(filename, "r")
 
         self.abort = bool(file.readline())
@@ -69,7 +71,7 @@ class check_cases:
         # Extract assignment matrix values
         self.A = np.zeros(self.rows*self.cols, dtype=int)
 
-        if(self.n_r<=10):
+        if(self.n_r <= 10):
             el = 0
             for c in A_string:
                 if (c != " ") and (c != "\n"):
@@ -89,11 +91,11 @@ class check_cases:
                     e = e+1
                     c = A_string[i+e]
                 if e > 0:
-                    if e>1:
+                    if e > 1:
                         for ee in range(e-1):
                             next(iter_var)
                     self.A[el] = value
-                    el+=1
+                    el += 1
 
         self.A = self.A.reshape(self.rows, self.cols)
 
@@ -113,19 +115,21 @@ class check_cases:
                 e = e+1
                 c = Ilabel_string[i+e]
             if e > 0:
-                if e>1:
+                if e > 1:
                     for ee in range(e-1):
                         next(iter_var)
                 self.Ilabel[el] = value
-                el+=1
+                el += 1
 
-        self.Ilabel = self.Ilabel.reshape(self.n_r,self.rows,self.cols)
+        self.Ilabel = self.Ilabel.reshape(self.n_r, self.rows, self.cols)
 
         # Print grid
-        if print==True:
-            self.print_DARP_graph(self.n_r, self.rows, self.cols, self.A, self.Grid)
+        if print == True:
+            self.print_DARP_graph(self.n_r, self.rows,
+                                  self.cols, self.A, self.Grid)
 
         file.close()
+
     def print_DARP_graph(self, n_r, rows, cols, A, EG):
         rip = np.argwhere(EG == 2)
 
@@ -157,13 +161,26 @@ class check_cases:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
                 else:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
-                            colour_assignments[A[j][i]])
-        plt.show()
+                             colour_assignments[A[j][i]])
+        # plt.show()
+
     # def rerun_DARP(self,log_filename,print_rerun=False):
     #     dp = DARP(self.Grid,self.max_iter,self.dcells,self.cc,self.rl,self.Imp,log_filename,print_rerun)
     #     dp.main_DARP()
 checker = check_cases()
-checker.get_values("Case01.txt",True)
+checker.get_values("Case01.txt", True)
+# checker.get_values("Case02.txt", True)
+# checker.get_values("Case03.txt", True)
+# checker.get_values("Case04.txt", True)
+# checker.get_values("Case05.txt", True)
+# checker.get_values("Case06.txt", True)
+# checker.get_values("Case07.txt", True)
+# checker.get_values("Case08.txt", True)
+# checker.get_values("Case09.txt", True)
+# checker.get_values("Case10.txt", True)
+# checker.get_values("Case11.txt", True)
+# checker.get_values("Case12.txt", True)
+plt.show()
 # checker.rerun_DARP("Checker_Logging.txt",True)
 
 # make it possible to rerun DARP
