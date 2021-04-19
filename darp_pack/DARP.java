@@ -53,6 +53,7 @@ public class DARP {
         // USER CODE START
         connected_bool = new boolean[nr];
         Ilabel_final = new int[nr][rows][cols];
+        this.final_iterations = 0;
         // USER CODE END
 
         long startTime = System.nanoTime();
@@ -114,7 +115,7 @@ public class DARP {
         ArrayList<double[][]> MetricMatrix = deepCopyListMatrix(AllDistances);
 
         double[][] criterionMatrix = new double[rows][cols];
-
+        
         while (termThr <= discr && !success && !canceled) {
             // Initializations
             double downThres = ((double) NoTiles - (double) termThr * (nr - 1)) / (double) (NoTiles * nr);
@@ -208,6 +209,7 @@ public class DARP {
                 iter++;
             }
             // USER CODE START
+            //this.final_iterations = this.final_iterations + iter;
             this.final_iterations = iter;
             // USER CODE END
 

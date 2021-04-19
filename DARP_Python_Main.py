@@ -48,6 +48,7 @@ class DARP:
             self.obs = len(np.argwhere(self.Grid == 1))
             print("Aborting Algorithm...")
         self.time_elapsed = time.time_ns() - timestart
+        print(self.DARP_success)
 
         # Logging
         file_log = open(self.log_filename, "a")
@@ -73,6 +74,8 @@ class DARP:
             file_log.write(str(self.maxIter))
             file_log.write(",")
             file_log.write(str(self.obs))
+            file_log.write(",")
+            file_log.write(str(self.DARP_success))
             file_log.write(",")
             file_log.write(str(self.discr_achieved))
             file_log.write(",")
@@ -131,6 +134,8 @@ class DARP:
             file_log.write(",")
             file_log.write("None")
             file_log.write(",")
+            file_log.write("None")
+            file_log.write(",")
             file_log.write(str(self.time_elapsed))
             file_log.write(",")
             file_log.write("None")
@@ -180,7 +185,12 @@ class DARP:
         if(self.maxIter < 1):
             print("WARNING: Maximum Iterations Needs to be a Positive Integer...\n")
             self.abort = True
-
+        if(self.n_r > self.rows*self.cols):
+            print("WARNING: More robots than available cells...\n")
+            self.abort = True
+        if(self.rows*self.cols == 0):
+            print("WARNING: One of the environment array dimensions is zero...\n")
+            self.abort = True
     def write_input(self):
         # Writes relevant inputs for java code to file
         # print(pathlib.Path("Input.txt").absolute())
@@ -232,11 +242,11 @@ class DARP:
             for j in range(self.cols):
                 self.A[i][j] = int(file_out.readline())
         self.discr_achieved = int(file_out.readline())
-        self.success = bool(file_out.readline())
+        self.DARP_success = self.import_bool(file_out.readline())
         self.obs = int(file_out.readline())
         self.iterations = int(file_out.readline())
         for r in range(self.n_r):
-            self.connected_bool[r] = bool(file_out.readline())
+            self.connected_bool[r] = self.import_bool(file_out.readline())
         for r in range(self.n_r):
             for i in range(self.rows):
                 for j in range(self.cols):
@@ -277,6 +287,21 @@ class DARP:
         
         plt.title("Figure generated from DARP run")
         # plt.show()
+    def import_bool(self,string):
+         # Extract boolean variables
+        if string[0] == "1" or string[0] == "t" or string[0] == "T":
+            return(True)
+        elif string[0] == "0" or string[0] == "f" or string[0] == "F":
+            return(False)
+        else:
+            if string[0] == " ":
+                for c in string:
+                    if c == " ":
+                        continue
+                    else:
+                        return(self.import_bool(c))
+            print("ERROR: failed to import boolean value from -> ", string)
+            return(-1)
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -427,7 +452,6 @@ class generate_grid:
         if ES.max_label > 1:
             self.es_flag = True
 
-
 if __name__ == "__main__":
     Imp = False
 
@@ -435,12 +459,20 @@ if __name__ == "__main__":
     dcells = 30
     cc = 0.01
     rl = 0.0001
-    rows = 10
-    cols = 10
-    robots = 4
+    # rows = 10
+    # cols = 10
+    robots = 5
     obstacles = 0
-
-    number_of_sims = 2
+    
+    number_of_sims = 100
+    
+    max_size = 50
+    min_size = 10
+    step_size = 10
+    sizes = np.array(np.arange(min_size/step_size,max_size/step_size + 1),dtype=int)*step_size
+    
+    rows = sizes
+    cols = sizes
 
     for sim in range(number_of_sims):
         print("SIMULATION: ", sim+1)
@@ -452,9 +484,11 @@ if __name__ == "__main__":
         # print(grid_class.es_flag)
 
         EnvironmentGrid = grid_class.GRID
-        print_graph = True
+        print_graph = False
         dp = DARP(EnvironmentGrid, maxIter, dcells,
                   cc, rl, Imp, "Logging.txt", print_graph)
+        dp.main_DARP()
         if print_graph == True:
             plt.show()
-        dp.main_DARP()
+
+    

@@ -52,6 +52,7 @@ public class DARP_Java_New{
                 }
             }
             if ((st = br.readLine()) != null) {
+                // Does not work for "0" and "1" but it works for "true" and "false"
                 t.imp = Boolean.parseBoolean(st);
             }
 

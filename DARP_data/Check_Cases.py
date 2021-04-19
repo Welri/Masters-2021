@@ -25,18 +25,18 @@ class check_cases:
         os.chdir(path)
 
         file = open(filename, "r")
-
-        self.abort = bool(file.readline())
+        abort_string = file.readline()
         self.dcells = int(file.readline())
-        self.Imp = bool(file.readline())
+        Imp_string = file.readline()
         self.rows = int(file.readline())
         self.cols = int(file.readline())
         self.n_r = int(file.readline())
-        self.es_flag = bool(file.readline())
+        es_flag_string = file.readline()
         self.cc = float(file.readline())
         self.rl = float(file.readline())
         self.max_iter = int(file.readline())
         self.obs = int(file.readline())
+        DARP_success_string = file.readline()
         self.discr_achieved = int(file.readline())
         self.iter_achieved = int(file.readline())
         self.time_elapsed = int(file.readline())
@@ -44,6 +44,11 @@ class check_cases:
         Ilabel_string = file.readline()
         Grid_string = file.readline()
         A_string = file.readline()
+
+        self.abort = self.import_bool(abort_string)
+        self.Imp = self.import_bool(Imp_string)
+        self.es_flag = self.import_bool(es_flag_string)
+        self.DARP_success = self.import_bool(DARP_success_string)
 
         # Extract connected boolean values
         self.connected_bool = np.zeros(self.n_r, dtype=bool)
@@ -165,21 +170,28 @@ class check_cases:
          # This will change the input and output text files again so you can run in Java if need be
          dp = DPM.DARP(self.Grid,self.max_iter,self.dcells,self.cc,self.rl,self.Imp,log_filename,print_rerun)
          dp.main_DARP()
-         
-checker = check_cases()
-checker.get_values("Case01.txt", True)
-checker.rerun_DARP("Checker_Logging.txt",True)
-checker.get_values("Case02.txt", True)
-checker.rerun_DARP("Checker_Logging.txt",True)
-# checker.get_values("Case03.txt", True)
-# checker.get_values("Case04.txt", True)
-# checker.get_values("Case05.txt", True)
-# checker.get_values("Case06.txt", True)
-# checker.get_values("Case07.txt", True)
-# checker.get_values("Case08.txt", True)
-# checker.get_values("Case09.txt", True)
-# checker.get_values("Case10.txt", True)
-# checker.get_values("Case11.txt", True)
-# checker.get_values("Case12.txt", True)
+    def import_bool(self,string):
+         # Extract boolean variables
+        if string[0] == "1" or string[0] == "t" or string[0] == "T":
+            return(True)
+        elif string[0] == "0" or string[0] == "f" or string[0] == "F":
+            return(False)
+        else:
+            if string[0] == " ":
+                for c in string:
+                    if c == " ":
+                        continue
+                    else:
+                        return(self.import_bool(c))
+            print("ERROR: failed to import boolean value from -> ", string)
+            return(-1)
 
-plt.show()
+overall_print = True
+
+checker = check_cases()
+checker.get_values("Case05.txt", overall_print)
+for i in range(5):
+    checker.rerun_DARP("Checker_Logging.txt",overall_print)
+
+if overall_print == True:
+    plt.show()
