@@ -189,7 +189,7 @@ class check_cases:
 overall_print = True
 
 checker = check_cases()
-checker.get_values("Case05.txt", overall_print)
+checker.get_values("Case10.txt", overall_print)
 for i in range(5):
     checker.rerun_DARP("Checker_Logging.txt",overall_print)
 
