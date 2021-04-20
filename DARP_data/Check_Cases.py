@@ -1,3 +1,4 @@
+
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,9 +16,11 @@ path = pathlib.Path(path).parent.absolute()
 os.chdir(path)
 sys.path.append(str(path))
 
-np.set_printoptions(threshold=np.inf) # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
+import DARP_Python_Main as DPM  # pylint: disable=import-error
 
-import DARP_Python_Main as DPM # pylint: disable=import-error
+# Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
+np.set_printoptions(threshold=np.inf)
+
 
 class check_cases:
     def get_values(self, filename, print=False):
@@ -42,6 +45,9 @@ class check_cases:
         self.discr_achieved = int(file.readline())
         self.iter_achieved = int(file.readline())
         self.time_elapsed = int(file.readline())
+        AOE_string = file.readline()
+        AOEperc_string = file.readline()
+        self.maxDiscrPerc = float(file.readline())
         connected_bool_string = file.readline()
         Ilabel_string = file.readline()
         Grid_string = file.readline()
@@ -51,6 +57,36 @@ class check_cases:
         self.Imp = self.import_bool(Imp_string)
         self.es_flag = self.import_bool(es_flag_string)
         self.DARP_success = self.import_bool(DARP_success_string)
+
+        # Extract ArrayOfElements
+        self.ArrayOfElements = np.zeros(self.n_r, dtype=int)
+
+        AOErange = len(AOE_string)
+        i=0
+        for r in range(self.n_r):
+            string_value = ""
+            while (AOE_string[i]==" ") or (AOE_string[i] == "\n"):
+                i+=1
+            while (AOE_string[i] != " ") and (AOE_string[i] != "\n"):
+                string_value = string_value + AOE_string[i]
+                i+=1
+            self.ArrayOfElements[r] = int(string_value)
+            string_value=""
+
+        # Extract AOEperc
+        self.AOEperc = np.zeros(self.n_r, dtype=float)
+
+        AOEperc_range = len(AOEperc_string)
+        i=0
+        for r in range(self.n_r):
+            string_value = ""
+            while (AOEperc_string[i]==" ") or (AOEperc_string[i] == "\n"):
+                i+=1
+            while (AOEperc_string[i] != " ") and (AOEperc_string[i] != "\n"):
+                string_value = string_value + AOEperc_string[i]
+                i+=1
+            self.AOEperc[r] = float(string_value)
+            string_value=""
 
         # Extract connected boolean values
         self.connected_bool = np.zeros(self.n_r, dtype=bool)
@@ -84,25 +120,18 @@ class check_cases:
                     self.A[el] = int(c)
                     el += 1
         else:
-            el = 0
-            iter_var = iter(range(len(A_string)))
-            for i in iter_var:
-                e = 0
-                mult = 1
-                value = 0
-                c = A_string[i+e]
-                while (c != " ") and (c != "\n"):
-                    value = value*mult+int(c)
-                    mult = 10
-                    e = e+1
-                    c = A_string[i+e]
-                if e > 0:
-                    if e > 1:
-                        for ee in range(e-1): # pylint: disable=unused-variable
-                            next(iter_var)
-                    self.A[el] = value
-                    el += 1
-
+            Arange = len(A_string) 
+            i=0
+            for el in range(self.rows*self.cols):
+                string_value = ""
+                while (A_string[i]==" ") or (A_string[i] == "\n"):
+                    i+=1
+                while (A_string[i] != " ") and (A_string[i] != "\n"):
+                    string_value = string_value + A_string[i]
+                    i+=1
+                self.A[el] = int(string_value)
+                string_value=""
+           
         self.A = self.A.reshape(self.rows, self.cols)
 
         # Extract Ilabel values
@@ -131,9 +160,11 @@ class check_cases:
 
         # Print grid
         if print == True:
-            self.print_DARP_graph(self.n_r, self.rows,self.cols, self.A, self.Grid)
+            self.print_DARP_graph(self.n_r, self.rows,
+                                  self.cols, self.A, self.Grid)
 
         file.close()
+
     def print_DARP_graph(self, n_r, rows, cols, A, EG):
         rip = np.argwhere(EG == 2)
 
@@ -168,12 +199,15 @@ class check_cases:
                              colour_assignments[A[j][i]])
 
         plt.title("Figure generated from DARP data")
-    def rerun_DARP(self,log_filename,print_rerun=False):
-         # This will change the input and output text files again so you can run in Java if need be
-         dp = DPM.DARP(self.Grid,self.max_iter,self.dcells,self.cc,self.rl,self.Imp,log_filename,print_rerun)
-         dp.main_DARP()
-    def import_bool(self,string):
-         # Extract boolean variables
+
+    def rerun_DARP(self, log_filename, print_rerun=False):
+        # This will change the input and output text files again so you can run in Java if need be
+        dp = DPM.DARP(self.Grid, self.max_iter, self.dcells,
+                      self.cc, self.rl, self.Imp, log_filename, print_rerun)
+        dp.main_DARP()
+
+    def import_bool(self, string):
+        # Extract boolean variables
         if string[0] == "1" or string[0] == "t" or string[0] == "T":
             return(True)
         elif string[0] == "0" or string[0] == "f" or string[0] == "F":
@@ -189,13 +223,13 @@ class check_cases:
             return(-1)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     overall_print = True
 
     checker = check_cases()
-    checker.get_values("Case13.txt", overall_print)
+    checker.get_values("Case01.txt", overall_print)
     for i in range(5):
-        checker.rerun_DARP("Checker_Logging.txt",overall_print)
+        checker.rerun_DARP("Checker_Logging.txt", overall_print)
 
     if overall_print == True:
         plt.show()

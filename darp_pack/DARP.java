@@ -115,7 +115,7 @@ public class DARP {
         ArrayList<double[][]> MetricMatrix = deepCopyListMatrix(AllDistances);
 
         double[][] criterionMatrix = new double[rows][cols];
-        
+
         while (termThr <= discr && !success && !canceled) {
             // Initializations
             double downThres = ((double) NoTiles - (double) termThr * (nr - 1)) / (double) (NoTiles * nr);
@@ -209,7 +209,7 @@ public class DARP {
                 iter++;
             }
             // USER CODE START
-            //this.final_iterations = this.final_iterations + iter;
+            // this.final_iterations = this.final_iterations + iter;
             this.final_iterations = this.final_iterations + iter;
             // USER CODE END
 
@@ -576,10 +576,9 @@ public class DARP {
         return Ilabel_final;
     }
 
-    public int getdiscr_perc(){
-        int discr_perc=0;
-        // CODE MISSING
-        return discr_perc;
+    public int[] getArrayOfElements() {
+        return ArrayOfElements;
     }
+
     // USER CODE END
 }

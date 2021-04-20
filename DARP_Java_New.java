@@ -2,17 +2,18 @@ import darp_pack.*;
 import java.io.*;
 import java.util.*;
 
-public class DARP_Java_New{
-    public int rows, cols, MaxIter, dcells,i,j,discr_achieved,obs,iterations,nr,r;
-    public boolean imp,success;
+public class DARP_Java_New {
+    public int rows, cols, MaxIter, dcells, i, j, discr_achieved, obs, iterations, nr, r;
+    public boolean imp, success;
     public boolean[] connected_bool;
-    public int[][] EnvironmentGrid,A;
+    public int[] ArrayOfElements;
+    public int[][] EnvironmentGrid, A;
     public int[][][] Ilabel_final;
     public ArrayList<boolean[][]> robotBinaryRegions;
     public double CCvariation;
     public double randomLevel;
-    
-    public static void main(String[] args){
+
+    public static void main(String[] args) {
         DARP_Java_New t = new DARP_Java_New();
         // Read input and run DARP
         try {
@@ -56,7 +57,8 @@ public class DARP_Java_New{
                 t.imp = Boolean.parseBoolean(st);
             }
 
-            DARP problem = new DARP(t.rows, t.cols, t.EnvironmentGrid, t.MaxIter, t.CCvariation, t.randomLevel, t.dcells, t.imp);
+            DARP problem = new DARP(t.rows, t.cols, t.EnvironmentGrid, t.MaxIter, t.CCvariation, t.randomLevel,
+                    t.dcells, t.imp);
             problem.constructAssignmentM();
             // Collecting outputs
             t.A = problem.getAssignmentMatrix();
@@ -67,6 +69,7 @@ public class DARP_Java_New{
             t.iterations = problem.getIterations();
             t.connected_bool = problem.getConnectedBool();
             t.Ilabel_final = problem.getIlabel();
+            t.ArrayOfElements = problem.getArrayOfElements();
             br.close();
         } catch (IOException e) {
             System.out.println("An error occurred.");
@@ -91,11 +94,15 @@ public class DARP_Java_New{
             brw.write("\n");
             brw.write(String.valueOf(t.iterations));
             brw.write("\n");
-            for(t.r = 0;t.r < t.nr;t.r++){
+            for (t.r = 0; t.r < t.nr; t.r++) {
+                brw.write(String.valueOf(t.ArrayOfElements[t.r]));
+                brw.write("\n");
+            }
+            for (t.r = 0; t.r < t.nr; t.r++) {
                 brw.write(String.valueOf(t.connected_bool[t.r]));
                 brw.write("\n");
             }
-            for(t.r = 0;t.r < t.nr;t.r++){
+            for (t.r = 0; t.r < t.nr; t.r++) {
                 for (t.i = 0; t.i < t.rows; t.i++) {
                     for (t.j = 0; t.j < t.cols; t.j++) {
                         brw.write(String.valueOf(t.Ilabel_final[t.r][t.i][t.j]));
@@ -104,6 +111,7 @@ public class DARP_Java_New{
                 }
             }
             brw.close();
+            // System.out.println("AHHHHHH");
         } catch (IOException e) {
             System.out.println("An error occurred.");
             e.printStackTrace();
