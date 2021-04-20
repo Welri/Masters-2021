@@ -28,7 +28,6 @@ class DARP:
         self.es_flag = False
         self.show_grid = show_grid
         self.log_filename = log_filename
-
     def main_DARP(self):
         timestart = time.time_ns()
         self.enclosed_space_handler()
@@ -152,7 +151,6 @@ class DARP:
             file_log.write('\n')
 
         file_log.close()
-
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
         ES = enclosed_space_check(
@@ -174,7 +172,6 @@ class DARP:
             if temp == True:
                 self.rip = np.argwhere(self.Grid == 2)
                 self.n_r = len(self.rip)
-
     def general_error_handling(self):
         if(self.n_r < 1):
             print("WARNING: No Robot Initial Positions Given....\n")
@@ -217,7 +214,6 @@ class DARP:
                 file_in.write('\n')
         file_in.write(str(self.Imp))
         file_in.close()
-
     def run_subprocess(self):
         # Runs the OS appropriate script to run the java program
         # subprocess.call([r'DARP_Java\Run_Java.bat'])
@@ -230,7 +226,6 @@ class DARP:
             subprocess.call("./Run_Java.sh")
         else:
             print("WARNING: Unrecognised operating system")
-
     def read_output(self):
         # Read file containing outputs that were wrote to file by Java file
         self.A = np.zeros([self.rows, self.cols], dtype=int)
@@ -252,7 +247,6 @@ class DARP:
                 for j in range(self.cols):
                     self.Ilabel_final[r][i][j] = int(file_out.readline())
         file_out.close()
-
     def print_DARP_graph(self):
         # Prints the DARP divisions
         plt.figure(figsize=(5, 5))

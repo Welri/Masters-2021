@@ -15,6 +15,8 @@ path = pathlib.Path(path).parent.absolute()
 os.chdir(path)
 sys.path.append(str(path))
 
+np.set_printoptions(threshold=np.inf) # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
+
 import DARP_Python_Main as DPM # pylint: disable=import-error
 
 class check_cases:
@@ -186,12 +188,14 @@ class check_cases:
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
 
-overall_print = True
 
-checker = check_cases()
-checker.get_values("Case10.txt", overall_print)
-for i in range(5):
-    checker.rerun_DARP("Checker_Logging.txt",overall_print)
+if __name__=="__main__":
+    overall_print = True
 
-if overall_print == True:
-    plt.show()
+    checker = check_cases()
+    checker.get_values("Case13.txt", overall_print)
+    for i in range(5):
+        checker.rerun_DARP("Checker_Logging.txt",overall_print)
+
+    if overall_print == True:
+        plt.show()

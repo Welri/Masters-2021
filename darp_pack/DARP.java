@@ -210,7 +210,7 @@ public class DARP {
             }
             // USER CODE START
             //this.final_iterations = this.final_iterations + iter;
-            this.final_iterations = iter;
+            this.final_iterations = this.final_iterations + iter;
             // USER CODE END
 
             if (iter >= maxIter) {
@@ -574,6 +574,12 @@ public class DARP {
 
     public int[][][] getIlabel() {
         return Ilabel_final;
+    }
+
+    public int getdiscr_perc(){
+        int discr_perc=0;
+        // CODE MISSING
+        return discr_perc;
     }
     // USER CODE END
 }

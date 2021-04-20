@@ -14,7 +14,7 @@ public class DARP_Java_New{
     
     public static void main(String[] args){
         DARP_Java_New t = new DARP_Java_New();
-        // Read Input
+        // Read input and run DARP
         try {
             File file_in = new File("Input.txt");
             // System.out.println(new File("DARP_JPype//Value.txt").getAbsolutePath());
@@ -73,7 +73,7 @@ public class DARP_Java_New{
             e.printStackTrace();
         }
 
-        // Write Output
+        // Write output
         try {
             File file_out = new File("Output.txt");
             BufferedWriter brw = new BufferedWriter(new FileWriter(file_out));
