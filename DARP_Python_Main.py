@@ -333,7 +333,6 @@ class DARP:
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
 
-
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
         self.n_r = n_r
@@ -447,7 +446,6 @@ class enclosed_space_check:
             self.next_label += 1
         return self.labels[r]
 
-
 class generate_grid:
     def __init__(self, rows, cols, robots, obs):
         self.rows = rows
@@ -484,93 +482,92 @@ class generate_grid:
         if ES.max_label > 1:
             self.es_flag = True
 
-
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
     np.set_printoptions(threshold=np.inf)
     ## RUN AN INDIVIDUAL CASE ##
 
-    Imp = False
-
-    maxIter = 1000
-    dcells = 30
-    cc = 0.01
-    rl = 0.0001
-    r = 10
-    c = 10
-    robot = 3
-    obstacles = 0
-
-    number_of_sims = 1
-
-    sim_overall = 1
-
-    for sim in range(number_of_sims):
-        print("SIMULATION: ", sim_overall)
-        sim_overall = sim_overall + 1
-        grid_class = generate_grid(r, c, robot, obstacles)
-        grid_class.randomise_robots()
-        grid_class.randomise_obs()
-        # grid_class.flag_enclosed_space()
-        # print(grid_class.GRID)
-        # print(grid_class.es_flag)
-
-        EnvironmentGrid = grid_class.GRID
-        print_graph = False
-        dp = DARP(EnvironmentGrid, maxIter, dcells,
-                  cc, rl, Imp, "Logging.txt", print_graph)
-        dp.main_DARP()
-        if print_graph == True:
-            plt.show()
-
-    ## RUN MULTIPLE SIMULATIONS ##
-
-    # FIXED PARAMETERS #
     # Imp = False
+
     # maxIter = 1000
     # dcells = 30
     # cc = 0.01
     # rl = 0.0001
+    # r = 10
+    # c = 10
+    # robot = 3
     # obstacles = 0
 
-    # # Number of simulations per case
-    # number_of_sims = 10
+    # number_of_sims = 1
 
-    # # VARIABLES #
-    # # Grid size range
-    # max_size = 50
-    # min_size = 10
-    # step_size = 10
-    # sizes = np.array(np.arange(min_size/step_size,max_size/step_size + 1),dtype=int)*step_size
-    # rows = sizes
-    # cols = sizes
-
-    # # Number of robots range
-    # min_robots = 2
-    # max_robots = 6
-    # step_robots = 2
-    # robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
-
-    # # CALCULATING TOTAL SIMULATIONS AND PRINTING #
-    # sims = number_of_sims*len(rows)*len(cols)*len(robots)
-    # print("Number of Sims Total: ",sims)
-
-    # # RUNNING SIMULATIONS #
     # sim_overall = 1
-    # for r in rows:
-    #     for c in cols:
-    #         for robot in robots:
-    #             for sim in range(number_of_sims):
-    #                 print("SIMULATION: ", sim_overall)
-    #                 sim_overall = sim_overall + 1
-    #                 grid_class = generate_grid(r, c, robot, obstacles)
-    #                 grid_class.randomise_robots()
-    #                 grid_class.randomise_obs()
 
-    #                 EnvironmentGrid = grid_class.GRID
-    #                 print_graph = False
-    #                 dp = DARP(EnvironmentGrid, maxIter, dcells,
-    #                         cc, rl, Imp, "Logging.txt", print_graph)
-    #                 dp.main_DARP()
-    #                 if print_graph == True:
-    #                     plt.show()
+    # for sim in range(number_of_sims):
+    #     print("SIMULATION: ", sim_overall)
+    #     sim_overall = sim_overall + 1
+    #     grid_class = generate_grid(r, c, robot, obstacles)
+    #     grid_class.randomise_robots()
+    #     grid_class.randomise_obs()
+    #     # grid_class.flag_enclosed_space()
+    #     # print(grid_class.GRID)
+    #     # print(grid_class.es_flag)
+
+    #     EnvironmentGrid = grid_class.GRID
+    #     print_graph = False
+    #     dp = DARP(EnvironmentGrid, maxIter, dcells,
+    #               cc, rl, Imp, "Logging.txt", print_graph)
+    #     dp.main_DARP()
+    #     if print_graph == True:
+    #         plt.show()
+
+    ## RUN MULTIPLE SIMULATIONS ##
+
+    # FIXED PARAMETERS #
+    Imp = False
+    maxIter = 1000
+    dcells = 30
+    cc = 0.01
+    rl = 0.0001
+    obstacles = 0
+
+    # Number of simulations per case
+    number_of_sims = 10
+
+    # VARIABLES #
+    # Grid size range
+    max_size = 50
+    min_size = 10
+    step_size = 10
+    sizes = np.array(np.arange(min_size/step_size,max_size/step_size + 1),dtype=int)*step_size
+    rows = sizes
+    cols = sizes
+
+    # Number of robots range
+    min_robots = 2
+    max_robots = 6
+    step_robots = 2
+    robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
+
+    # CALCULATING TOTAL SIMULATIONS AND PRINTING #
+    sims = number_of_sims*len(rows)*len(cols)*len(robots)
+    print("Number of Sims Total: ",sims)
+
+    # RUNNING SIMULATIONS #
+    sim_overall = 1
+    for r in rows:
+        for c in cols:
+            for robot in robots:
+                for sim in range(number_of_sims):
+                    print("SIMULATION: ", sim_overall)
+                    sim_overall = sim_overall + 1
+                    grid_class = generate_grid(r, c, robot, obstacles)
+                    grid_class.randomise_robots()
+                    grid_class.randomise_obs()
+
+                    EnvironmentGrid = grid_class.GRID
+                    print_graph = False
+                    dp = DARP(EnvironmentGrid, maxIter, dcells,
+                            cc, rl, Imp, "Logging.txt", print_graph)
+                    dp.main_DARP()
+                    if print_graph == True:
+                        plt.show()
