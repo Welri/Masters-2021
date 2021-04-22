@@ -201,7 +201,7 @@ class check_cases:
 
     def rerun_DARP(self, log_filename, print_rerun=False):
         # This will change the input and output text files again so you can run in Java if need be
-        self.max_iter = 10000
+        # self.max_iter = 10000
         dp = DPM.DARP(self.Grid, self.max_iter, self.dcells,
                       self.cc, self.rl, self.Imp, log_filename, print_rerun)
         dp.main_DARP()
@@ -223,18 +223,34 @@ class check_cases:
             return(-1)
 
 if __name__ == "__main__":
-    overall_print = False
-    for file_no in range(10,13):
-        FILE = "CASES/FC0"+str(file_no)+".txt"
-        FILE_LOG = "Checker_Logging.txt"
-        file_log = open(FILE_LOG,"a")
-        file_log.write(FILE+"\n")
-        file_log.close()
+    overall_print = True
+    ## RUNNING MULTIPLE (SORT OF)
+    # for file_no in range(10,13):
+    #     FILE = "CASES/FC0"+str(file_no)+".txt"
+    #     FILE_LOG = "Checker_Logging.txt"
+    #     file_log = open(FILE_LOG,"a")
+    #     file_log.write(FILE+"\n")
+    #     file_log.close()
 
-        checker = check_cases()
-        checker.get_values(FILE, overall_print)
-        for i in range(5):
-            checker.rerun_DARP(FILE_LOG, overall_print)
+    #     checker = check_cases()
+    #     checker.get_values(FILE, overall_print)
+    #     for i in range(5):
+    #         checker.rerun_DARP(FILE_LOG, overall_print)
 
-        if overall_print == True:
-            plt.show()
+    #     if overall_print == True:
+    #         plt.show()
+
+    FILE = "CASES/FO001.txt"
+    FILE_LOG = "Checker_Logging.txt"
+    file_log = open(FILE_LOG,"a")
+    file_log.write(FILE+"\n")
+    file_log.close()
+
+    checker = check_cases()
+    checker.get_values(FILE, overall_print)
+    for i in range(5):
+        checker.rerun_DARP(FILE_LOG, overall_print)
+
+    if overall_print == True:
+        plt.show()
+

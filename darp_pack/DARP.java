@@ -209,11 +209,10 @@ public class DARP {
                 iter++;
             }
             // USER CODE START
-            // this.final_iterations = this.final_iterations + iter;
             this.final_iterations = this.final_iterations + iter;
             // USER CODE END
 
-            if (iter >= maxIter) {
+            if (iter > maxIter) {
                 maxIter = maxIter / 2;
                 success = false;
                 termThr++;
