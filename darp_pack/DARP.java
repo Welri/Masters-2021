@@ -297,7 +297,10 @@ public class DARP {
             if (minCellsAss > ArrayOfElements[r]) {
                 minCellsAss = ArrayOfElements[r];
             }
-
+        // USER CODE START
+        }
+        for (int r = 0; r < nr; r++) {
+        // USER CODE END
             if (!ConnectedRobotRegions[r]) {
                 return false;
             }

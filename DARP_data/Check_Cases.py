@@ -21,7 +21,6 @@ import DARP_Python_Main as DPM  # pylint: disable=import-error
 # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
 np.set_printoptions(threshold=np.inf)
 
-
 class check_cases:
     def get_values(self, filename, print=False):
         # # DIRECTORY MANAGEMENT
@@ -221,7 +220,6 @@ class check_cases:
                         return(self.import_bool(c))
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
-
 
 if __name__ == "__main__":
     overall_print = True

@@ -531,7 +531,7 @@ if __name__ == "__main__":
     obstacles = 0
 
     # Number of simulations per case
-    number_of_sims = 10
+    number_of_sims = 20
 
     # VARIABLES #
     # Grid size range
