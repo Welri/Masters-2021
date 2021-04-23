@@ -212,6 +212,7 @@ public class DARP {
             this.final_iterations = this.final_iterations + iter;
             // USER CODE END
 
+            // USER CODE DELETION (changed from >= to >)
             if (iter > maxIter) {
                 maxIter = maxIter / 2;
                 success = false;
@@ -257,7 +258,12 @@ public class DARP {
 
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
+                // USER CODE START
+                // RandomMa[i][j] = 1;
+                // USER CODE END
+                // USER COMMENT OUT START
                 RandomMa[i][j] = 2.0 * randomLevel * randomno.nextDouble() + 1.0 - randomLevel;
+                // USER COMMENT OUT END
             }
         }
 

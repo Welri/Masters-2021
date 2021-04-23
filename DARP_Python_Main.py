@@ -531,7 +531,7 @@ if __name__ == "__main__":
     obstacles = 0
 
     # Number of simulations per case
-    number_of_sims = 20
+    number_of_sims = 10
 
     # VARIABLES #
     # Grid size range
@@ -543,9 +543,9 @@ if __name__ == "__main__":
     cols = sizes
 
     # Number of robots range
-    min_robots = 2
+    min_robots = 3
     max_robots = 6
-    step_robots = 2
+    step_robots = 1
     robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
 
     # CALCULATING TOTAL SIMULATIONS AND PRINTING #

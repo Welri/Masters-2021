@@ -201,7 +201,7 @@ class check_cases:
 
     def rerun_DARP(self, log_filename, print_rerun=False):
         # This will change the input and output text files again so you can run in Java if need be
-        # self.max_iter = 10000
+        self.max_iter = 1000
         dp = DPM.DARP(self.Grid, self.max_iter, self.dcells,
                       self.cc, self.rl, self.Imp, log_filename, print_rerun)
         dp.main_DARP()
@@ -248,7 +248,7 @@ if __name__ == "__main__":
 
     checker = check_cases()
     checker.get_values(FILE, overall_print)
-    for i in range(5):
+    for i in range(30):
         checker.rerun_DARP(FILE_LOG, overall_print)
 
     if overall_print == True:
