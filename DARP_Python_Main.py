@@ -8,7 +8,7 @@ import time
 
 
 class DARP:
-    def __init__(self, EnvironmentGrid, maxIter, dcells, cc, rl, Imp, log_filename, show_grid=False):
+    def __init__(self, EnvironmentGrid, maxIter, dcells, cc_starting, rl, Imp, log_filename, show_grid=False):
         # DIRECTORY MANAGEMENT
         path = pathlib.Path(__file__).parent.absolute()
         # Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
@@ -18,7 +18,7 @@ class DARP:
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
-        self.cc = cc
+        self.cc = cc_starting
         self.rl = rl
         self.Imp = Imp
         self.rows = len(self.Grid)
@@ -29,25 +29,31 @@ class DARP:
         self.fairDiv = self.rows*self.cols/self.n_r
         self.abort = False
         self.es_flag = False
+        self.cc_runs = 0
         self.show_grid = show_grid
+        self.DARP_success = False
         self.log_filename = log_filename
 
     def main_DARP(self):
         timestart = time.time_ns()
-        
         self.enclosed_space_handler()
         self.general_error_handling()
         self.connected_bool = np.zeros(self.n_r, dtype=bool)
         self.Ilabel_final = np.zeros(
             [self.n_r, self.rows, self.cols], dtype=int)
         if self.abort == False:
-            self.write_input()
-            self.run_subprocess()
-            self.read_output()
-            self.AOEperc = np.abs((self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
-            self.maxDiscr = np.max(self.AOEperc)
-            if self.show_grid == True:
-                self.print_DARP_graph()
+            while( (self.cc_runs<3) and (self.DARP_success==False)):
+                self.write_input()
+                self.run_subprocess()
+                self.read_output()
+                self.AOEperc = np.abs((self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
+                self.maxDiscr = np.max(self.AOEperc)
+                if self.show_grid == True:
+                    self.print_DARP_graph()
+                self.cc_runs += 1
+                if self.DARP_success == False:
+                    self.cc = self.cc/10
+
         elif self.abort == True:
             # Cancels program if any errors occurred in error handling
             # Calculate the obstacles seen as they aren't returned by Java algorithm
@@ -126,6 +132,8 @@ class DARP:
             Astring = Astring.replace('[', '')
             Astring = Astring.replace(']', '')
             file_log.write(Astring)
+            file_log.write(',')
+            file_log.write(str(self.cc_runs))
             file_log.write('\n')
         else:
             file_log.write(str(self.abort))
@@ -175,8 +183,9 @@ class DARP:
             file_log.write(gridstring)
             file_log.write(",")
             file_log.write("None")
+            file_log.write(',')
+            file_log.write(str(self.cc_runs))
             file_log.write('\n')
-
         file_log.close()
 
     def enclosed_space_handler(self):
@@ -314,7 +323,7 @@ class DARP:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
                              colour_assignments[self.A[j][i]])
 
-        plt.title("Figure generated from DARP run")
+        plt.title("Figure generated from DARP run: ",self.cc_runs)
         # plt.show()
 
     def import_bool(self, string):
@@ -524,9 +533,9 @@ if __name__ == "__main__":
 
     # FIXED PARAMETERS #
     Imp = False
-    maxIter = 1000
+    maxIter = 10000
     dcells = 30
-    cc = 0.01
+    cc = 0.1
     rl = 0.0001
     obstacles = 0
 
@@ -543,7 +552,7 @@ if __name__ == "__main__":
     cols = sizes
 
     # Number of robots range
-    min_robots = 3
+    min_robots = 2
     max_robots = 6
     step_robots = 1
     robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
@@ -558,16 +567,17 @@ if __name__ == "__main__":
         for c in cols:
             for robot in robots:
                 for sim in range(number_of_sims):
-                    print("SIMULATION: ", sim_overall)
-                    sim_overall = sim_overall + 1
-                    grid_class = generate_grid(r, c, robot, obstacles)
-                    grid_class.randomise_robots()
-                    grid_class.randomise_obs()
+                        print("SIMULATION: ", sim_overall)
+                        sim_overall = sim_overall + 1
+                        grid_class = generate_grid(r, c, robot, obstacles)
+                        grid_class.randomise_robots()
+                        grid_class.randomise_obs()
 
-                    EnvironmentGrid = grid_class.GRID
-                    print_graph = False
-                    dp = DARP(EnvironmentGrid, maxIter, dcells,
-                            cc, rl, Imp, "Logging.txt", print_graph)
-                    dp.main_DARP()
-                    if print_graph == True:
-                        plt.show()
+                        EnvironmentGrid = grid_class.GRID
+                        print_graph = False
+                        
+                        dp = DARP(EnvironmentGrid, maxIter, dcells,
+                                cc, rl, Imp, "Logging.txt", print_graph)
+                        dp.main_DARP()
+                        if print_graph == True:
+                            plt.show()

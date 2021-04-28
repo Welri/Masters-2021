@@ -51,6 +51,7 @@ class check_cases:
         Ilabel_string = file.readline()
         Grid_string = file.readline()
         A_string = file.readline()
+        self.cc_reruns = int(file.readline())
 
         self.abort = self.import_bool(abort_string)
         self.Imp = self.import_bool(Imp_string)
@@ -199,11 +200,14 @@ class check_cases:
 
         plt.title("Figure generated from DARP data")
 
-    def rerun_DARP(self, log_filename, print_rerun=False):
-        # This will change the input and output text files again so you can run in Java if need be
-        self.max_iter = 1000
-        dp = DPM.DARP(self.Grid, self.max_iter, self.dcells,
-                      self.cc, self.rl, self.Imp, log_filename, print_rerun)
+    def rerun_DARP(self, log_filename, print_rerun=False,maxIter_change=None,cc_change=None,rl_change=None):
+        if maxIter_change != None:
+            self.max_iter = maxIter_change
+        if cc_change != None:
+            self.cc = cc_change
+        if rl_change != None:
+            self.rl	= rl_change
+        dp = DPM.DARP(self.Grid, self.max_iter, self.dcells,self.cc, self.rl, self.Imp, log_filename, print_rerun)
         dp.main_DARP()
 
     def import_bool(self, string):
@@ -223,24 +227,9 @@ class check_cases:
             return(-1)
 
 if __name__ == "__main__":
-    overall_print = True
-    ## RUNNING MULTIPLE (SORT OF)
-    # for file_no in range(10,13):
-    #     FILE = "CASES/FC0"+str(file_no)+".txt"
-    #     FILE_LOG = "Checker_Logging.txt"
-    #     file_log = open(FILE_LOG,"a")
-    #     file_log.write(FILE+"\n")
-    #     file_log.close()
+    overall_print = False
 
-    #     checker = check_cases()
-    #     checker.get_values(FILE, overall_print)
-    #     for i in range(5):
-    #         checker.rerun_DARP(FILE_LOG, overall_print)
-
-    #     if overall_print == True:
-    #         plt.show()
-
-    FILE = "CASES/FO001.txt"
+    FILE = "CASES/FO008.txt"
     FILE_LOG = "Checker_Logging.txt"
     file_log = open(FILE_LOG,"a")
     file_log.write(FILE+"\n")
@@ -248,8 +237,11 @@ if __name__ == "__main__":
 
     checker = check_cases()
     checker.get_values(FILE, overall_print)
-    for i in range(30):
-        checker.rerun_DARP(FILE_LOG, overall_print)
+    for i in range(5):
+        maxIter_change = 10000
+        cc_change = 0.1
+        rl_change = 0.0001
+        checker.rerun_DARP(FILE_LOG, overall_print,maxIter_change,cc_change,rl_change)
 
     if overall_print == True:
         plt.show()
