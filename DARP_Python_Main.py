@@ -18,8 +18,12 @@ class DARP:
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
-        self.cc = cc_starting
-        self.rl = rl
+        # self.cc = cc_starting
+        # self.rl = rl
+        self.cc_vals = np.array([0.1,0.01,0.001])
+        self.cc = self.cc_vals[0]
+        self.rl_vals = np.array([0.01,0.001,0.0001])
+        self.rl = self.rl_vals[0]
         self.Imp = Imp
         self.rows = len(self.Grid)
         self.cols = len(self.Grid[0])
@@ -29,7 +33,7 @@ class DARP:
         self.fairDiv = self.rows*self.cols/self.n_r
         self.abort = False
         self.es_flag = False
-        self.cc_runs = 0
+        self.runs = 0
         self.show_grid = show_grid
         self.DARP_success = False
         self.log_filename = log_filename
@@ -39,20 +43,23 @@ class DARP:
         self.enclosed_space_handler()
         self.general_error_handling()
         self.connected_bool = np.zeros(self.n_r, dtype=bool)
-        self.Ilabel_final = np.zeros(
-            [self.n_r, self.rows, self.cols], dtype=int)
+        self.Ilabel_final = np.zeros([self.n_r, self.rows, self.cols], dtype=int)
         if self.abort == False:
-            while( (self.cc_runs<3) and (self.DARP_success==False)):
-                self.write_input()
-                self.run_subprocess()
-                self.read_output()
-                self.AOEperc = np.abs((self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
-                self.maxDiscr = np.max(self.AOEperc)
-                if self.show_grid == True:
-                    self.print_DARP_graph()
-                self.cc_runs += 1
-                if self.DARP_success == False:
-                    self.cc = self.cc/10
+            for self.cc in self.cc_vals:
+                for self.rl in self.rl_vals:
+                    self.write_input()
+                    self.run_subprocess()
+                    self.read_output()
+                    self.AOEperc = np.abs((self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
+                    self.maxDiscr = np.max(self.AOEperc)
+                    if self.show_grid == True:
+                        self.print_DARP_graph()
+                    self.runs += 1
+                    if self.DARP_success == True:
+                        break
+                else:
+                    continue
+                break
 
         elif self.abort == True:
             # Cancels program if any errors occurred in error handling
@@ -133,7 +140,7 @@ class DARP:
             Astring = Astring.replace(']', '')
             file_log.write(Astring)
             file_log.write(',')
-            file_log.write(str(self.cc_runs))
+            file_log.write(str(self.runs))
             file_log.write('\n')
         else:
             file_log.write(str(self.abort))
@@ -184,7 +191,7 @@ class DARP:
             file_log.write(",")
             file_log.write("None")
             file_log.write(',')
-            file_log.write(str(self.cc_runs))
+            file_log.write(str(self.runs))
             file_log.write('\n')
         file_log.close()
 
@@ -323,7 +330,7 @@ class DARP:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
                              colour_assignments[self.A[j][i]])
 
-        plt.title("Figure generated from DARP run: ",self.cc_runs)
+        plt.title("Figure generated from DARP run")
         # plt.show()
 
     def import_bool(self, string):
@@ -544,8 +551,8 @@ if __name__ == "__main__":
 
     # VARIABLES #
     # Grid size range
-    max_size = 50
-    min_size = 10
+    max_size = 100
+    min_size = 50
     step_size = 10
     sizes = np.array(np.arange(min_size/step_size,max_size/step_size + 1),dtype=int)*step_size
     rows = sizes
@@ -563,6 +570,10 @@ if __name__ == "__main__":
 
     # RUNNING SIMULATIONS #
     sim_overall = 1
+    file_log = "Logging04.txt"
+    FL = open(file_log,"a")
+    FL.write("Running 50 - 100, 2 - 6 with new rl and cc changing\n\n")
+    FL.close()
     for r in rows:
         for c in cols:
             for robot in robots:
@@ -576,8 +587,9 @@ if __name__ == "__main__":
                         EnvironmentGrid = grid_class.GRID
                         print_graph = False
                         
+
                         dp = DARP(EnvironmentGrid, maxIter, dcells,
-                                cc, rl, Imp, "Logging.txt", print_graph)
+                                cc, rl, Imp, file_log, print_graph)
                         dp.main_DARP()
                         if print_graph == True:
                             plt.show()

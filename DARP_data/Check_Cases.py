@@ -51,6 +51,7 @@ class check_cases:
         Ilabel_string = file.readline()
         Grid_string = file.readline()
         A_string = file.readline()
+            
         self.cc_reruns = int(file.readline())
 
         self.abort = self.import_bool(abort_string)
@@ -227,9 +228,9 @@ class check_cases:
             return(-1)
 
 if __name__ == "__main__":
-    overall_print = False
+    overall_print = True
 
-    FILE = "CASES/FO008.txt"
+    FILE = "CASES/FC020.txt"
     FILE_LOG = "Checker_Logging.txt"
     file_log = open(FILE_LOG,"a")
     file_log.write(FILE+"\n")
@@ -240,7 +241,7 @@ if __name__ == "__main__":
     for i in range(5):
         maxIter_change = 10000
         cc_change = 0.1
-        rl_change = 0.0001
+        rl_change = 0.001
         checker.rerun_DARP(FILE_LOG, overall_print,maxIter_change,cc_change,rl_change)
 
     if overall_print == True:
