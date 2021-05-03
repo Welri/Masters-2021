@@ -547,12 +547,12 @@ if __name__ == "__main__":
     obstacles = 0
 
     # Number of simulations per case
-    number_of_sims = 10
+    number_of_sims = 100
 
     # VARIABLES #
     # Grid size range
-    max_size = 100
-    min_size = 50
+    max_size = 98
+    min_size = 98
     step_size = 10
     sizes = np.array(np.arange(min_size/step_size,max_size/step_size + 1),dtype=int)*step_size
     rows = sizes
@@ -562,17 +562,17 @@ if __name__ == "__main__":
     min_robots = 2
     max_robots = 6
     step_robots = 1
-    robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
-
+    # robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
+    robots = np.array([2,8,14,20])
     # CALCULATING TOTAL SIMULATIONS AND PRINTING #
     sims = number_of_sims*len(rows)*len(cols)*len(robots)
     print("Number of Sims Total: ",sims)
 
     # RUNNING SIMULATIONS #
     sim_overall = 1
-    file_log = "Logging04.txt"
+    file_log = "Logging05.txt"
     FL = open(file_log,"a")
-    FL.write("Running 50 - 100, 2 - 6 with new rl and cc changing\n\n")
+    FL.write("Running Zeng style test with no obstacles\n\n")
     FL.close()
     for r in rows:
         for c in cols:
