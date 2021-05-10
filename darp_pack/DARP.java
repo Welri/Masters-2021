@@ -258,12 +258,14 @@ public class DARP {
 
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
-                // USER CODE START
+                // USER CODE START 
                 // RandomMa[i][j] = 1;
                 // USER CODE END
-                // USER COMMENT OUT START
+
+                // The above was to figure out if random matrix is important - it is very important
+                
                 RandomMa[i][j] = 2.0 * randomLevel * randomno.nextDouble() + 1.0 - randomLevel;
-                // USER COMMENT OUT END
+                
             }
         }
 

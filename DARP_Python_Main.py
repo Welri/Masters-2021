@@ -6,9 +6,8 @@ import os
 import random
 import time
 
-
 class DARP:
-    def __init__(self, EnvironmentGrid, maxIter, dcells, cc_starting, rl, Imp, log_filename, show_grid=False):
+    def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
         # DIRECTORY MANAGEMENT
         path = pathlib.Path(__file__).parent.absolute()
         # Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
@@ -18,12 +17,10 @@ class DARP:
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
-        # self.cc = cc_starting
-        # self.rl = rl
-        self.cc_vals = np.array([0.1,0.01,0.001])
-        self.cc = self.cc_vals[0]
-        self.rl_vals = np.array([0.01,0.001,0.0001])
-        self.rl = self.rl_vals[0]
+        self.cc_vals = cc_vals#np.array([0.1, 0.01, 0.001])
+        # self.cc = self.cc_vals[0]
+        self.rl_vals = rl_vals#np.array([0.01, 0.001, 0.0001])
+        # self.rl = self.rl_vals[0]
         self.Imp = Imp
         self.rows = len(self.Grid)
         self.cols = len(self.Grid[0])
@@ -43,14 +40,16 @@ class DARP:
         self.enclosed_space_handler()
         self.general_error_handling()
         self.connected_bool = np.zeros(self.n_r, dtype=bool)
-        self.Ilabel_final = np.zeros([self.n_r, self.rows, self.cols], dtype=int)
+        self.Ilabel_final = np.zeros(
+            [self.n_r, self.rows, self.cols], dtype=int)
         if self.abort == False:
             for self.cc in self.cc_vals:
                 for self.rl in self.rl_vals:
                     self.write_input()
                     self.run_subprocess()
                     self.read_output()
-                    self.AOEperc = np.abs((self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
+                    self.AOEperc = np.abs(
+                        (self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
                     self.maxDiscr = np.max(self.AOEperc)
                     if self.show_grid == True:
                         self.print_DARP_graph()
@@ -66,7 +65,7 @@ class DARP:
             # Calculate the obstacles seen as they aren't returned by Java algorithm
             self.obs = len(np.argwhere(self.Grid == 1))
             print("Aborting Algorithm...")
-        
+
         self.time_elapsed = time.time_ns() - timestart
 
         # Logging
@@ -109,9 +108,9 @@ class DARP:
             file_log.write(AOEstring)
             file_log.write(",")
             AOEperc_string = str(self.AOEperc)
-            AOEperc_string = AOEperc_string.replace("[",'')
-            AOEperc_string = AOEperc_string.replace("]",'')
-            AOEperc_string = AOEperc_string.replace("\n",'')
+            AOEperc_string = AOEperc_string.replace("[", '')
+            AOEperc_string = AOEperc_string.replace("]", '')
+            AOEperc_string = AOEperc_string.replace("\n", '')
             file_log.write(AOEperc_string)
             file_log.write(",")
             file_log.write(str(self.maxDiscr))
@@ -122,12 +121,12 @@ class DARP:
             conBoolstring = conBoolstring.replace(']', '')
             file_log.write(conBoolstring)
             file_log.write(",")
-            ilabelstring = str(self.Ilabel_final)
-            ilabelstring = ilabelstring.replace('\n', '')
-            ilabelstring = ilabelstring.replace('[', '')
-            ilabelstring = ilabelstring.replace(']', '')
-            file_log.write(ilabelstring)
-            file_log.write(",")
+            # ilabelstring = str(self.Ilabel_final)
+            # ilabelstring = ilabelstring.replace('\n', '')
+            # ilabelstring = ilabelstring.replace('[', '')
+            # ilabelstring = ilabelstring.replace(']', '')
+            # file_log.write(ilabelstring)
+            # file_log.write(",")
             gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
             gridstring = gridstring.replace('\n', '')
             gridstring = gridstring.replace('[', '')
@@ -181,8 +180,8 @@ class DARP:
             file_log.write(",")
             file_log.write("None")
             file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
+            # file_log.write("None")
+            # file_log.write(",")
             gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
             gridstring = gridstring.replace('\n', '')
             gridstring = gridstring.replace('[', '')
@@ -501,7 +500,69 @@ class generate_grid:
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
     np.set_printoptions(threshold=np.inf)
-    ## RUN AN INDIVIDUAL CASE ##
+
+## RUN MULTIPLE SIMULATIONS ##
+
+    # FIXED PARAMETERS #
+    Imp = False
+    maxIter = 10000
+    dcells = 30
+    cc = 0.1
+    rl = 0.0001
+    obs_perc = 20
+
+    # Number of simulations per case
+    number_of_sims = 10
+
+    # VARIABLES #
+    # Grid size range 
+    # OLD WAY OF DOING IT- INDENTED
+        # max_size = 98
+        # min_size = 98
+        # step_size = 10
+        # sizes = np.array(np.arange(min_size/step_size, max_size /
+        #                            step_size + 1), dtype=int)*step_size
+    sizes = np.array([58])
+    rows = sizes
+    cols = sizes
+
+    # Number of robots range
+    # OLD WAY OF DOING IT - INDENTED
+        # min_robots = 2
+        # max_robots = 6
+        # step_robots = 1
+        # robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
+    robots = np.array([2, 8, 14, 20])
+    # CALCULATING TOTAL SIMULATIONS AND PRINTING #
+    sims = number_of_sims*len(rows)*len(cols)*len(robots)
+    print("Number of Sims Total: ", sims)
+
+    # RUNNING SIMULATIONS #
+    sim_overall = 1
+    file_log = "Logging_003.txt"
+    FL = open(file_log, "a")
+    FL.write("Running Zeng style test with  obstacles\n\n")
+    FL.close()
+    for r in rows:
+        for c in cols:
+            for robot in robots:
+                for sim in range(number_of_sims):
+                    print("SIMULATION: ", sim_overall)
+                    sim_overall = sim_overall + 1
+                    obstacles = int((r*c)*obs_perc/100)
+                    grid_class = generate_grid(r, c, robot, obstacles)
+                    grid_class.randomise_robots()
+                    grid_class.randomise_obs()
+
+                    EnvironmentGrid = grid_class.GRID
+                    print_graph = False
+
+                    dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graph)
+                    dp.main_DARP()
+                    if print_graph == True:
+                        plt.show()
+
+## RUN AN INDIVIDUAL CASE ##
 
     # Imp = False
 
@@ -535,61 +596,3 @@ if __name__ == "__main__":
     #     dp.main_DARP()
     #     if print_graph == True:
     #         plt.show()
-
-    ## RUN MULTIPLE SIMULATIONS ##
-
-    # FIXED PARAMETERS #
-    Imp = False
-    maxIter = 10000
-    dcells = 30
-    cc = 0.1
-    rl = 0.0001
-    obstacles = 0
-
-    # Number of simulations per case
-    number_of_sims = 100
-
-    # VARIABLES #
-    # Grid size range
-    max_size = 98
-    min_size = 98
-    step_size = 10
-    sizes = np.array(np.arange(min_size/step_size,max_size/step_size + 1),dtype=int)*step_size
-    rows = sizes
-    cols = sizes
-
-    # Number of robots range
-    min_robots = 2
-    max_robots = 6
-    step_robots = 1
-    # robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
-    robots = np.array([2,8,14,20])
-    # CALCULATING TOTAL SIMULATIONS AND PRINTING #
-    sims = number_of_sims*len(rows)*len(cols)*len(robots)
-    print("Number of Sims Total: ",sims)
-
-    # RUNNING SIMULATIONS #
-    sim_overall = 1
-    file_log = "Logging05.txt"
-    FL = open(file_log,"a")
-    FL.write("Running Zeng style test with no obstacles\n\n")
-    FL.close()
-    for r in rows:
-        for c in cols:
-            for robot in robots:
-                for sim in range(number_of_sims):
-                        print("SIMULATION: ", sim_overall)
-                        sim_overall = sim_overall + 1
-                        grid_class = generate_grid(r, c, robot, obstacles)
-                        grid_class.randomise_robots()
-                        grid_class.randomise_obs()
-
-                        EnvironmentGrid = grid_class.GRID
-                        print_graph = False
-                        
-
-                        dp = DARP(EnvironmentGrid, maxIter, dcells,
-                                cc, rl, Imp, file_log, print_graph)
-                        dp.main_DARP()
-                        if print_graph == True:
-                            plt.show()
