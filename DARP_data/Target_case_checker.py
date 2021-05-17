@@ -49,6 +49,6 @@ class target_case_checker:
 
 if __name__ == "__main__":
     TCC = target_case_checker()
-    TCC.get_grid("TARGET_CASES/Case02.txt")
+    TCC.get_grid("TARGET_CASES/Case03.txt")
     TCC.rerun_DARP("target_logger.txt",show_grid=True)
     plt.show()

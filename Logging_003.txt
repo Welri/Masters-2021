@@ -1,0 +1,2 @@
+Running Zeng style test with  obstacles
+

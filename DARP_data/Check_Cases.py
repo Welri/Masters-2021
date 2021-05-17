@@ -57,7 +57,8 @@ class check_cases:
             # Ilabel_string = file.readline()
             Grid_string = file.readline()
             A_string = file.readline()
-            self.cc_reruns = int(file.readline())
+            self.reruns = int(file.readline()) # Not really useful to read either but whatever
+            # Does not read total iterations - realised it isn't really useful to read
 
             # Extract ArrayOfElements
             self.ArrayOfElements = np.zeros(self.n_r, dtype=int)

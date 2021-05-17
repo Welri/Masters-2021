@@ -34,6 +34,7 @@ class DARP:
         self.show_grid = show_grid
         self.DARP_success = False
         self.log_filename = log_filename
+        self.total_iterations = 0
 
     def main_DARP(self):
         timestart = time.time_ns()
@@ -54,6 +55,7 @@ class DARP:
                     if self.show_grid == True:
                         self.print_DARP_graph()
                     self.runs += 1
+                    self.total_iterations = self.total_iterations + self.iterations
                     if self.DARP_success == True:
                         break
                 else:
@@ -140,6 +142,8 @@ class DARP:
             file_log.write(Astring)
             file_log.write(',')
             file_log.write(str(self.runs))
+            file_log.write(',')
+            file_log.write(str(self.total_iterations))
             file_log.write('\n')
         else:
             file_log.write(str(self.abort))
@@ -191,6 +195,8 @@ class DARP:
             file_log.write("None")
             file_log.write(',')
             file_log.write(str(self.runs))
+            file_log.write(',')
+            file_log.write(str(self.total_iterations))
             file_log.write('\n')
         file_log.close()
 
