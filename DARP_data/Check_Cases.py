@@ -203,7 +203,7 @@ class check_cases:
         plt.title("Figure generated from DARP data")
 
     def rerun_DARP(self, log_filename, print_rerun=False):
-        dp = DPM.DARP(self.Grid, 300, self.Imp, log_filename, print_rerun,1000)
+        dp = DPM.DARP(self.Grid, 1000, self.Imp, log_filename, print_rerun)
         dp.main_DARP()
 
     def import_bool(self, string):

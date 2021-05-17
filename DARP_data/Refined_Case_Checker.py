@@ -31,14 +31,15 @@ class target_case_checker:
         FILE = open(file_name,"r")
         self.rows = int(FILE.readline())
         self.cols = int(FILE.readline())
-        Grid_string = FILE.readline()
+        Grid_string = FILE.readlines()
         self.Grid = np.zeros(self.rows*self.cols,dtype=int)
 
         el = 0
-        for c in Grid_string:
-            if (c != " ") and (c != "\n") and (c != "\t"):
-                self.Grid[el] = int(c)
-                el += 1
+        for grid_entry in Grid_string:
+            for c in grid_entry:
+                if (c != " ") and (c != "\n") and (c != "\t"):
+                    self.Grid[el] = int(c)
+                    el += 1
 
         self.Grid = self.Grid.reshape([self.rows,self.cols])
         FILE.close()
