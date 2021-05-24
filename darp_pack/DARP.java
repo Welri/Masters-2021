@@ -7,6 +7,14 @@ import java.util.*;
  * Created by atkap on 5/16/2016.
  */
 public class DARP {
+    /* USER NOTES ON DARP
+        Enew = Eold * CriterionMatrix * RandoMatrix * ConnectivityMatrix
+
+        Criterion matrix - restores fairness between robots
+        Connectivity matrix - ensures connectedness amongst cells
+        Random matrix - to resolve issues with sharing
+
+    */
     private double variateWeight, randomLevel;
     private int rows, cols, nr, ob, maxIter;
     private int[][] GridEnv;

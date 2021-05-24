@@ -2,6 +2,15 @@ import darp_pack.*;
 import java.io.*;
 import java.util.*;
 
+/* USER NOTES ON DARP
+    Enew = Eold * CriterionMatrix * RandoMatrix * ConnectivityMatrix
+
+    Criterion matrix - restores fairness between robots
+    Connectivity matrix - ensures connectedness amongst cells
+    Random matrix - to resolve issues with sharing
+
+*/
+
 public class DARP_Java_New {
     public int rows, cols, MaxIter, dcells, i, j, discr_achieved, obs, iterations, nr, r;
     public boolean imp, success;
