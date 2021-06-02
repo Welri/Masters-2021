@@ -5,6 +5,7 @@ import pathlib
 import os
 import random
 import time
+import networkx as nx
 
 class DARP:
     def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
@@ -354,6 +355,80 @@ class DARP:
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
 
+class MST_graph_maker:
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel):
+        self.A = A
+        self.n_r = n_r
+        self.rows = rows
+        self.cols = cols
+        self.rip = rip
+        self.grids = Ilabel
+
+        # Grids: 0 is obstacle, 1 is free space
+        # Graphs represent each individual node and which nodes it is connected to
+        moves = np.array([[0,1],[1,0],[0,-1],[-1,0]])
+        self.free_nodes_list = list()
+        self.vertices_list = list()
+        self.parents_list = list()
+
+        for r in range(self.n_r):   
+            free_nodes = np.argwhere(self.grids[r]==1) # vertice coordinates
+            vertices = len(free_nodes) # number of vertices
+
+            graph = np.zeros([vertices,vertices],dtype = int)
+            parents = np.zeros(vertices,dtype = int) 
+            node_ind = 0
+            for node_ind in range(vertices):
+                node = free_nodes[node_ind]
+                for move in moves:
+                    row = node[0]+move[0]
+                    col = node[1]+move[1]
+                    if(row>=0)and(col>=0)and(row<self.rows)and(col<self.cols):
+                        neighbour_node_ind = np.argwhere((free_nodes==(row,col)).all(axis=1))
+                        if len(neighbour_node_ind)>0:
+                            # Add edge to graph
+                            graph[node_ind][neighbour_node_ind[0][0]]=1 # weights are just 1 for now
+
+            self.write_input(graph,vertices)
+            self.run_subprocess()
+            parents = self.read_output(vertices)
+
+            self.free_nodes_list.append(free_nodes)
+            self.vertices_list.append(vertices)
+            self.parents_list.append(parents)
+        
+    def write_input(self,graph,dim):
+        # write graphs to file
+        file_in = open("MST_Input.txt","w")
+        file_in.write(str(dim))
+        file_in.write("\n")
+        for i in range(dim):
+            for j in range(dim):
+                file_in.write(str(graph[i][j]))
+                file_in.write("\n")
+        file_in.close()
+    
+    def run_subprocess(self):
+        if (os.name == 'nt'):
+            # print("The current operating system is WINDOWS")
+            subprocess.call([r'pMST_Run_Java.bat'])
+        elif (os.name == 'posix'):
+            # print("The current operating system is UBUNTU")
+            subprocess.call("./pMST_Run_Java.sh")
+        else:
+            print("WARNING: Unrecognised operating system")
+    
+    def read_output(self,dim):
+        file_out = open("MST_Output.txt","r")
+        parents = np.zeros(dim,dtype=int)
+        for d in range(dim):
+            parents[d] = int(file_out.readline())
+        file_out.close()
+        return(parents)
+
+    # def draw_graph(self,nodes,edges):
+        
+
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
         self.n_r = n_r
@@ -509,6 +584,66 @@ if __name__ == "__main__":
 
 ## RUN MULTIPLE SIMULATIONS ##
 
+    # # FIXED PARAMETERS #
+    # Imp = False
+    # maxIter = 10000
+    # dcells = 30
+    # cc = 0.1
+    # rl = 0.0001
+    # obs_perc = 20
+
+    # # Number of simulations per case
+    # number_of_sims = 10
+
+    # # VARIABLES #
+    # # Grid size range 
+    # # OLD WAY OF DOING IT- INDENTED
+    #     # max_size = 98
+    #     # min_size = 98
+    #     # step_size = 10
+    #     # sizes = np.array(np.arange(min_size/step_size, max_size /
+    #     #                            step_size + 1), dtype=int)*step_size
+    # sizes = np.array([58])
+    # rows = sizes
+    # cols = sizes
+
+    # # Number of robots range
+    # # OLD WAY OF DOING IT - INDENTED
+    #     # min_robots = 2
+    #     # max_robots = 6
+    #     # step_robots = 1
+    #     # robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
+    # robots = np.array([2, 8, 14, 20])
+    # # CALCULATING TOTAL SIMULATIONS AND PRINTING #
+    # sims = number_of_sims*len(rows)*len(cols)*len(robots)
+    # print("Number of Sims Total: ", sims)
+
+    # # RUNNING SIMULATIONS #
+    # sim_overall = 1
+    # file_log = "Logging_003.txt"
+    # FL = open(file_log, "a")
+    # FL.write("Running Zeng style test with  obstacles\n\n")
+    # FL.close()
+    # for r in rows:
+    #     for c in cols:
+    #         for robot in robots:
+    #             for sim in range(number_of_sims):
+    #                 print("SIMULATION: ", sim_overall)
+    #                 sim_overall = sim_overall + 1
+    #                 obstacles = int((r*c)*obs_perc/100)
+    #                 grid_class = generate_grid(r, c, robot, obstacles)
+    #                 grid_class.randomise_robots()
+    #                 grid_class.randomise_obs()
+
+    #                 EnvironmentGrid = grid_class.GRID
+    #                 print_graph = False
+
+    #                 dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graph)
+    #                 dp.main_DARP()
+    #                 if print_graph == True:
+    #                     plt.show()
+
+## RUN AN INDIVIDUAL CASE ##
     # FIXED PARAMETERS #
     Imp = False
     maxIter = 10000
@@ -517,88 +652,25 @@ if __name__ == "__main__":
     rl = 0.0001
     obs_perc = 20
 
-    # Number of simulations per case
-    number_of_sims = 10
+    rows = 5
+    cols = 5
+    n_r = 2
+   
+    print_graphs = True
 
-    # VARIABLES #
-    # Grid size range 
-    # OLD WAY OF DOING IT- INDENTED
-        # max_size = 98
-        # min_size = 98
-        # step_size = 10
-        # sizes = np.array(np.arange(min_size/step_size, max_size /
-        #                            step_size + 1), dtype=int)*step_size
-    sizes = np.array([58])
-    rows = sizes
-    cols = sizes
+    # RUNNING SIMULATION #
+    file_log = "Logging_004.txt"
 
-    # Number of robots range
-    # OLD WAY OF DOING IT - INDENTED
-        # min_robots = 2
-        # max_robots = 6
-        # step_robots = 1
-        # robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
-    robots = np.array([2, 8, 14, 20])
-    # CALCULATING TOTAL SIMULATIONS AND PRINTING #
-    sims = number_of_sims*len(rows)*len(cols)*len(robots)
-    print("Number of Sims Total: ", sims)
+    obstacles = int((rows*cols)*obs_perc/100)
+    grid_class = generate_grid(rows, cols, n_r, obstacles)
+    grid_class.randomise_robots()
+    grid_class.randomise_obs()
 
-    # RUNNING SIMULATIONS #
-    sim_overall = 1
-    file_log = "Logging_003.txt"
-    FL = open(file_log, "a")
-    FL.write("Running Zeng style test with  obstacles\n\n")
-    FL.close()
-    for r in rows:
-        for c in cols:
-            for robot in robots:
-                for sim in range(number_of_sims):
-                    print("SIMULATION: ", sim_overall)
-                    sim_overall = sim_overall + 1
-                    obstacles = int((r*c)*obs_perc/100)
-                    grid_class = generate_grid(r, c, robot, obstacles)
-                    grid_class.randomise_robots()
-                    grid_class.randomise_obs()
+    EnvironmentGrid = grid_class.GRID
+    
+    dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graphs)
+    dp.main_DARP()
+    if print_graphs == True:
+        plt.show()
 
-                    EnvironmentGrid = grid_class.GRID
-                    print_graph = False
-
-                    dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graph)
-                    dp.main_DARP()
-                    if print_graph == True:
-                        plt.show()
-
-## RUN AN INDIVIDUAL CASE ##
-
-    # Imp = False
-
-    # maxIter = 1000
-    # dcells = 30
-    # cc = 0.01
-    # rl = 0.0001
-    # r = 10
-    # c = 10
-    # robot = 3
-    # obstacles = 0
-
-    # number_of_sims = 1
-
-    # sim_overall = 1
-
-    # for sim in range(number_of_sims):
-    #     print("SIMULATION: ", sim_overall)
-    #     sim_overall = sim_overall + 1
-    #     grid_class = generate_grid(r, c, robot, obstacles)
-    #     grid_class.randomise_robots()
-    #     grid_class.randomise_obs()
-    #     # grid_class.flag_enclosed_space()
-    #     # print(grid_class.GRID)
-    #     # print(grid_class.es_flag)
-
-    #     EnvironmentGrid = grid_class.GRID
-    #     print_graph = False
-    #     dp = DARP(EnvironmentGrid, maxIter, dcells,
-    #               cc, rl, Imp, "Logging.txt", print_graph)
-    #     dp.main_DARP()
-    #     if print_graph == True:
-    #         plt.show()
+    pMST = MST_graph_maker(dp.A,dp.n_r,dp.rows,dp.cols,dp.rip,dp.Ilabel_final)

@@ -11,7 +11,4 @@ Important File Breakdown
 * RUN_Java.sh
     * Bash file: Compiles and Runs the Java DARP_Java_New.java for UBUNTU
 
-TODO
-----
 
-* Write Bash File so that the code can run on LINUX

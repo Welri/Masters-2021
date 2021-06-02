@@ -65,6 +65,7 @@ class primMST:
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
         moves = np.array([[0,1],[1,0],[0,-1],[-1,0]])
+        
         r=0    
         self.free_nodes = np.argwhere(self.grids[r]==1)   
         self.node_list = self.free_nodes 
@@ -88,10 +89,13 @@ class primMST:
             self.grids[r][self.rip[r][0]][self.rip[r][1]] = 2
                 
 if __name__ == "__main__":
+    make_plots = True
+    
     TCC = target_case_checker()
-    TCC.get_grid("TARGET_CASES/Case03.txt")
-    TCC.rerun_DARP("target_logger.txt",show_grid=False)
-    # plt.show()
+    TCC.get_grid("TARGET_CASES/Case04.txt")
+    TCC.rerun_DARP("target_logger.txt",show_grid=make_plots)
+    if make_plots == True:
+        plt.show()
 
     pSTC = primMST(TCC.A,TCC.n_r,TCC.rows,TCC.cols,TCC.rip,TCC.Ilabel)
 

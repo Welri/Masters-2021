@@ -32,10 +32,9 @@ public class prim {
 			System.out.println(this.parent[i] + " - " + i + "\t" + this.graph[i][this.parent[i]]);
 	}
 
-	public void primMST(int graph_input[][])
+	public int[] primMST(int graph_input[][])
 	{
 		// function to cunstruct MST
-
 		// initializes private graph variable
 		this.graph = new int[this.V][this.V]; 
 		this.graph = graph_input;
@@ -75,46 +74,7 @@ public class prim {
 					key[v] = graph[u][v];
 				}
 		}
-	}
-
-	public static void main(String[] args)
-	{
-		/* Test Graph
-		   2     3
-		(0)--(1)--(2)
-		 |   / \   |
-		6| 8/   \5 |7
-		 | /	 \ |
-		(3)-------(4)
-			  9		 */
-		
-		prim t = new prim();
-		// int graph[][] = new int[][] {   { 0, 2, 0, 6, 0 },
-        //                                 { 2, 0, 3, 8, 5 },
-        //                                 { 0, 3, 0, 0, 7 },
-        //                                 { 6, 8, 0, 0, 9 },
-        //                                 { 0, 5, 7, 9, 0 } };
-		// int graph[][] = new int[][] {	{0,1,0,1,0},
-		// 								{1,0,1,1,1},
-		// 								{0,1,0,0,1},
-		// 								{1,1,0,0,1},
-		// 								{0,1,1,1,0}};
-		
-		int graph[][] = new int[][] {	{0,1,0,1,0,0,0,0,0},
-										{1,0,1,0,1,0,0,0,0},
-										{0,1,0,0,0,1,0,0,0},
-										{1,0,0,0,1,0,1,0,0},
-										{0,1,0,1,0,1,0,1,0},
-										{0,0,1,0,1,0,0,0,1},
-										{0,0,0,1,0,0,0,1,0},
-										{0,0,0,0,1,0,1,0,1},
-										{0,0,0,0,0,1,0,1,0}};
-		int V = 9;
-		t.setV(V);
-
-		t.primMST(graph);
-		// Print edges and weights of MST (solution)
-		t.printMST();
+		return(parent);
 	}
 }
 // Based on code by Aakash Hasija
