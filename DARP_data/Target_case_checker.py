@@ -52,52 +52,15 @@ class target_case_checker:
         self.rows = dp.rows
         self.rip = dp.rip
         self.Ilabel = dp.Ilabel_final
-
-class primMST:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel):
-        self.A = A
-        self.n_r = n_r
-        self.rows = rows
-        self.cols = cols
-        self.rip = rip
-        self.grids = Ilabel
-
-        # Grids: 0 is obstacle, 1 is free space
-        # Graphs represent each individual node and which nodes it is connected to
-        moves = np.array([[0,1],[1,0],[0,-1],[-1,0]])
-        
-        r=0    
-        self.free_nodes = np.argwhere(self.grids[r]==1)   
-        self.node_list = self.free_nodes 
-        self.graph = np.zeros([len(self.free_nodes),len(self.free_nodes)],dtype = int)
-        # for node_ind in range(len(self.free_nodes)):
-        node_ind = 0
-        for node_ind in range(len(self.free_nodes)):
-            node = self.free_nodes[node_ind]
-            for move in moves:
-                row = node[0]+move[0]
-                col = node[1]+move[1]
-                if(row>=0)and(col>=0)and(row<self.rows)and(col<self.cols):
-                    neighbour_node_ind = np.argwhere((self.free_nodes==(row,col)).all(axis=1))
-                    # self.free_nodes == (row,col) prints a matrix of the same size as self.free_node, except True in every first column position = row, and True in every econd column position = col (False everywhere else)
-                    # (self.free_nodes==(row,col)).all(axis=1) will check in which row there is a True for both the first and second col and return that index. axis=1 means it checks along the columns (thereby stepping through the rows)
-                    if len(neighbour_node_ind)>0:
-                        self.graph[node_ind][neighbour_node_ind[0][0]]=1 # weights are just 1 for now
-                        # self.graph[neighbour_node_ind[0][0]][node_ind]=1
-        # Not sure if this is necessary
-        for r in range(self.n_r):
-            self.grids[r][self.rip[r][0]][self.rip[r][1]] = 2
                 
 if __name__ == "__main__":
     make_plots = True
     
-    TCC = target_case_checker()
-    TCC.get_grid("TARGET_CASES/Case04.txt")
+    TCC = target_case_checker(dcells=5)
+    TCC.get_grid("TARGET_CASES/Case05-01.txt")
     TCC.rerun_DARP("target_logger.txt",show_grid=make_plots)
     if make_plots == True:
         plt.show()
-
-    pSTC = primMST(TCC.A,TCC.n_r,TCC.rows,TCC.cols,TCC.rip,TCC.Ilabel)
 
 
     

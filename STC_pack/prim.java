@@ -24,14 +24,6 @@ public class prim {
 		return min_index;
 	}
 
-	public void printMST()
-	{
-		// Funtion to print edges in MST and their weights
-		System.out.println("Edge \tWeight");
-		for (int i = 1; i < this.V; i++)
-			System.out.println(this.parent[i] + " - " + i + "\t" + this.graph[i][this.parent[i]]);
-	}
-
 	public int[] primMST(int graph_input[][])
 	{
 		// function to cunstruct MST

@@ -10,17 +10,18 @@ class DARP:
     def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
         # DIRECTORY MANAGEMENT
         path = pathlib.Path(__file__).parent.absolute()
-        # Changing current working directory to directory this file is in (avoid directory conflict with subprocess)
+        # Changing current working directory to directory this file is in (avoid directory conflict when running subprocesses)
         os.chdir(path)
         # print("CURRENT WORKING DIRECTORY:", os.getcwd())
+
+        # Compile all the Java programs
+        self.compilation_subprocess()
 
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
-        self.cc_vals = cc_vals#np.array([0.1, 0.01, 0.001])
-        # self.cc = self.cc_vals[0]
-        self.rl_vals = rl_vals#np.array([0.01, 0.001, 0.0001])
-        # self.rl = self.rl_vals[0]
+        self.cc_vals = cc_vals
+        self.rl_vals = rl_vals
         self.Imp = Imp
         self.rows = len(self.Grid)
         self.cols = len(self.Grid[0])
@@ -35,6 +36,17 @@ class DARP:
         self.DARP_success = False
         self.log_filename = log_filename
         self.total_iterations = 0
+
+    def compilation_subprocess(self):
+        # Runs the OS appropriate script to run the subprocess to compile all the Java files
+        if (os.name == 'nt'):
+            # print("The current operating system is WINDOWS")
+            subprocess.call([r'compiling.bat'])
+        elif (os.name == 'posix'):
+            # print("The current operating system is UBUNTU")
+            subprocess.call("./compiling.sh")
+        else:
+            print("WARNING: Unrecognised operating system")
 
     def main_DARP(self):
         timestart = time.time_ns()
@@ -200,6 +212,12 @@ class DARP:
             file_log.write('\n')
         file_log.close()
 
+        # Individual Area Search - Prim MST
+        self.primMST()
+
+    def primMST(self):
+        pMST = MST_graph_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid)
+
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
         ES = enclosed_space_check(
@@ -267,7 +285,7 @@ class DARP:
         file_in.close()
 
     def run_subprocess(self):
-        # Runs the OS appropriate script to run the java program
+        # Runs the OS appropriate script to run the Java program for the DARP algorithm
         # subprocess.call([r'DARP_Java\Run_Java.bat'])
         # print(pathlib.Path('Run_Java.bat').absolute())
         if (os.name == 'nt'):
@@ -319,8 +337,8 @@ class DARP:
             colour_assignments[self.n_r] = "k"
 
         ripy, ripx = zip(*self.rip)
-        ripy = self.rows - np.array(ripy)
-        plt.plot(ripx, ripy, 'xk', markersize=20)
+        ripy = self.rows - np.array(ripy) - 1
+        plt.plot(ripx, ripy, '.w', markersize=15)
 
         # Print Assgnments
         for j in range(self.rows):
@@ -336,7 +354,6 @@ class DARP:
                              colour_assignments[self.A[j][i]])
 
         plt.title("Figure generated from DARP run")
-        # plt.show()
 
     def import_bool(self, string):
         # Extract boolean variables
@@ -354,8 +371,11 @@ class DARP:
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
 
+    def small_cell_grid(self):
+        SC_grid = np.array([self.rows*2,self.cols*2],dtype=int)
+
 class MST_graph_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel):
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph):
         self.A = A
         self.n_r = n_r
         self.rows = rows
@@ -395,8 +415,9 @@ class MST_graph_maker:
             self.free_nodes_list.append(free_nodes)
             self.vertices_list.append(vertices)
             self.parents_list.append(parents)
-        r=0
-        self.draw_graph(self.free_nodes_list[r],self.parents_list[r])
+        if print_graph == True:
+            for r in range(self.n_r):
+                self.draw_graph(self.free_nodes_list[r],self.parents_list[r])
         
     def write_input(self,graph,dim):
         # write graphs to file
@@ -410,6 +431,7 @@ class MST_graph_maker:
         file_in.close()
     
     def run_subprocess(self):
+        # Run the OS appropriate script to run the Java program for Prim's MST Algorithm for individual area searches
         if (os.name == 'nt'):
             # print("The current operating system is WINDOWS")
             subprocess.call([r'pMST_Run_Java.bat'])
@@ -428,15 +450,16 @@ class MST_graph_maker:
         return(parents)
 
     def draw_graph(self,nodes,parents):
-        # plt.figure()
         for node in nodes:
-            plt.plot(node[1],node[0],".")
-        # for i in range(1,len(parents)):
-        #     print(nodes[i])
-        #     print(nodes[parents[i]])
-        #     plt.plot(np.array([nodes[i][1],nodes[parents[i]][1]]),np.array([nodes[i][0],nodes[parents[i]][0]]),"-k")
-        plt.show()
-
+            x = node[1]
+            y = self.rows - node[0] - 1
+            plt.plot(x,y,".w")
+        for i in range(1,len(parents)):
+             x0 = nodes[i][1]
+             x1 = nodes[parents[i]][1]
+             y0 = self.rows - nodes[i][0] - 1
+             y1 = self.rows - nodes[parents[i]][0] - 1
+             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -656,14 +679,12 @@ if __name__ == "__main__":
     # FIXED PARAMETERS #
     Imp = False
     maxIter = 10000
-    dcells = 30
-    cc = 0.1
-    rl = 0.0001
-    obs_perc = 20
+    obs_perc = 10
 
-    rows = 5
-    cols = 5
-    n_r = 2
+    rows = 30
+    cols = 30
+    n_r = 3
+    dcells = int(rows*cols/10)
    
     print_graphs = True
 
@@ -679,8 +700,7 @@ if __name__ == "__main__":
     
     dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graphs)
     dp.main_DARP()
-    plt.show()
-    pMST = MST_graph_maker(dp.A,dp.n_r,dp.rows,dp.cols,dp.rip,dp.Ilabel_final)
+    # pMST = MST_graph_maker(dp.A,dp.n_r,dp.rows,dp.cols,dp.rip,dp.Ilabel_final,print_graphs)
     if print_graphs == True:
         plt.show()
 

@@ -2,7 +2,7 @@ import STC_pack.*;
 import java.io.*;
 import java.util.*;
 
-public class Running_STC {
+public class Running_pMST {
     public static void main(String[] args) {
         try{
             // Read Input
@@ -29,7 +29,6 @@ public class Running_STC {
             prim_problem.setV(vertices);
             int parent[] = new int[vertices];
             parent = prim_problem.primMST(graph);
-            prim_problem.printMST();
 
             File file_out = new File("MST_Output.txt");
             BufferedWriter brw = new BufferedWriter(new FileWriter(file_out));
