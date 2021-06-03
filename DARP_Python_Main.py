@@ -5,7 +5,6 @@ import pathlib
 import os
 import random
 import time
-import networkx as nx
 
 class DARP:
     def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
@@ -328,8 +327,8 @@ class DARP:
             for i in range(self.cols):
                 x1 = i-0.5
                 x2 = i+0.5
-                y1 = self.rows - (j-0.5)
-                y2 = self.rows - (j+0.5)
+                y1 = self.rows - (j-0.5) - 1
+                y2 = self.rows - (j+0.5) - 1
                 if self.A[j][i] == self.n_r:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
                 else:
@@ -396,6 +395,8 @@ class MST_graph_maker:
             self.free_nodes_list.append(free_nodes)
             self.vertices_list.append(vertices)
             self.parents_list.append(parents)
+        r=0
+        self.draw_graph(self.free_nodes_list[r],self.parents_list[r])
         
     def write_input(self,graph,dim):
         # write graphs to file
@@ -426,8 +427,16 @@ class MST_graph_maker:
         file_out.close()
         return(parents)
 
-    # def draw_graph(self,nodes,edges):
-        
+    def draw_graph(self,nodes,parents):
+        # plt.figure()
+        for node in nodes:
+            plt.plot(node[1],node[0],".")
+        # for i in range(1,len(parents)):
+        #     print(nodes[i])
+        #     print(nodes[parents[i]])
+        #     plt.plot(np.array([nodes[i][1],nodes[parents[i]][1]]),np.array([nodes[i][0],nodes[parents[i]][0]]),"-k")
+        plt.show()
+
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -670,7 +679,9 @@ if __name__ == "__main__":
     
     dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graphs)
     dp.main_DARP()
+    plt.show()
+    pMST = MST_graph_maker(dp.A,dp.n_r,dp.rows,dp.cols,dp.rip,dp.Ilabel_final)
     if print_graphs == True:
         plt.show()
 
-    pMST = MST_graph_maker(dp.A,dp.n_r,dp.rows,dp.cols,dp.rip,dp.Ilabel_final)
+   
