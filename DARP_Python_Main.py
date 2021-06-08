@@ -6,16 +6,40 @@ import os
 import random
 import time
 
-class DARP:
-    def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
-        # DIRECTORY MANAGEMENT
+class algorithm_start:
+    def __init__(self,recompile=True):
+         # DIRECTORY MANAGEMENT
         path = pathlib.Path(__file__).parent.absolute()
         # Changing current working directory to directory this file is in (avoid directory conflict when running subprocesses)
         os.chdir(path)
         # print("CURRENT WORKING DIRECTORY:", os.getcwd())
 
         # Compile all the Java programs
-        self.compilation_subprocess()
+        if recompile == True:   
+            self.compilation_subprocess()
+    def compilation_subprocess(self):
+        # Runs the OS appropriate script to run the subprocess to compile all the Java files
+        if (os.name == 'nt'):
+            # print("The current operating system is WINDOWS")
+            subprocess.call([r'compiling.bat'])
+        elif (os.name == 'posix'):
+            # print("The current operating system is UBUNTU")
+            subprocess.call("./compiling.sh")
+        else:
+            print("WARNING: Unrecognised operating system")
+
+
+class Run_Algorithm:
+    def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
+        # # DIRECTORY MANAGEMENT
+        # path = pathlib.Path(__file__).parent.absolute()
+        # # Changing current working directory to directory this file is in (avoid directory conflict when running subprocesses)
+        # os.chdir(path)
+        # # print("CURRENT WORKING DIRECTORY:", os.getcwd())
+
+        # # Compile all the Java programs
+        # if recompile_java == True:   
+        #     self.compilation_subprocess()
 
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
@@ -37,18 +61,8 @@ class DARP:
         self.log_filename = log_filename
         self.total_iterations = 0
 
-    def compilation_subprocess(self):
-        # Runs the OS appropriate script to run the subprocess to compile all the Java files
-        if (os.name == 'nt'):
-            # print("The current operating system is WINDOWS")
-            subprocess.call([r'compiling.bat'])
-        elif (os.name == 'posix'):
-            # print("The current operating system is UBUNTU")
-            subprocess.call("./compiling.sh")
-        else:
-            print("WARNING: Unrecognised operating system")
-
-    def main_DARP(self):
+    def main(self):
+    #  DARP SECTION
         timestart = time.time_ns()
         self.enclosed_space_handler()
         self.general_error_handling()
@@ -212,11 +226,11 @@ class DARP:
             file_log.write('\n')
         file_log.close()
 
-        # Individual Area Search - Prim MST
+    # PRIM MST SECTION
         self.primMST()
 
     def primMST(self):
-        pMST = MST_graph_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid)
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -323,7 +337,7 @@ class DARP:
 
     def print_DARP_graph(self):
         # Prints the DARP divisions
-        plt.figure(figsize=(5, 5))
+        plt.figure(figsize=(8, 8))
 
         # Initialize cell colours
         colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
@@ -371,10 +385,7 @@ class DARP:
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
 
-    def small_cell_grid(self):
-        SC_grid = np.array([self.rows*2,self.cols*2],dtype=int)
-
-class MST_graph_maker:
+class Prim_MST_maker:
     def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph):
         self.A = A
         self.n_r = n_r
@@ -382,6 +393,7 @@ class MST_graph_maker:
         self.cols = cols
         self.rip = rip
         self.grids = Ilabel
+        self.small_cell_grids = np.zeros([self.n_r,self.rows*2,self.cols*2])
 
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
@@ -412,13 +424,15 @@ class MST_graph_maker:
             self.run_subprocess()
             parents = self.read_output(vertices)
 
+            # Data structure TODO
             self.free_nodes_list.append(free_nodes)
             self.vertices_list.append(vertices)
             self.parents_list.append(parents)
         if print_graph == True:
             for r in range(self.n_r):
+                self.small_cell_grids[r] = self.small_cell_grid(self.grids[r],self.rows,self.cols)
                 self.draw_graph(self.free_nodes_list[r],self.parents_list[r])
-        
+    
     def write_input(self,graph,dim):
         # write graphs to file
         file_in = open("MST_Input.txt","w")
@@ -460,6 +474,20 @@ class MST_graph_maker:
              y0 = self.rows - nodes[i][0] - 1
              y1 = self.rows - nodes[parents[i]][0] - 1
              plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+
+    def small_cell_grid(self,grid,rows,cols):
+        SC_grid = np.zeros([rows*2,cols*2],dtype=int)
+        for i in range(rows):
+            for j in range(cols):
+                i_SC = i*2 # i starting index for bigger grid
+                j_SC = j*2 # j starting index for bigger grid
+                val = grid[i][j]
+                # Assign one grid value to every four cells
+                SC_grid[i_SC][j_SC] = val
+                SC_grid[i_SC+1][j_SC] = val
+                SC_grid[i_SC][j_SC+1] = val
+                SC_grid[i_SC+1][j_SC+1] = val
+        return(SC_grid)
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -674,15 +702,15 @@ if __name__ == "__main__":
     #                 dp.main_DARP()
     #                 if print_graph == True:
     #                     plt.show()
-
+ 
 ## RUN AN INDIVIDUAL CASE ##
     # FIXED PARAMETERS #
     Imp = False
     maxIter = 10000
     obs_perc = 10
 
-    rows = 30
-    cols = 30
+    rows = 20
+    cols = 20
     n_r = 3
     dcells = int(rows*cols/10)
    
@@ -698,9 +726,12 @@ if __name__ == "__main__":
 
     EnvironmentGrid = grid_class.GRID
     
-    dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graphs)
-    dp.main_DARP()
-    # pMST = MST_graph_maker(dp.A,dp.n_r,dp.rows,dp.cols,dp.rip,dp.Ilabel_final,print_graphs)
+    #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
+    algorithm_start(recompile=True)
+    # Call this to run DARP and MST
+    RA = Run_Algorithm(EnvironmentGrid, dcells, Imp, file_log, print_graphs)
+    RA.main()
+
     if print_graphs == True:
         plt.show()
 
