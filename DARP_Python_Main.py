@@ -28,7 +28,6 @@ class algorithm_start:
         else:
             print("WARNING: Unrecognised operating system")
 
-
 class Run_Algorithm:
     def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
         # # DIRECTORY MANAGEMENT
