@@ -400,6 +400,7 @@ class Prim_MST_maker:
         self.free_nodes_list = list()
         self.vertices_list = list()
         self.parents_list = list()
+        self.nodes_list = list()
 
         for r in range(self.n_r):   
             free_nodes = np.argwhere(self.grids[r]==1) # vertice coordinates
@@ -423,15 +424,23 @@ class Prim_MST_maker:
             self.run_subprocess()
             parents = self.read_output(vertices)
 
-            # Data structure TODO
             self.free_nodes_list.append(free_nodes)
             self.vertices_list.append(vertices)
             self.parents_list.append(parents)
+
+            # node creation
+            nodes = np.empty(vertices,dtype=mst_node)
+
+            for v in range(vertices):
+                nodes[v] = mst_node(v,free_nodes[v][1],free_nodes[v][0])
+                nodes[v].set_edges(parents)              
+
+            self.nodes_list.append(nodes)
+
         if print_graph == True:
             for r in range(self.n_r):
                 self.small_cell_grids[r] = self.small_cell_grid(self.grids[r],self.rows,self.cols)
                 self.draw_graph(self.free_nodes_list[r],self.parents_list[r])
-    
     def write_input(self,graph,dim):
         # write graphs to file
         file_in = open("MST_Input.txt","w")
@@ -637,6 +646,25 @@ class generate_grid:
         if ES.max_label > 1:
             self.es_flag = True
 
+class mst_node:
+    def __init__(self,i,x,y):
+        self.node_number = i
+        self.coord_x = x
+        self.coord_y = y
+    def set_edges(self,parents):
+        self.edges = np.ones(4,dtype=int)*(-1)
+        edge_no = 0
+        for node_ind in range(len(parents)):
+            if(node_ind==self.node_number):
+                self.edges[edge_no] = parents[node_ind]
+                edge_no+=1
+            elif(parents[node_ind]==self.node_number):
+                self.edges[edge_no] = node_ind
+                edge_no+=1
+        self.no_edges = edge_no
+            
+        
+
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
     np.set_printoptions(threshold=np.inf)
@@ -706,12 +734,12 @@ if __name__ == "__main__":
     # FIXED PARAMETERS #
     Imp = False
     maxIter = 10000
-    obs_perc = 10
+    obs_perc = 0
 
-    rows = 20
-    cols = 20
+    rows = 2
+    cols = 9
     n_r = 3
-    dcells = int(rows*cols/10)
+    dcells = int(rows*cols/10)+1
    
     print_graphs = True
 
