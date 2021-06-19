@@ -424,23 +424,30 @@ class Prim_MST_maker:
             self.run_subprocess()
             parents = self.read_output(vertices)
 
-            self.free_nodes_list.append(free_nodes)
-            self.vertices_list.append(vertices)
-            self.parents_list.append(parents)
+            self.free_nodes_list.append(free_nodes) # List of free mode coordinates per robot
+            self.vertices_list.append(vertices)     # List of number of vertices per robot
+            self.parents_list.append(parents)       # List of parent node numbers per robot
 
             # node creation
             nodes = np.empty(vertices,dtype=mst_node)
 
             for v in range(vertices):
                 nodes[v] = mst_node(v,free_nodes[v][1],free_nodes[v][0])
-                nodes[v].set_edges(parents)              
+                nodes[v].set_edges(parents) 
+            for v in range(vertices):
+                self.parse_directions(nodes,nodes[v])  
 
-            self.nodes_list.append(nodes)
+            self.nodes_list.append(nodes)           # List of node objects (using free nodes and parents) per robot
 
+            # waypoint creation
+            waypoints = np.empty(vertices*4,dtype=mst_node)
+            start_node = self.select_start_node(nodes)
+            
         if print_graph == True:
             for r in range(self.n_r):
                 self.small_cell_grids[r] = self.small_cell_grid(self.grids[r],self.rows,self.cols)
                 self.draw_graph(self.free_nodes_list[r],self.parents_list[r])
+   
     def write_input(self,graph,dim):
         # write graphs to file
         file_in = open("MST_Input.txt","w")
@@ -496,6 +503,32 @@ class Prim_MST_maker:
                 SC_grid[i_SC][j_SC+1] = val
                 SC_grid[i_SC+1][j_SC+1] = val
         return(SC_grid)
+
+    def select_start_node(self,nodes):
+        for node in nodes:
+            # Select first node with only one edge
+            if(node.no_edges==1):
+                return(node)
+
+    def parse_directions(self,nodes,node):
+        start_x = node.coord_x
+        start_y = node.coord_y
+        for i in range(len(node.edges)):
+            edge = node.edges[i]
+            new_node = nodes[edge]
+            if(edge!=-1):
+                end_x = new_node.coord_x # col
+                end_y = new_node.coord_y # row
+                dx = end_x - start_x
+                dy = end_y - start_y
+                if(dy==1):
+                    node.dir[i]='S'
+                if(dy==-1):
+                    node.dir[i]='N'
+                if(dx==1):
+                    node.dir[i]='E'
+                if(dx==-1):
+                    node.dir[i]='W'
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -653,6 +686,7 @@ class mst_node:
         self.coord_y = y
     def set_edges(self,parents):
         self.edges = np.ones(4,dtype=int)*(-1)
+        self.dir = np.zeros(4,dtype=str)
         edge_no = 0
         for node_ind in range(len(parents)):
             if(node_ind==self.node_number):
@@ -662,8 +696,8 @@ class mst_node:
                 self.edges[edge_no] = node_ind
                 edge_no+=1
         self.no_edges = edge_no
-            
-        
+        if(self.node_number==0):
+            self.no_edges = self.no_edges-1                        
 
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
