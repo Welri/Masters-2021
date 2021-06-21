@@ -428,20 +428,39 @@ class Prim_MST_maker:
             self.vertices_list.append(vertices)     # List of number of vertices per robot
             self.parents_list.append(parents)       # List of parent node numbers per robot
 
-            # node creation
+            # node object creation
             nodes = np.empty(vertices,dtype=mst_node)
 
             for v in range(vertices):
                 nodes[v] = mst_node(v,free_nodes[v][1],free_nodes[v][0])
                 nodes[v].set_edges(parents) 
             for v in range(vertices):
-                self.parse_directions(nodes,nodes[v])  
+                self.parse_directions(nodes,nodes[v])
+                nodes[v].reorganise_dir()
 
             self.nodes_list.append(nodes)           # List of node objects (using free nodes and parents) per robot
 
-            # waypoint creation
-            waypoints = np.empty(vertices*4,dtype=mst_node)
+            # Start Arrow Creation
+            # waypoints = np.empty(vertices*4,dtype=mst_node)
+            no_arws = (vertices-1)*2 # edges = nodes-1, arrows = edges*2
+            arrows = np.empty(no_arws,dtype=mst_arrow) 
+            arw_ind = 0
             start_node = self.select_start_node(nodes)
+            for i in range(4):
+                direction = start_node.dir[i]
+                node_no = start_node.edges[i]
+                end_node = nodes[node_no]
+                if(direction!=-1):
+                    break
+            arrow = mst_arrow(start_node,end_node,direction)
+            arrows[arw_ind] = arrow
+            arw_ind += 1
+
+            # Update Arrow
+            while(arw_ind!=no_arws):
+                arrow = self.update_arrow(nodes,arrow.end_node,arrow.direction)
+                arrows[arw_ind] = arrow
+                arw_ind += 1
             
         if print_graph == True:
             for r in range(self.n_r):
@@ -522,13 +541,38 @@ class Prim_MST_maker:
                 dx = end_x - start_x
                 dy = end_y - start_y
                 if(dy==1):
-                    node.dir[i]='S'
+                    node.dir[i]= 2 # South
                 if(dy==-1):
-                    node.dir[i]='N'
+                    node.dir[i]= 0 # North
                 if(dx==1):
-                    node.dir[i]='E'
+                    node.dir[i]= 1 # East
                 if(dx==-1):
-                    node.dir[i]='W'
+                    node.dir[i]= 3 # West
+
+    def update_arrow(self,nodes,start_node,prev_dir):
+        edges = start_node.edges
+        direction = start_node.dir
+
+        P = np.array([[3,0,1,2],[0,1,2,3],[1,2,3,0],[2,3,0,1]]) # Stores L,F,R,B for each prev_dir -> N,E,S,W ~ 0,1,2,3 
+
+        p = P[prev_dir] # L,F,R,B
+        # Left
+        if(direction[p[0]]!=-1):
+            ind = p[0]
+        # Forward
+        elif(direction[p[1]]!=-1):
+            ind = p[1]
+        # Right
+        elif(direction[p[2]]!=-1):
+            ind = p[2]
+        # Backttracking
+        elif(direction[p[3]]!=-1):
+            ind = p[3]
+        node_ind = edges[ind]
+        end_node = nodes[node_ind]
+        direction = direction[ind]
+        arrow = mst_arrow(start_node,end_node,direction)
+        return(arrow)   
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -686,7 +730,7 @@ class mst_node:
         self.coord_y = y
     def set_edges(self,parents):
         self.edges = np.ones(4,dtype=int)*(-1)
-        self.dir = np.zeros(4,dtype=str)
+        self.dir = np.ones(4,dtype=int)*(-1)
         edge_no = 0
         for node_ind in range(len(parents)):
             if(node_ind==self.node_number):
@@ -697,7 +741,32 @@ class mst_node:
                 edge_no+=1
         self.no_edges = edge_no
         if(self.node_number==0):
-            self.no_edges = self.no_edges-1                        
+            self.no_edges = self.no_edges-1 
+    def reorganise_dir(self):
+        dir_temp = np.ones(4,dtype=int)*-1
+        edges_temp = np.ones(4,dtype=int)*-1
+        for i in range(4):
+            if(self.dir[i]==0):
+                dir_temp[0] = self.dir[i]
+                edges_temp[0] = self.edges[i]
+            if(self.dir[i]==1):
+                dir_temp[1] = self.dir[i]
+                edges_temp[1] = self.edges[i]
+            if(self.dir[i]==2):
+                dir_temp[2] = self.dir[i]
+                edges_temp[2] = self.edges[i]
+            if(self.dir[i]==3):  
+                dir_temp[3] = self.dir[i]
+                edges_temp[3] = self.edges[i]
+        for i in range(4):
+            self.dir[i] = dir_temp[i]
+            self.edges[i] = edges_temp[i]
+
+class mst_arrow:
+    def __init__(self,start_node,end_node,direction):
+        self.start_node = start_node
+        self.end_node = end_node
+        self.direction = direction
 
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
