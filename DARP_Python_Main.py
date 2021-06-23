@@ -350,16 +350,20 @@ class Run_Algorithm:
             colour_assignments[self.n_r] = "k"
 
         ripy, ripx = zip(*self.rip)
-        ripy = self.rows - np.array(ripy) - 1
+        ripx = (np.array(ripx))*2
+        ripy = (self.rows - np.array(ripy) - 1)*2
         plt.plot(ripx, ripy, '.w', markersize=15)
+        plt.grid(which='major',axis='both', color='k')
+        plt.xticks(np.arange(0, self.cols*2, step=1))
+        plt.yticks(np.arange(0, self.rows*2, step=1))
 
         # Print Assgnments
         for j in range(self.rows):
             for i in range(self.cols):
-                x1 = i-0.5
-                x2 = i+0.5
-                y1 = self.rows - (j-0.5) - 1
-                y2 = self.rows - (j+0.5) - 1
+                x1 = (i-0.5)*2
+                x2 = (i+0.5)*2
+                y1 = (self.rows - (j-0.5) - 1)*2
+                y2 = (self.rows - (j+0.5) - 1)*2
                 if self.A[j][i] == self.n_r:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
                 else:
@@ -401,7 +405,9 @@ class Prim_MST_maker:
         self.vertices_list = list()
         self.parents_list = list()
         self.nodes_list = list()
-
+        self.wpnts_list = list()
+        # self.arw_list = list()
+        
         for r in range(self.n_r):   
             free_nodes = np.argwhere(self.grids[r]==1) # vertice coordinates
             vertices = len(free_nodes) # number of vertices
@@ -441,7 +447,8 @@ class Prim_MST_maker:
             self.nodes_list.append(nodes)           # List of node objects (using free nodes and parents) per robot
 
             # Start Arrow Creation
-            # waypoints = np.empty(vertices*4,dtype=mst_node)
+            self.waypoints = np.empty([vertices*4,2],dtype=mst_node)
+            self.wpnt_ind = 0
             no_arws = (vertices-1)*2 # edges = nodes-1, arrows = edges*2
             arrows = np.empty(no_arws,dtype=mst_arrow) 
             arw_ind = 0
@@ -453,6 +460,7 @@ class Prim_MST_maker:
                 if(direction!=-1):
                     break
             arrow = mst_arrow(start_node,end_node,direction)
+            self.back_turn_wpnts(arrow) # Add first two waypoints
             arrows[arw_ind] = arrow
             arw_ind += 1
 
@@ -461,6 +469,12 @@ class Prim_MST_maker:
                 arrow = self.update_arrow(nodes,arrow.end_node,arrow.direction)
                 arrows[arw_ind] = arrow
                 arw_ind += 1
+
+            # Final waypoints for last arrow
+
+
+            self.wpnts_list.append(self.waypoints)
+            # self.arw_list.append(arrows)
             
         if print_graph == True:
             for r in range(self.n_r):
@@ -496,18 +510,6 @@ class Prim_MST_maker:
             parents[d] = int(file_out.readline())
         file_out.close()
         return(parents)
-
-    def draw_graph(self,nodes,parents):
-        for node in nodes:
-            x = node[1]
-            y = self.rows - node[0] - 1
-            plt.plot(x,y,".w")
-        for i in range(1,len(parents)):
-             x0 = nodes[i][1]
-             x1 = nodes[parents[i]][1]
-             y0 = self.rows - nodes[i][0] - 1
-             y1 = self.rows - nodes[parents[i]][0] - 1
-             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
     def small_cell_grid(self,grid,rows,cols):
         SC_grid = np.zeros([rows*2,cols*2],dtype=int)
@@ -559,20 +561,214 @@ class Prim_MST_maker:
         # Left
         if(direction[p[0]]!=-1):
             ind = p[0]
+            new_dir = 'L'
         # Forward
         elif(direction[p[1]]!=-1):
             ind = p[1]
+            new_dir = 'F'
         # Right
         elif(direction[p[2]]!=-1):
             ind = p[2]
+            new_dir = 'R'
         # Backttracking
         elif(direction[p[3]]!=-1):
             ind = p[3]
+            new_dir = 'B'
         node_ind = edges[ind]
         end_node = nodes[node_ind]
         direction = direction[ind]
         arrow = mst_arrow(start_node,end_node,direction)
+        if(new_dir=='L'):
+            self.left_turn_wpnts(arrow)
+        elif(new_dir=='F'):
+            self.fw_turn_wpnts(arrow)
+        elif(new_dir=='R'):
+            self.right_turn_wpnts(arrow)
+        elif(new_dir=='B'):
+            self.back_turn_wpnts(arrow)
         return(arrow)   
+
+    def left_turn_wpnts(self,arrow):
+        # Add one waypoint
+        direction = arrow.direction
+        end_node = arrow.end_node
+        X = end_node.coord_x
+        Y = end_node.coord_y
+        if(direction==0):
+            # This means it went from E-N
+            x = 2*X
+            y = 2*Y + 1
+        elif(direction==1):
+            # This means it went from S-E
+            x = 2*X
+            y = 2*Y
+        elif(direction==2):
+            # This means it went from W-S
+            x = 2*X + 1
+            y = 2*Y
+        elif(direction==3):        
+            # This means it went from N-W
+            x = 2*X + 1
+            y = 2*Y + 1
+        self.waypoints[self.wpnt_ind][0] = y # row
+        self.waypoints[self.wpnt_ind][1] = x # col
+        self.wpnt_ind+=1
+    
+    def fw_turn_wpnts(self,arrow):
+        # Add two waypoints
+        direction = arrow.direction
+        end_node = arrow.end_node
+        X = end_node.coord_x
+        Y = end_node.coord_y
+        if(direction==0):
+            # This means it went from N-N
+            x1 = 2*X
+            y1 = 2*Y + 2
+            x2 = 2*X
+            y2 = 2*Y + 1
+        elif(direction==1):
+            # This means it went from E-E
+            x1 = 2*X - 1
+            y1 = 2*Y
+            x2 = 2*X
+            y2 = 2*Y
+        elif(direction==2):
+            # This means it went from S-S
+            x1 = 2*X + 1
+            y1 = 2*Y - 1
+            x2 = 2*X + 1
+            y2 = 2*Y
+        elif(direction==3):        
+            # This means it went from W-W
+            x1 = 2*X + 1
+            y1 = 2*Y + 1
+            x2 = 2*X + 2
+            y2 = 2*Y + 1
+        self.waypoints[self.wpnt_ind][0] = y1 # row
+        self.waypoints[self.wpnt_ind][1] = x1 # col
+        self.wpnt_ind+=1
+        self.waypoints[self.wpnt_ind][0] = y2 # row
+        self.waypoints[self.wpnt_ind][1] = x2 # col
+        self.wpnt_ind+=1
+    
+    def right_turn_wpnts(self,arrow):
+        # Add three waypoints
+        direction = arrow.direction
+        end_node = arrow.end_node
+        X = end_node.coord_x
+        Y = end_node.coord_y
+        if(direction==0):
+            # This means it went from W-N
+            x1 = 2*X
+            y1 = 2*Y + 3
+            x2 = 2*X 
+            y2 = 2*Y + 2
+            x3 = 2*X
+            y3 = 2*Y + 1
+        elif(direction==1):
+            # This means it went from N-E
+            x1 = 2*X - 2
+            y1 = 2*Y
+            x2 = 2*X - 1
+            y2 = 2*Y
+            x3 = 2*X
+            y3 = 2*Y
+        elif(direction==2):
+            # This means it went from E-S
+            x1 = 2*X + 1
+            y1 = 2*Y - 2
+            x2 = 2*X + 1
+            y2 = 2*Y - 1
+            x3 = 2*X + 1
+            y3 = 2*Y
+        elif(direction==3):        
+            # This means it went from S-W
+            x1 = 2*X + 3
+            y1 = 2*Y + 1
+            x2 = 2*X + 2
+            y2 = 2*Y + 1
+            x3 = 2*X + 1
+            y3 = 2*Y + 1
+        self.waypoints[self.wpnt_ind][0] = y1 # row
+        self.waypoints[self.wpnt_ind][1] = x1 # col
+        self.wpnt_ind+=1
+        self.waypoints[self.wpnt_ind][0] = y2 # row
+        self.waypoints[self.wpnt_ind][1] = x2 # col
+        self.wpnt_ind+=1
+        self.waypoints[self.wpnt_ind][0] = y3 # row
+        self.waypoints[self.wpnt_ind][1] = x3 # col
+        self.wpnt_ind+=1
+    
+    def back_turn_wpnts(self,arrow):
+        # Add four waypoints
+        direction = arrow.direction
+        end_node = arrow.end_node
+        X = end_node.coord_x
+        Y = end_node.coord_y
+        if(direction==0):
+            # This means it went from S-N
+            x1 = 2*X + 1
+            y1 = 2*Y + 3
+            x2 = 2*X 
+            y2 = 2*Y + 3
+            x3 = 2*X
+            y3 = 2*Y + 2
+            x4 = 2*X
+            y4 = 2*Y + 1
+        elif(direction==1):
+            # This means it went from W-E
+            x1 = 2*X - 2
+            y1 = 2*Y + 1
+            x2 = 2*X - 2
+            y2 = 2*Y
+            x3 = 2*X - 1
+            y3 = 2*Y
+            x4 = 2*X
+            y4 = 2*Y
+        elif(direction==2):
+            # This means it went from N-S
+            x1 = 2*X
+            y1 = 2*Y - 2
+            x2 = 2*X + 1
+            y2 = 2*Y - 2
+            x3 = 2*X + 1
+            y3 = 2*Y - 1
+            x4 = 2*X + 1
+            y4 = 2*Y
+        elif(direction==3):        
+            # This means it went from E-W
+            x1 = 2*X + 3
+            y1 = 2*Y
+            x2 = 2*X + 3
+            y2 = 2*Y + 1
+            x3 = 2*X + 2
+            y3 = 2*Y + 1
+            x4 = 2*X + 1
+            y4 = 2*Y + 1
+        self.waypoints[self.wpnt_ind][0] = y1 # row
+        self.waypoints[self.wpnt_ind][1] = x1 # col
+        self.wpnt_ind+=1
+        self.waypoints[self.wpnt_ind][0] = y2 # row
+        self.waypoints[self.wpnt_ind][1] = x2 # col
+        self.wpnt_ind+=1
+        self.waypoints[self.wpnt_ind][0] = y3 # row
+        self.waypoints[self.wpnt_ind][1] = x3 # col
+        self.wpnt_ind+=1
+        self.waypoints[self.wpnt_ind][0] = y4 # row
+        self.waypoints[self.wpnt_ind][1] = x4 # col
+        self.wpnt_ind+=1
+    
+    def draw_graph(self,nodes,parents):
+        for node in nodes:
+            x = (node[1])*2
+            y = (self.rows - node[0] - 1)*2
+            plt.plot(x,y,".w")
+        for i in range(1,len(parents)):
+             x0 = (nodes[i][1])*2
+             x1 = (nodes[parents[i]][1])*2
+             y0 = (self.rows - nodes[i][0] - 1)*2
+             y1 = (self.rows - nodes[parents[i]][0] - 1)*2
+             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
