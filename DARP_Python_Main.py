@@ -354,8 +354,8 @@ class Run_Algorithm:
         ripy = (self.rows - np.array(ripy) - 1)*2 + 0.5
         plt.plot(ripx, ripy, '.w', markersize=15)
         # plt.grid(which='major',axis='both', color='k')
-        plt.xticks(np.arange(0, self.cols*2, step=1))
-        plt.yticks(np.arange(0, self.rows*2, step=1))
+        plt.xticks(np.arange(0, self.cols*2, step=2))
+        plt.yticks(np.arange(0, self.rows*2, step=2))
 
         # Print Assgnments
         for j in range(self.rows):
@@ -396,7 +396,7 @@ class Prim_MST_maker:
         self.cols = cols
         self.rip = rip
         self.grids = Ilabel
-        self.small_cell_grids = np.zeros([self.n_r,self.rows*2,self.cols*2])
+        # self.small_cell_grids = np.zeros([self.n_r,self.rows*2,self.cols*2])
 
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
@@ -478,7 +478,7 @@ class Prim_MST_maker:
             
         if print_graph == True:
             for r in range(self.n_r):
-                self.small_cell_grids[r] = self.small_cell_grid(self.grids[r],self.rows,self.cols)
+                # self.small_cell_grids[r] = self.small_cell_grid(self.grids[r],self.rows,self.cols)
                 self.draw_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_list[r])
    
     def write_input(self,graph,dim):
@@ -640,9 +640,9 @@ class Prim_MST_maker:
             y2 = 2*Y
         elif(direction==3):        
             # This means it went from W-W
-            x1 = 2*X + 1
+            x1 = 2*X + 2
             y1 = 2*Y + 1
-            x2 = 2*X + 2
+            x2 = 2*X + 1
             y2 = 2*Y + 1
         self.waypoints[self.wpnt_ind][0] = y1 # row
         self.waypoints[self.wpnt_ind][1] = x1 # col
@@ -1039,10 +1039,10 @@ if __name__ == "__main__":
     # FIXED PARAMETERS #
     Imp = False
     maxIter = 10000
-    obs_perc = 10
+    obs_perc = 30
 
-    rows = 10
-    cols = 10
+    rows = 20
+    cols = 20
     n_r = 3
     dcells = int(rows*cols/10)+1
    
@@ -1057,6 +1057,12 @@ if __name__ == "__main__":
     grid_class.randomise_obs()
 
     EnvironmentGrid = grid_class.GRID
+
+    # EnvironmentGrid = np.array([    [1,1,0,0,0],
+    #                                 [0,0,0,0,1],
+    #                                 [2,0,0,0,1],
+    #                                 [0,0,0,0,1],
+    #                                 [1,0,0,2,1]],dtype=int)
     
     #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
     algorithm_start(recompile=True)
