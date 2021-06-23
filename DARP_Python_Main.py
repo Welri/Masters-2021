@@ -350,20 +350,20 @@ class Run_Algorithm:
             colour_assignments[self.n_r] = "k"
 
         ripy, ripx = zip(*self.rip)
-        ripx = (np.array(ripx))*2
-        ripy = (self.rows - np.array(ripy) - 1)*2
+        ripx = (np.array(ripx))*2 + 0.5
+        ripy = (self.rows - np.array(ripy) - 1)*2 + 0.5
         plt.plot(ripx, ripy, '.w', markersize=15)
-        plt.grid(which='major',axis='both', color='k')
+        # plt.grid(which='major',axis='both', color='k')
         plt.xticks(np.arange(0, self.cols*2, step=1))
         plt.yticks(np.arange(0, self.rows*2, step=1))
 
         # Print Assgnments
         for j in range(self.rows):
             for i in range(self.cols):
-                x1 = (i-0.5)*2
-                x2 = (i+0.5)*2
-                y1 = (self.rows - (j-0.5) - 1)*2
-                y2 = (self.rows - (j+0.5) - 1)*2
+                x1 = (i-0.5)*2 + 0.5
+                x2 = (i+0.5)*2 + 0.5
+                y1 = (self.rows - (j-0.5) - 1)*2 + 0.5
+                y2 = (self.rows - (j+0.5) - 1)*2 + 0.5
                 if self.A[j][i] == self.n_r:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
                 else:
@@ -479,7 +479,7 @@ class Prim_MST_maker:
         if print_graph == True:
             for r in range(self.n_r):
                 self.small_cell_grids[r] = self.small_cell_grid(self.grids[r],self.rows,self.cols)
-                self.draw_graph(self.free_nodes_list[r],self.parents_list[r])
+                self.draw_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_list[r])
    
     def write_input(self,graph,dim):
         # write graphs to file
@@ -758,17 +758,23 @@ class Prim_MST_maker:
         self.waypoints[self.wpnt_ind][1] = x4 # col
         self.wpnt_ind+=1
     
-    def draw_graph(self,nodes,parents):
+    def draw_graph(self,nodes,parents,wpnts):
         for node in nodes:
-            x = (node[1])*2
-            y = (self.rows - node[0] - 1)*2
+            x = (node[1])*2 + 0.5
+            y = (self.rows - node[0] - 1)*2 + 0.5
             plt.plot(x,y,".w")
         for i in range(1,len(parents)):
-             x0 = (nodes[i][1])*2
-             x1 = (nodes[parents[i]][1])*2
-             y0 = (self.rows - nodes[i][0] - 1)*2
-             y1 = (self.rows - nodes[parents[i]][0] - 1)*2
+             x0 = (nodes[i][1])*2 + 0.5
+             x1 = (nodes[parents[i]][1])*2 + 0.5
+             y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
+             y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
              plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+        px = np.zeros(len(wpnts),dtype=int)
+        py = np.zeros(len(wpnts),dtype=int)
+        for pi in range(len(wpnts)):
+            py[pi] = self.rows*2 - wpnts[pi][0] - 1
+            px[pi] = wpnts[pi][1]
+        plt.plot(px,py,'-k')
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -1033,10 +1039,10 @@ if __name__ == "__main__":
     # FIXED PARAMETERS #
     Imp = False
     maxIter = 10000
-    obs_perc = 0
+    obs_perc = 10
 
-    rows = 2
-    cols = 9
+    rows = 10
+    cols = 10
     n_r = 3
     dcells = int(rows*cols/10)+1
    
