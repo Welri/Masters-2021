@@ -5,6 +5,7 @@ import pathlib
 import os
 import random
 import time
+import math
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -29,7 +30,7 @@ class algorithm_start:
             print("WARNING: Unrecognised operating system")
 
 class Run_Algorithm:
-    def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
+    def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001]),tick_spacing = 1):
         # # DIRECTORY MANAGEMENT
         # path = pathlib.Path(__file__).parent.absolute()
         # # Changing current working directory to directory this file is in (avoid directory conflict when running subprocesses)
@@ -59,6 +60,15 @@ class Run_Algorithm:
         self.DARP_success = False
         self.log_filename = log_filename
         self.total_iterations = 0
+        self.tick_spacing = tick_spacing
+
+    def set_continuous(self,hor,vert,small_cell,large_cell,rip_sml,rip_cont):
+        self.horizontal = hor
+        self.vertical = vert
+        self.small_cell = small_cell
+        self.large_cell = large_cell
+        self.rip_cont = rip_cont
+        self.rip_sml = rip_sml
 
     def main(self):
     #  DARP SECTION
@@ -229,7 +239,7 @@ class Run_Algorithm:
         self.primMST()
 
     def primMST(self):
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid)
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_sml)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -349,13 +359,13 @@ class Run_Algorithm:
                 c = 0
             colour_assignments[self.n_r] = "k"
 
-        ripy, ripx = zip(*self.rip)
-        ripx = (np.array(ripx))*2 + 0.5
-        ripy = (self.rows - np.array(ripy) - 1)*2 + 0.5
-        plt.plot(ripx, ripy, '.w', markersize=15)
+        # ripy, ripx = zip(*self.rip)
+        # ripx = (np.array(ripx))*2 + 0.5
+        # ripy = (self.rows - np.array(ripy) - 1)*2 + 0.5
+        # plt.plot(ripx, ripy, '.w', markersize=15)
         # plt.grid(which='major',axis='both', color='k')
-        plt.xticks(np.arange(0, self.cols*2, step=2))
-        plt.yticks(np.arange(0, self.rows*2, step=2))
+        plt.xticks(np.arange(0, self.cols*2, step=self.tick_spacing))
+        plt.yticks(np.arange(0, self.rows*2, step=self.tick_spacing))
 
         # Print Assgnments
         for j in range(self.rows):
@@ -389,13 +399,14 @@ class Run_Algorithm:
             return(-1)
 
 class Prim_MST_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph):
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_sml):
         self.A = A
         self.n_r = n_r
         self.rows = rows
         self.cols = cols
         self.rip = rip
         self.grids = Ilabel
+        self.rip_sml = rip_sml
         # self.small_cell_grids = np.zeros([self.n_r,self.rows*2,self.cols*2])
 
         # Grids: 0 is obstacle, 1 is free space
@@ -471,16 +482,38 @@ class Prim_MST_maker:
                 arw_ind += 1
 
             # Final waypoints for last arrow
-
-
             self.wpnts_list.append(self.waypoints)
             # self.arw_list.append(arrows)
-            
+        
+    
+        self.update_wpnts()
+
         if print_graph == True:
             for r in range(self.n_r):
-                # self.small_cell_grids[r] = self.small_cell_grid(self.grids[r],self.rows,self.cols)
                 self.draw_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_list[r])
    
+    def update_wpnts(self):
+        for r in range(self.n_r):
+            wpnts = self.wpnts_list[r]
+            wpnts_updated = np.zeros(np.shape(wpnts),dtype=int)
+            rip = self.rip_sml[r]
+            for w in range(len(wpnts)):
+                if(wpnts[w][0]==rip[0])and(wpnts[w][1]==rip[1]):
+                    p = w
+            ind = 0
+            ind_p = p
+            while(ind_p!=len(wpnts)):
+                wpnts_updated[ind] = wpnts[ind_p]
+                ind_p+=1
+                ind+=1
+            ind_p=0
+            while(ind_p!=p):
+                wpnts_updated[ind] = wpnts[ind_p]
+                ind_p+=1
+                ind+=1
+            self.wpnts_list[r] = wpnts_updated
+
+
     def write_input(self,graph,dim):
         # write graphs to file
         file_in = open("MST_Input.txt","w")
@@ -775,6 +808,9 @@ class Prim_MST_maker:
             py[pi] = self.rows*2 - wpnts[pi][0] - 1
             px[pi] = wpnts[pi][1]
         plt.plot(px,py,'-k')
+        plt.plot(px,py,'.k')
+        for r in range(self.n_r):
+            plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.k',markersize=15)
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -889,42 +925,6 @@ class enclosed_space_check:
             self.next_label += 1
         return self.labels[r]
 
-class generate_grid:
-    def __init__(self, rows, cols, robots, obs):
-        self.rows = rows
-        self.cols = cols
-        self.GRID = np.zeros([rows, cols], dtype=int)
-        self.n_r = robots
-        self.obs = obs
-        self.possible_indexes = np.argwhere(self.GRID == 0)
-        np.random.shuffle(self.possible_indexes)
-        self.es_flag = False
-
-    def randomise_robots(self):
-        if self.n_r < self.rows*self.cols:
-            self.rip = self.possible_indexes[0:self.n_r]
-            val1 = self.rip[:, 0]
-            val2 = self.rip[:, 1]
-            self.GRID[val1, val2] = 2
-        else:
-            print("MADNESS! Why do you have so many robots?")
-
-    def randomise_obs(self):
-        if self.obs < (self.rows*self.cols-self.n_r):
-            indices = self.possible_indexes[self.n_r:self.n_r+self.obs]
-            val1 = indices[:, 0]
-            val2 = indices[:, 1]
-            self.GRID[val1, val2] = 1
-        else:
-            print("MADNESS! Why so many obstacles?")
-
-    def flag_enclosed_space(self):
-        # Note that DARP re-does this, so co-ordinate them because enclosed_space_check is an expensive process
-        ES = enclosed_space_check(
-            self.n_r, self.rows, self.cols, self.GRID, self.rip)
-        if ES.max_label > 1:
-            self.es_flag = True
-
 class mst_node:
     def __init__(self,i,x,y):
         self.node_number = i
@@ -969,6 +969,69 @@ class mst_arrow:
         self.start_node = start_node
         self.end_node = end_node
         self.direction = direction
+
+class generate_rand_grid:
+    def __init__(self, rows, cols, robots, obs):
+        self.rows = rows
+        self.cols = cols
+        self.GRID = np.zeros([rows, cols], dtype=int)
+        self.n_r = robots
+        self.obs = obs
+        self.possible_indexes = np.argwhere(self.GRID == 0)
+        np.random.shuffle(self.possible_indexes)
+        self.es_flag = False
+
+    def randomise_robots(self):
+        if self.n_r < self.rows*self.cols:
+            self.rip = self.possible_indexes[0:self.n_r]
+            val1 = self.rip[:, 0]
+            val2 = self.rip[:, 1]
+            self.GRID[val1, val2] = 2
+        else:
+            print("MADNESS! Why do you have so many robots?")
+
+    def randomise_obs(self):
+        if self.obs < (self.rows*self.cols-self.n_r):
+            indices = self.possible_indexes[self.n_r:self.n_r+self.obs]
+            val1 = indices[:, 0]
+            val2 = indices[:, 1]
+            self.GRID[val1, val2] = 1
+        else:
+            print("MADNESS! Why so many obstacles?")
+
+    def flag_enclosed_space(self):
+        # Note that DARP re-does this, so co-ordinate them because enclosed_space_check is an expensive process
+        ES = enclosed_space_check(
+            self.n_r, self.rows, self.cols, self.GRID, self.rip)
+        if ES.max_label > 1:
+            self.es_flag = True
+
+class generate_grid:
+    def __init__(self,hor,vert,fov):
+        # Get continuous dimensions too
+        self.small_cell = fov_sqr
+        self.large_cell = fov_sqr*2 # large cell size in km
+
+        # Divide Environment Into Large Nodes
+        self.rows = math.ceil(vert/self.large_cell)
+        self.cols = math.ceil(hor/self.large_cell)
+        self.GRID = np.zeros([self.rows, self.cols], dtype=int)
+    def set_robots(self,n_r,coords):
+        self.n_r =  n_r # number of robots
+        self.rip_cont = coords 
+        self.rip_sml = np.zeros([len(coords),2],dtype=int)
+        self.rip_lrg = np.zeros([len(coords),2],dtype=int)
+        for r in range(self.n_r):
+            rip = self.rip_cont[r]
+            # small cell position and large cell position
+            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/self.small_cell) # row
+            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/self.small_cell) # col
+            self.rip_lrg[r][0] = math.floor(self.rip_cont[r][0]/self.large_cell) # row
+            self.rip_lrg[r][1] = math.floor(self.rip_cont[r][1]/self.large_cell) # col
+            self.GRID[self.rip_lrg[r][0]][self.rip_lrg[r][1]] = 2
+    def set_obs(self,obs_coords):
+        for obs in obs_coords:
+            self.GRID[obs[0]][obs[1]] = 1
 
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
@@ -1037,40 +1100,106 @@ if __name__ == "__main__":
  
 ## RUN AN INDIVIDUAL CASE ##
     # FIXED PARAMETERS #
+        # Imp = False
+        # maxIter = 10000
+        # obs_perc = 20
+        # tick_spacing = 1
+
+        # rows = 20
+        # cols = 20
+        # n_r = 3
+        # dcells = int(rows*cols/10)+1
+    
+        # print_graphs = True
+
+        # # RUNNING SIMULATION #
+        # file_log = "Logging_004.txt"
+
+        # obstacles = int((rows*cols)*obs_perc/100)
+        # grid_class = generate_rand_grid(rows, cols, n_r, obstacles)
+        # grid_class.randomise_robots()
+        # grid_class.randomise_obs()
+
+        # EnvironmentGrid = grid_class.GRID
+
+        # # EnvironmentGrid = np.array([    [1,1,0,0,0],
+        # #                                 [0,0,0,0,1],
+        # #                                 [2,0,0,0,1],
+        # #                                 [0,0,0,0,1],
+        # #                                 [1,0,0,2,1]],dtype=int)
+        
+        # #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
+        # algorithm_start(recompile=True)
+        # # Call this to run DARP and MST
+
+        # RA = Run_Algorithm(EnvironmentGrid, dcells, Imp, file_log, print_graphs,tick_spacing=tick_spacing)
+        # RA.main()
+
+        # if print_graphs == True:
+        #     plt.show()
+
+## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
+    # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
+    horizontal = 224.0 # m
+    vertical = 224.0 # m
+
+    # Establish Small Node size
+    fov_sqr = 12.3 # small cell size in m
+    GG = generate_grid(horizontal,vertical,fov_sqr)
+    
+    # Coordinates from top left (vert,hor)
+    n_r = 2
+    robot_cont = np.array([[50,160],[180,40]])
+    GG.set_robots(n_r,robot_cont)
+    obs = np.array([[0,1],[0,2],[1,1],[1,2],[2,2],[2,3],[2,4],[2,5],[3,4],[3,5],[7,4],[7,5],[8,4],[8,5],[9,5]])
+    GG.set_obs(obs)
+
+    # Other parameters
     Imp = False
     maxIter = 10000
-    obs_perc = 30
-
-    rows = 20
-    cols = 20
-    n_r = 3
+    tick_spacing = 1
+    rows = GG.rows
+    cols = GG.cols
     dcells = int(rows*cols/10)+1
-   
+    
     print_graphs = True
 
     # RUNNING SIMULATION #
     file_log = "Logging_004.txt"
+    EnvironmentGrid = GG.GRID
 
-    obstacles = int((rows*cols)*obs_perc/100)
-    grid_class = generate_grid(rows, cols, n_r, obstacles)
-    grid_class.randomise_robots()
-    grid_class.randomise_obs()
-
-    EnvironmentGrid = grid_class.GRID
-
-    # EnvironmentGrid = np.array([    [1,1,0,0,0],
-    #                                 [0,0,0,0,1],
-    #                                 [2,0,0,0,1],
-    #                                 [0,0,0,0,1],
-    #                                 [1,0,0,2,1]],dtype=int)
-    
     #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
     algorithm_start(recompile=True)
     # Call this to run DARP and MST
-    RA = Run_Algorithm(EnvironmentGrid, dcells, Imp, file_log, print_graphs)
+
+    RA = Run_Algorithm(EnvironmentGrid, dcells, Imp, file_log, print_graphs,tick_spacing=tick_spacing)
+    RA.set_continuous(horizontal,vertical,GG.small_cell,GG.large_cell,GG.rip_sml,GG.rip_cont)
     RA.main()
 
     if print_graphs == True:
         plt.show()
 
-   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TODO: Print in continuous and discrete space? Robot starting positions do not have to be at node centre
+
+
+# TODO: Create continuous space conversion to discrete
+    # Make the robot starting positions continuous
+    # Establish the nearest small cell centre and the nearest large cell centre.
+    # Establish waypoint positions in continuous space
+# TODO: Include dynamic constraints
+    # The first waypoint is the robot starting position regardless of whether it is a node centre
