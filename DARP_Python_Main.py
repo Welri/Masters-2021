@@ -1,11 +1,13 @@
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 import pathlib
 import os
 import random
 import time
 import math
+MARKERSIZE=10
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -30,7 +32,7 @@ class algorithm_start:
             print("WARNING: Unrecognised operating system")
 
 class Run_Algorithm:
-    def __init__(self, EnvironmentGrid, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001]),tick_spacing = 1):
+    def __init__(self, EnvironmentGrid, rip, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001]),tick_spacing = 1):
         # # DIRECTORY MANAGEMENT
         # path = pathlib.Path(__file__).parent.absolute()
         # # Changing current working directory to directory this file is in (avoid directory conflict when running subprocesses)
@@ -50,6 +52,7 @@ class Run_Algorithm:
         self.rows = len(self.Grid)
         self.cols = len(self.Grid[0])
         self.rip = np.argwhere(self.Grid == 2)
+        self.rip_temp = rip
         self.n_r = len(self.rip)
         self.ArrayOfElements = np.zeros(self.n_r, dtype=int)
         self.fairDiv = self.rows*self.cols/self.n_r
@@ -69,7 +72,18 @@ class Run_Algorithm:
         self.large_cell = large_cell
         self.rip_cont = rip_cont
         self.rip_sml = rip_sml
-
+        ind = np.zeros([self.n_r],dtype=int)
+        for r_0 in range(self.n_r):
+            for r_1 in range(self.n_r):
+                if(self.rip[r_0][0] == self.rip_temp[r_1][0])and(self.rip[r_0][1] == self.rip_temp[r_1][1]):
+                    ind[r_0] = r_1
+        for r in range(self.n_r):
+            self.rip_temp[r][0] = self.rip_sml[ind[r]][0]
+            self.rip_temp[r][1] = self.rip_sml[ind[r]][1]
+        for r in range(self.n_r):
+            self.rip_sml[r][0] = self.rip_temp[r][0]
+            self.rip_sml[r][1] = self.rip_temp[r][1]
+         
     def main(self):
     #  DARP SECTION
         timestart = time.time_ns()
@@ -345,8 +359,11 @@ class Run_Algorithm:
         file_out.close()
 
     def print_DARP_graph(self):
+        plt.rc('font', size=12)
+        plt.rc('axes', titlesize=15) 
+
         # Prints the DARP divisions
-        plt.figure(figsize=(8, 8))
+        fig,ax = plt.subplots(figsize=(8, 8))
 
         # Initialize cell colours
         colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
@@ -359,13 +376,21 @@ class Run_Algorithm:
                 c = 0
             colour_assignments[self.n_r] = "k"
 
-        # ripy, ripx = zip(*self.rip)
+        # ripy, ripx = zip(*self.rip_sml)
         # ripx = (np.array(ripx))*2 + 0.5
         # ripy = (self.rows - np.array(ripy) - 1)*2 + 0.5
-        # plt.plot(ripx, ripy, '.w', markersize=15)
-        # plt.grid(which='major',axis='both', color='k')
-        plt.xticks(np.arange(0, self.cols*2, step=self.tick_spacing))
-        plt.yticks(np.arange(0, self.rows*2, step=self.tick_spacing))
+        # plt.plot(ripx, ripy, 'xk', markersize=15)
+        for r in range(self.n_r):
+            ripy = self.rows*2 - self.rip_sml[r][0] - 1
+            ripx = self.rip_sml[r][1]
+            plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
+
+        ax.set_xticks(np.arange(0, self.cols*2, step=self.tick_spacing),minor=False)
+        ax.set_yticks(np.arange(0, self.rows*2, step=self.tick_spacing),minor=False)
+        ax.set_xticks(np.arange(-0.5, self.cols*2+0.5, step=2),minor=True)
+        ax.set_yticks(np.arange(-0.5, self.rows*2+0.5, step=2),minor=True)
+
+        plt.grid(which='minor',axis='both', color='k')
 
         # Print Assgnments
         for j in range(self.rows):
@@ -380,7 +405,7 @@ class Run_Algorithm:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
                              colour_assignments[self.A[j][i]])
 
-        plt.title("Figure generated from DARP run")
+        plt.title("DARP with Spanning Tree Results")
 
     def import_bool(self, string):
         # Extract boolean variables
@@ -495,7 +520,7 @@ class Prim_MST_maker:
     def update_wpnts(self):
         for r in range(self.n_r):
             wpnts = self.wpnts_list[r]
-            wpnts_updated = np.zeros(np.shape(wpnts),dtype=int)
+            wpnts_updated = np.zeros([len(wpnts)+1,2],dtype=int)
             rip = self.rip_sml[r]
             for w in range(len(wpnts)):
                 if(wpnts[w][0]==rip[0])and(wpnts[w][1]==rip[1]):
@@ -511,8 +536,8 @@ class Prim_MST_maker:
                 wpnts_updated[ind] = wpnts[ind_p]
                 ind_p+=1
                 ind+=1
+            wpnts_updated[ind] = wpnts[p]
             self.wpnts_list[r] = wpnts_updated
-
 
     def write_input(self,graph,dim):
         # write graphs to file
@@ -792,25 +817,28 @@ class Prim_MST_maker:
         self.wpnt_ind+=1
     
     def draw_graph(self,nodes,parents,wpnts):
-        for node in nodes:
-            x = (node[1])*2 + 0.5
-            y = (self.rows - node[0] - 1)*2 + 0.5
-            plt.plot(x,y,".w")
-        for i in range(1,len(parents)):
-             x0 = (nodes[i][1])*2 + 0.5
-             x1 = (nodes[parents[i]][1])*2 + 0.5
-             y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
-             y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
-             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+        # Plot spanning tree
+        # for node in nodes:
+        #     x = (node[1])*2 + 0.5
+        #     y = (self.rows - node[0] - 1)*2 + 0.5
+        #     plt.plot(x,y,".w")
+        # for i in range(1,len(parents)):
+        #      x0 = (nodes[i][1])*2 + 0.5
+        #      x1 = (nodes[parents[i]][1])*2 + 0.5
+        #      y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
+        #      y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
+        #      plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+
+        # Plot waypoints
         px = np.zeros(len(wpnts),dtype=int)
         py = np.zeros(len(wpnts),dtype=int)
         for pi in range(len(wpnts)):
             py[pi] = self.rows*2 - wpnts[pi][0] - 1
             px[pi] = wpnts[pi][1]
-        plt.plot(px,py,'-k')
+        plt.plot(px,py,'-k') # linewidth=2
         plt.plot(px,py,'.k')
         for r in range(self.n_r):
-            plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.k',markersize=15)
+            plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -1016,22 +1044,53 @@ class generate_grid:
         self.rows = math.ceil(vert/self.large_cell)
         self.cols = math.ceil(hor/self.large_cell)
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
+        self.GRID_smaller = np.zeros([int(self.rows/3), int(self.cols/3)], dtype=int)
+        self.possible_indexes_s = np.argwhere(self.GRID_smaller == 0)
+        self.possible_indexes = np.argwhere(self.GRID == 0)
+        np.random.shuffle(self.possible_indexes)
     def set_robots(self,n_r,coords):
         self.n_r =  n_r # number of robots
         self.rip_cont = coords 
         self.rip_sml = np.zeros([len(coords),2],dtype=int)
-        self.rip_lrg = np.zeros([len(coords),2],dtype=int)
+        self.rip = np.zeros([len(coords),2],dtype=int)
         for r in range(self.n_r):
             rip = self.rip_cont[r]
             # small cell position and large cell position
             self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/self.small_cell) # row
             self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/self.small_cell) # col
-            self.rip_lrg[r][0] = math.floor(self.rip_cont[r][0]/self.large_cell) # row
-            self.rip_lrg[r][1] = math.floor(self.rip_cont[r][1]/self.large_cell) # col
+            self.rip[r][0] = math.floor(self.rip_cont[r][0]/self.large_cell) # row
+            self.rip[r][1] = math.floor(self.rip_cont[r][1]/self.large_cell) # col
             self.GRID[self.rip_lrg[r][0]][self.rip_lrg[r][1]] = 2
     def set_obs(self,obs_coords):
         for obs in obs_coords:
             self.GRID[obs[0]][obs[1]] = 1
+    def randomise_robots(self,n_r):
+        self.n_r = n_r
+        self.rip_sml = np.zeros([n_r,2],dtype=int)
+        self.rip_cont = np.zeros([n_r,2],dtype=float)
+        # self.rip = np.zeros([n_r,2],dtype=int)
+        if self.n_r < self.rows*self.cols:
+            self.rip = self.possible_indexes_s[0:self.n_r]
+            val1 = self.rip[:, 0]
+            val2 = self.rip[:, 1]
+            self.GRID[val1, val2] = 2
+        else:
+            print("MADNESS! Why do you have so many robots?")
+
+        for r in range(self.n_r):
+            self.rip_sml[r][0] = self.rip[r][0]*2
+            self.rip_sml[r][1] = self.rip[r][1]*2
+            self.rip_cont[r][0] = self.rip_sml[r][0]*self.small_cell
+            self.rip_cont[r][0] = self.rip_sml[r][0]*self.small_cell
+    def randomise_obs(self,obs_perc):
+        self.obs = math.floor(self.rows*self.cols*obs_perc/100)
+        if self.obs < (self.rows*self.cols-self.n_r):
+            indices = self.possible_indexes[self.n_r:self.n_r+self.obs]
+            val1 = indices[:, 0]
+            val2 = indices[:, 1]
+            self.GRID[val1, val2] = 1
+        else:
+            print("MADNESS! Why so many obstacles?")
 
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
@@ -1140,24 +1199,27 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 224.0 # m
-    vertical = 224.0 # m
+    horizontal = 700.0 # m
+    vertical = 700.0 # m
 
     # Establish Small Node size
     fov_sqr = 12.3 # small cell size in m
     GG = generate_grid(horizontal,vertical,fov_sqr)
     
     # Coordinates from top left (vert,hor)
-    n_r = 2
-    robot_cont = np.array([[50,160],[180,40]])
-    GG.set_robots(n_r,robot_cont)
-    obs = np.array([[0,1],[0,2],[1,1],[1,2],[2,2],[2,3],[2,4],[2,5],[3,4],[3,5],[7,4],[7,5],[8,4],[8,5],[9,5]])
-    GG.set_obs(obs)
+    n_r = 5
+    obs_perc = 10
+    GG.randomise_robots(n_r)
+    GG.randomise_obs(obs_perc)
+    # robot_cont = np.array([[50,160],[180,40]])
+    # GG.set_robots(n_r,robot_cont)
+    # obs = np.array([[0,1],[0,2],[1,1],[1,2],[2,2],[2,3],[2,4],[2,5],[3,4],[3,5],[7,4],[7,5],[8,4],[8,5],[9,5]])
+    # GG.set_obs(obs)
 
     # Other parameters
     Imp = False
     maxIter = 10000
-    tick_spacing = 1
+    tick_spacing = 4
     rows = GG.rows
     cols = GG.cols
     dcells = int(rows*cols/10)+1
@@ -1172,7 +1234,7 @@ if __name__ == "__main__":
     algorithm_start(recompile=True)
     # Call this to run DARP and MST
 
-    RA = Run_Algorithm(EnvironmentGrid, dcells, Imp, file_log, print_graphs,tick_spacing=tick_spacing)
+    RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs,tick_spacing=tick_spacing)
     RA.set_continuous(horizontal,vertical,GG.small_cell,GG.large_cell,GG.rip_sml,GG.rip_cont)
     RA.main()
 
