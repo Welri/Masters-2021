@@ -7,7 +7,8 @@ import os
 import random
 import time
 import math
-MARKERSIZE=10
+MARKERSIZE=15
+TICK_SPACING = 2
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -31,18 +32,9 @@ class algorithm_start:
         else:
             print("WARNING: Unrecognised operating system")
 
+# Contains main DARP code, runs the DARP algorithm and runs PrimMST by calling the other class
 class Run_Algorithm:
-    def __init__(self, EnvironmentGrid, rip, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001]),tick_spacing = 1):
-        # # DIRECTORY MANAGEMENT
-        # path = pathlib.Path(__file__).parent.absolute()
-        # # Changing current working directory to directory this file is in (avoid directory conflict when running subprocesses)
-        # os.chdir(path)
-        # # print("CURRENT WORKING DIRECTORY:", os.getcwd())
-
-        # # Compile all the Java programs
-        # if recompile_java == True:   
-        #     self.compilation_subprocess()
-
+    def __init__(self, EnvironmentGrid, rip, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
@@ -63,7 +55,6 @@ class Run_Algorithm:
         self.DARP_success = False
         self.log_filename = log_filename
         self.total_iterations = 0
-        self.tick_spacing = tick_spacing
 
     def set_continuous(self,hor,vert,small_cell,large_cell,rip_sml,rip_cont):
         self.horizontal = hor
@@ -385,8 +376,8 @@ class Run_Algorithm:
             ripx = self.rip_sml[r][1]
             plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
 
-        ax.set_xticks(np.arange(0, self.cols*2, step=self.tick_spacing),minor=False)
-        ax.set_yticks(np.arange(0, self.rows*2, step=self.tick_spacing),minor=False)
+        ax.set_xticks(np.arange(0, self.cols*2, step=TICK_SPACING),minor=False)
+        ax.set_yticks(np.arange(0, self.rows*2, step=TICK_SPACING),minor=False)
         ax.set_xticks(np.arange(-0.5, self.cols*2+0.5, step=2),minor=True)
         ax.set_yticks(np.arange(-0.5, self.rows*2+0.5, step=2),minor=True)
 
@@ -423,6 +414,7 @@ class Run_Algorithm:
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
 
+# Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
     def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_sml):
         self.A = A
@@ -818,16 +810,16 @@ class Prim_MST_maker:
     
     def draw_graph(self,nodes,parents,wpnts):
         # Plot spanning tree
-        # for node in nodes:
-        #     x = (node[1])*2 + 0.5
-        #     y = (self.rows - node[0] - 1)*2 + 0.5
-        #     plt.plot(x,y,".w")
-        # for i in range(1,len(parents)):
-        #      x0 = (nodes[i][1])*2 + 0.5
-        #      x1 = (nodes[parents[i]][1])*2 + 0.5
-        #      y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
-        #      y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
-        #      plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+        for node in nodes:
+            x = (node[1])*2 + 0.5
+            y = (self.rows - node[0] - 1)*2 + 0.5
+            plt.plot(x,y,".w")
+        for i in range(1,len(parents)):
+             x0 = (nodes[i][1])*2 + 0.5
+             x1 = (nodes[parents[i]][1])*2 + 0.5
+             y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
+             y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
+             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
         # Plot waypoints
         px = np.zeros(len(wpnts),dtype=int)
@@ -1044,8 +1036,8 @@ class generate_grid:
         self.rows = math.ceil(vert/self.large_cell)
         self.cols = math.ceil(hor/self.large_cell)
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
-        self.GRID_smaller = np.zeros([int(self.rows/3), int(self.cols/3)], dtype=int)
-        self.possible_indexes_s = np.argwhere(self.GRID_smaller == 0)
+        # self.GRID_smaller = np.zeros([int(self.rows/3), int(self.cols/3)], dtype=int)
+        # self.possible_indexes_s = np.argwhere(self.GRID_smaller == 0)
         self.possible_indexes = np.argwhere(self.GRID == 0)
         np.random.shuffle(self.possible_indexes)
     def set_robots(self,n_r,coords):
@@ -1070,7 +1062,7 @@ class generate_grid:
         self.rip_cont = np.zeros([n_r,2],dtype=float)
         # self.rip = np.zeros([n_r,2],dtype=int)
         if self.n_r < self.rows*self.cols:
-            self.rip = self.possible_indexes_s[0:self.n_r]
+            self.rip = self.possible_indexes[0:self.n_r]
             val1 = self.rip[:, 0]
             val2 = self.rip[:, 1]
             self.GRID[val1, val2] = 2
@@ -1199,15 +1191,15 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 700.0 # m
-    vertical = 700.0 # m
+    horizontal = 200.0 # m
+    vertical = 200.0 # m
 
     # Establish Small Node size
     fov_sqr = 12.3 # small cell size in m
     GG = generate_grid(horizontal,vertical,fov_sqr)
     
     # Coordinates from top left (vert,hor)
-    n_r = 5
+    n_r = 3
     obs_perc = 10
     GG.randomise_robots(n_r)
     GG.randomise_obs(obs_perc)
@@ -1219,7 +1211,7 @@ if __name__ == "__main__":
     # Other parameters
     Imp = False
     maxIter = 10000
-    tick_spacing = 4
+    
     rows = GG.rows
     cols = GG.cols
     dcells = int(rows*cols/10)+1
@@ -1234,30 +1226,14 @@ if __name__ == "__main__":
     algorithm_start(recompile=True)
     # Call this to run DARP and MST
 
-    RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs,tick_spacing=tick_spacing)
+    RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs)
     RA.set_continuous(horizontal,vertical,GG.small_cell,GG.large_cell,GG.rip_sml,GG.rip_cont)
     RA.main()
 
     if print_graphs == True:
         plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # TODO: Print in continuous and discrete space? Robot starting positions do not have to be at node centre
-
 
 # TODO: Create continuous space conversion to discrete
     # Make the robot starting positions continuous
