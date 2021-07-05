@@ -8,7 +8,8 @@ import random
 import time
 import math
 MARKERSIZE=15
-TICK_SPACING = 2
+TICK_SPACING = 1
+FIGURE_TITLE = "DARP Continuous Results"
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -94,6 +95,7 @@ class Run_Algorithm:
                     self.maxDiscr = np.max(self.AOEperc)
                     if self.show_grid == True:
                         self.print_DARP_graph()
+                        self.cont_DARP_graph()
                     self.runs += 1
                     self.total_iterations = self.total_iterations + self.iterations
                     if self.DARP_success == True:
@@ -244,7 +246,7 @@ class Run_Algorithm:
         self.primMST()
 
     def primMST(self):
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_sml)
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_sml,self.small_cell)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -367,10 +369,6 @@ class Run_Algorithm:
                 c = 0
             colour_assignments[self.n_r] = "k"
 
-        # ripy, ripx = zip(*self.rip_sml)
-        # ripx = (np.array(ripx))*2 + 0.5
-        # ripy = (self.rows - np.array(ripy) - 1)*2 + 0.5
-        # plt.plot(ripx, ripy, 'xk', markersize=15)
         for r in range(self.n_r):
             ripy = self.rows*2 - self.rip_sml[r][0] - 1
             ripx = self.rip_sml[r][1]
@@ -380,6 +378,7 @@ class Run_Algorithm:
         ax.set_yticks(np.arange(0, self.rows*2, step=TICK_SPACING),minor=False)
         ax.set_xticks(np.arange(-0.5, self.cols*2+0.5, step=2),minor=True)
         ax.set_yticks(np.arange(-0.5, self.rows*2+0.5, step=2),minor=True)
+        plt.xticks(rotation=90)
 
         plt.grid(which='minor',axis='both', color='k')
 
@@ -397,6 +396,54 @@ class Run_Algorithm:
                              colour_assignments[self.A[j][i]])
 
         plt.title("DARP with Spanning Tree Results")
+    
+    def cont_DARP_graph(self):
+        plt.rc('font', size=12)
+        plt.rc('axes', titlesize=15) 
+
+        # Prints the DARP divisions
+        fig,ax = plt.subplots(figsize=(8, 8))
+
+        # Initialize cell colours
+        colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
+        c = 0
+        colour_assignments = {}
+        for i in range(self.n_r):
+            colour_assignments[i] = colours[c]
+            c = c + 1
+            if c == len(colours)-1:
+                c = 0
+            colour_assignments[self.n_r] = "k"
+
+        # Robot positions
+        for r in range(self.n_r):
+            ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*self.small_cell
+            ripx = (self.rip_sml[r][1] + 0.5)*self.small_cell
+            plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
+
+        # Ticks and Grid
+        ax.set_xticks(np.arange(0, (self.cols*2+1)*self.small_cell, step=2*self.small_cell),minor=False)
+        ax.set_yticks(np.arange(0, (self.rows*2+1)*self.small_cell, step=2*self.small_cell),minor=False)
+        ax.set_xticks(np.arange(self.small_cell, (self.cols*2-0.5)*self.small_cell, step=2*self.small_cell),minor=True)
+        ax.set_yticks(np.arange(self.small_cell, (self.rows*2-0.5)*self.small_cell, step=2*self.small_cell),minor=True)
+        plt.xticks(rotation=90)
+        plt.grid(which='major',axis='both', color='k',linewidth=1)
+        plt.grid(which='minor',axis='both',color='k',linewidth=0.3)
+
+        # Print Assgnments
+        for j in range(self.rows):
+            for i in range(self.cols):
+                x1 = ( (i-0.5)*2 + 0.5 + 0.5 )*self.small_cell
+                x2 = ( (i+0.5)*2 + 0.5 + 0.5 )*self.small_cell
+                y1 = ( (self.rows - (j-0.5) - 1)*2 + 0.5 + 0.5 )*self.small_cell
+                y2 = ( (self.rows - (j+0.5) - 1)*2 + 0.5 + 0.5 )*self.small_cell
+                if self.A[j][i] == self.n_r:
+                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
+                else:
+                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
+                             colour_assignments[self.A[j][i]])
+
+        plt.title(FIGURE_TITLE)
 
     def import_bool(self, string):
         # Extract boolean variables
@@ -416,7 +463,8 @@ class Run_Algorithm:
 
 # Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_sml):
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_sml,small_cell):
+        self.small_cell = small_cell
         self.A = A
         self.n_r = n_r
         self.rows = rows
@@ -502,12 +550,11 @@ class Prim_MST_maker:
             self.wpnts_list.append(self.waypoints)
             # self.arw_list.append(arrows)
         
-    
         self.update_wpnts()
 
         if print_graph == True:
             for r in range(self.n_r):
-                self.draw_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_list[r])
+                self.draw_cont_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_list[r])
    
     def update_wpnts(self):
         for r in range(self.n_r):
@@ -809,28 +856,52 @@ class Prim_MST_maker:
         self.wpnt_ind+=1
     
     def draw_graph(self,nodes,parents,wpnts):
-        # Plot spanning tree
+        None
+        # # Plot spanning tree
+        # for node in nodes:
+        #     x = (node[1])*2 + 0.5
+        #     y = (self.rows - node[0] - 1)*2 + 0.5
+        #     plt.plot(x,y,".w")
+        # for i in range(1,len(parents)):
+        #      x0 = (nodes[i][1])*2 + 0.5
+        #      x1 = (nodes[parents[i]][1])*2 + 0.5
+        #      y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
+        #      y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
+        #      plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+
+        # # Plot waypoints
+        # px = np.zeros(len(wpnts),dtype=int)
+        # py = np.zeros(len(wpnts),dtype=int)
+        # for pi in range(len(wpnts)):
+        #     py[pi] = self.rows*2 - wpnts[pi][0] - 1
+        #     px[pi] = wpnts[pi][1]
+        # plt.plot(px,py,'-k') # linewidth=2
+        # plt.plot(px,py,'.k')
+        # for r in range(self.n_r):
+        #     plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
+    def draw_cont_graph(self,nodes,parents,wpnts):
+        # # Plot spanning tree
         for node in nodes:
-            x = (node[1])*2 + 0.5
-            y = (self.rows - node[0] - 1)*2 + 0.5
+            x = ( (node[1])*2 + 0.5 + 0.5 )*self.small_cell
+            y = ( (self.rows - node[0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
             plt.plot(x,y,".w")
         for i in range(1,len(parents)):
-             x0 = (nodes[i][1])*2 + 0.5
-             x1 = (nodes[parents[i]][1])*2 + 0.5
-             y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
-             y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
+             x0 = ( (nodes[i][1])*2 + 0.5 + 0.5 )*self.small_cell
+             x1 = ( (nodes[parents[i]][1])*2 + 0.5 + 0.5 )*self.small_cell
+             y0 = ( (self.rows - nodes[i][0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
+             y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
              plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
-        # Plot waypoints
+        # # Plot waypoints
         px = np.zeros(len(wpnts),dtype=int)
         py = np.zeros(len(wpnts),dtype=int)
         for pi in range(len(wpnts)):
-            py[pi] = self.rows*2 - wpnts[pi][0] - 1
-            px[pi] = wpnts[pi][1]
+            py[pi] = ( self.rows*2 - wpnts[pi][0] - 1 + 0.5 )*self.small_cell
+            px[pi] = ( wpnts[pi][1] + 0.5 )*self.small_cell
         plt.plot(px,py,'-k') # linewidth=2
         plt.plot(px,py,'.k')
         for r in range(self.n_r):
-            plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
+            plt.plot((self.rip_sml[r][1] + 0.5)*self.small_cell,(self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*self.small_cell,'.w',markersize=int(MARKERSIZE/3))
 
 class enclosed_space_check:
     def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
@@ -1191,8 +1262,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 200.0 # m
-    vertical = 200.0 # m
+    horizontal = 250.0 # m
+    vertical = 250.0 # m
 
     # Establish Small Node size
     fov_sqr = 12.3 # small cell size in m
@@ -1233,11 +1304,5 @@ if __name__ == "__main__":
     if print_graphs == True:
         plt.show()
 
-# TODO: Print in continuous and discrete space? Robot starting positions do not have to be at node centre
-
-# TODO: Create continuous space conversion to discrete
-    # Make the robot starting positions continuous
-    # Establish the nearest small cell centre and the nearest large cell centre.
-    # Establish waypoint positions in continuous space
 # TODO: Include dynamic constraints
     # The first waypoint is the robot starting position regardless of whether it is a node centre
