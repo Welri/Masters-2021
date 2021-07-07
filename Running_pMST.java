@@ -38,7 +38,7 @@ public class Running_pMST {
             }
             brw.close();
         } catch (IOException e) {
-            System.out.println("An error occurred.");
+            System.out.println("An error occurred in Java file: Running_pMST.java.");
             e.printStackTrace();
         }
         
