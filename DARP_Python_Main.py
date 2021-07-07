@@ -13,6 +13,15 @@ MARKERSIZE=15
 TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 
+# FOV Constants - Mavic Pro 2
+Height = 10 # m above ground
+AOV = 78.8 # Angle of view
+V = 3 
+H = 4
+AR = V/H # Aspect ratio (V/H)
+FOV_H = 2*Height*math.tan( (AOV/2) * math.pi/180.0 )
+FOV_V = FOV_H*AR
+
 class algorithm_start:
     def __init__(self,recompile=True):
          # DIRECTORY MANAGEMENT
@@ -59,11 +68,9 @@ class Run_Algorithm:
         self.log_filename = log_filename
         self.total_iterations = 0
 
-    def set_continuous(self,hor,vert,small_cell,large_cell,rip_sml,rip_cont):
-        self.horizontal = hor
-        self.vertical = vert
-        self.small_cell = small_cell
-        self.large_cell = large_cell
+    def set_continuous(self,rip_sml,rip_cont):
+        self.horizontal = 2*FOV_H*self.cols
+        self.vertical = 2*FOV_V*self.rows
         self.rip_cont = rip_cont
         self.rip_sml = rip_sml
         ind = np.zeros([self.n_r],dtype=int)
@@ -256,7 +263,7 @@ class Run_Algorithm:
         file_log.close()
 
     def primMST(self):
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_sml,self.small_cell)
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_sml)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -427,18 +434,18 @@ class Run_Algorithm:
 
         # Robot positions
         for r in range(self.n_r):
-            # ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*self.small_cell
-            # ripx = (self.rip_sml[r][1] + 0.5)*self.small_cell
+            # ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*FOV_V
+            # ripx = (self.rip_sml[r][1] + 0.5)*FOV_H
             # plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
-            ripy = self.small_cell*(self.rows*2) - self.rip_cont[r][0]
+            ripy = self.vertical - self.rip_cont[r][0]
             ripx = self.rip_cont[r][1]
             plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)            
 
         # Ticks and Grid
-        ax.set_xticks(np.arange(0, (self.cols*2+1)*self.small_cell, step=2*self.small_cell),minor=False)
-        ax.set_yticks(np.arange(0, (self.rows*2+1)*self.small_cell, step=2*self.small_cell),minor=False)
-        ax.set_xticks(np.arange(self.small_cell, (self.cols*2-0.5)*self.small_cell, step=2*self.small_cell),minor=True)
-        ax.set_yticks(np.arange(self.small_cell, (self.rows*2-0.5)*self.small_cell, step=2*self.small_cell),minor=True)
+        ax.set_xticks(np.arange(0, (self.cols*2+1)*FOV_H, step=2*FOV_H),minor=False) # Large cell grid-lines
+        ax.set_yticks(np.arange(0, (self.rows*2+1)*FOV_V, step=2*FOV_V),minor=False)
+        ax.set_xticks(np.arange(FOV_H, (self.cols*2-0.5)*FOV_H, step=2*FOV_H),minor=True) # Small cell grid_lines
+        ax.set_yticks(np.arange(FOV_V, (self.rows*2-0.5)*FOV_V, step=2*FOV_V),minor=True)
         plt.xticks(rotation=90)
         plt.grid(which='major',axis='both', color='k',linewidth=1)
         plt.grid(which='minor',axis='both',color='k',linewidth=0.3)
@@ -446,10 +453,10 @@ class Run_Algorithm:
         # Print Assgnments
         for j in range(self.rows):
             for i in range(self.cols):
-                x1 = ( (i-0.5)*2 + 0.5 + 0.5 )*self.small_cell
-                x2 = ( (i+0.5)*2 + 0.5 + 0.5 )*self.small_cell
-                y1 = ( (self.rows - (j-0.5) - 1)*2 + 0.5 + 0.5 )*self.small_cell
-                y2 = ( (self.rows - (j+0.5) - 1)*2 + 0.5 + 0.5 )*self.small_cell
+                x1 = ( (i-0.5)*2 + 0.5 + 0.5 )*FOV_H
+                x2 = ( (i+0.5)*2 + 0.5 + 0.5 )*FOV_H
+                y1 = ( (self.rows - (j-0.5) - 1)*2 + 0.5 + 0.5 )*FOV_V
+                y2 = ( (self.rows - (j+0.5) - 1)*2 + 0.5 + 0.5 )*FOV_V
                 if self.A[j][i] == self.n_r:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
                 else:
@@ -590,8 +597,7 @@ class enclosed_space_check:
 
 # Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_sml,small_cell):
-        self.small_cell = small_cell
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_sml):
         self.A = A
         self.n_r = n_r
         self.rows = rows
@@ -604,6 +610,7 @@ class Prim_MST_maker:
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
         moves = np.array([[0,1],[1,0],[0,-1],[-1,0]])
+        mov_class = np.array(['H','V','H','V']) # horizontal/vertical
         self.free_nodes_list = list()
         self.vertices_list = list()
         self.parents_list = list()
@@ -615,20 +622,24 @@ class Prim_MST_maker:
             free_nodes = np.argwhere(self.grids[r]==1) # vertice coordinates
             vertices = len(free_nodes) # number of vertices
 
+            # Making graph for prim algorithm
             graph = np.zeros([vertices,vertices],dtype = int)
             parents = np.zeros(vertices,dtype = int) 
             node_ind = 0
             for node_ind in range(vertices):
                 node = free_nodes[node_ind]
-                for move in moves:
-                    row = node[0]+move[0]
-                    col = node[1]+move[1]
+                for m in range(len(moves)):
+                    row = node[0]+moves[m][0]
+                    col = node[1]+moves[m][1]
+                    classification = mov_class[m]
                     if(row>=0)and(col>=0)and(row<self.rows)and(col<self.cols):
                         neighbour_node_ind = np.argwhere((free_nodes==(row,col)).all(axis=1))
                         if len(neighbour_node_ind)>0:
-                            # Add edge to graph
-                            graph[node_ind][neighbour_node_ind[0][0]]=1 # weights are just 1 for now
-
+                            # Add edge to graph - weight can be different for horizontal and vertical
+                            if(classification=='H'):
+                                graph[node_ind][neighbour_node_ind[0][0]] = FOV_H # weights are just distance for now
+                            elif(classification=='V'):
+                                graph[node_ind][neighbour_node_ind[0][0]] = FOV_V # weights are just distance for now
             self.write_input(graph,vertices)
             self.run_subprocess()
             parents = self.read_output(vertices)
@@ -1011,26 +1022,26 @@ class Prim_MST_maker:
         # Draws graph on continuous space graph
         # Plot spanning tree
         for node in nodes:
-            x = ( (node[1])*2 + 0.5 + 0.5 )*self.small_cell
-            y = ( (self.rows - node[0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
+            x = ( (node[1])*2 + 0.5 + 0.5 )*FOV_H
+            y = ( (self.rows - node[0] - 1)*2 + 0.5 + 0.5 )*FOV_V
             plt.plot(x,y,".w")
         for i in range(1,len(parents)):
-             x0 = ( (nodes[i][1])*2 + 0.5 + 0.5 )*self.small_cell
-             x1 = ( (nodes[parents[i]][1])*2 + 0.5 + 0.5 )*self.small_cell
-             y0 = ( (self.rows - nodes[i][0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
-             y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
+             x0 = ( (nodes[i][1])*2 + 0.5 + 0.5 )*FOV_H
+             x1 = ( (nodes[parents[i]][1])*2 + 0.5 + 0.5 )*FOV_H
+             y0 = ( (self.rows - nodes[i][0] - 1)*2 + 0.5 + 0.5 )*FOV_V
+             y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5 + 0.5 )*FOV_V
              plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
         # Plot waypoints
         px = np.zeros(len(wpnts),dtype=int)
         py = np.zeros(len(wpnts),dtype=int)
         for pi in range(len(wpnts)):
-            py[pi] = ( self.rows*2 - wpnts[pi][0] - 1 + 0.5 )*self.small_cell
-            px[pi] = ( wpnts[pi][1] + 0.5 )*self.small_cell
+            py[pi] = ( self.rows*2 - wpnts[pi][0] - 1 + 0.5 )*FOV_V
+            px[pi] = ( wpnts[pi][1] + 0.5 )*FOV_H
         plt.plot(px,py,'-k') # linewidth=2
         plt.plot(px,py,'.k')
         for r in range(self.n_r):
-            plt.plot((self.rip_sml[r][1] + 0.5)*self.small_cell,(self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*self.small_cell,'.w',markersize=int(MARKERSIZE/3))
+            plt.plot((self.rip_sml[r][1] + 0.5)*FOV_H,(self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*FOV_V,'.w',markersize=int(MARKERSIZE/3))
 
 # Prim Related
 class mst_node:
@@ -1116,14 +1127,14 @@ class generate_rand_grid:
             self.es_flag = True
 
 class generate_grid:
-    def __init__(self,hor,vert,fov):
+    def __init__(self,hor,vert):
         # Get continuous dimensions too
-        self.small_cell = fov_sqr
-        self.large_cell = fov_sqr*2 # large cell size in km
+        # self.small_cell = FOV_V
+        # self.large_cell = FOV_V*2 # large cell size in km
 
         # Divide Environment Into Large Nodes
-        self.rows = math.ceil(vert/self.large_cell)
-        self.cols = math.ceil(hor/self.large_cell)
+        self.rows = math.ceil(vert/(FOV_V*2))
+        self.cols = math.ceil(hor/(FOV_H*2))
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
         # self.GRID_smaller = np.zeros([int(self.rows/3), int(self.cols/3)], dtype=int)
         # self.possible_indexes_s = np.argwhere(self.GRID_smaller == 0)
@@ -1137,10 +1148,10 @@ class generate_grid:
         for r in range(self.n_r):
             rip = self.rip_cont[r]
             # small cell position and large cell position
-            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/self.small_cell) # row
-            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/self.small_cell) # col
-            self.rip[r][0] = math.floor(self.rip_cont[r][0]/self.large_cell) # row
-            self.rip[r][1] = math.floor(self.rip_cont[r][1]/self.large_cell) # col
+            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/FOV_V) # row
+            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/FOV_H) # col
+            self.rip[r][0] = math.floor(self.rip_cont[r][0]/(FOV_V*2)) # row
+            self.rip[r][1] = math.floor(self.rip_cont[r][1]/(FOV_H*2)) # col
             self.GRID[self.rip_lrg[r][0]][self.rip_lrg[r][1]] = 2
     def set_obs(self,obs_coords):
         for obs in obs_coords:
@@ -1161,8 +1172,8 @@ class generate_grid:
         for r in range(self.n_r):
             self.rip_sml[r][0] = self.rip[r][0]*2
             self.rip_sml[r][1] = self.rip[r][1]*2
-            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*self.small_cell
-            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*self.small_cell
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*FOV_V # vertical
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*FOV_H # horizontal
     def randomise_obs(self,obs_perc):
         self.obs = math.floor(self.rows*self.cols*obs_perc/100)
         if self.obs < (self.rows*self.cols-self.n_r):
@@ -1284,8 +1295,8 @@ if __name__ == "__main__":
     vertical = 250.0 # m
 
     # Establish Small Node size
-    fov_sqr = 12.3 # small cell size in m
-    GG = generate_grid(horizontal,vertical,fov_sqr)
+    
+    GG = generate_grid(horizontal,vertical)
     
     # Coordinates from top left (vert,hor)
     n_r = 3
@@ -1316,7 +1327,7 @@ if __name__ == "__main__":
 
     # Call this to run DARP and MST
     RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs)
-    RA.set_continuous(horizontal,vertical,GG.small_cell,GG.large_cell,GG.rip_sml,GG.rip_cont)
+    RA.set_continuous(GG.rip_sml,GG.rip_cont)
     RA.main()
 
     if print_graphs == True:

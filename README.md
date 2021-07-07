@@ -1,14 +1,50 @@
 Important File Breakdown
 ------------------------
 
+General
+-------
 * DARP_Python_Main.py 
-    * This file sends things to Input.txt, runs the subprocess (which runs DARP_Java_Main.java) and then reads from the Output.txt files.
-    * This is also where the main development happens after DARP_Java_Main.java is run. STC should be run from here (or any other individual area search algoirhthm).
+    * Where main development happens - NOT JUST DARP RELATED (needs a name change)
+    * Compiles and runs java files using subprocesses (.sh and .bat)
+    * Runs both DARP and PrimMST algorithm
+* compiling .bat/.sh
+    * Batch file / Bash file: WINDOWS / UBUNTU
+    * Compiles all the necessary Java files
+    * Gets called in DARP_Python_Main.py
+* Logging_xxx.txt
+    * Log files that store information about algorithm runs
+    * Written to from DARP_Pythin_Main.py
+
+DARP Related
+-------------
+* DARP_data
+    * Code used to check cases where DARP broke historically - a lot of the debugging happened here
+    * Target_case_checker is easier to use. You just have to follow a specific file format.
+* darp_pack
+    * Contains code copied from original developers of DARP algorith,
 * DARP_Java_New.java
     * Runs the Java DARP algorithm (uses Input.txt and writes to Output.txt files)
-* RUN_Java.bat
-    * Batch file: Compiles and Runs the Java DARP_Java_New.java for WINDOWS
-* RUN_Java.sh
-    * Bash file: Compiles and Runs the Java DARP_Java_New.java for UBUNTU
+    * DARP related files it interfaces with are in darp_pack
+* RUN_Java .bat/.sh
+    * Batch / Bash file:  WINDOWS / UBUNTU
+    * Runs the Java DARP_Java_New.java
+* Input.txt / Output.txt
+    * Files that are written to and from for DARP
 
+MST Related
+------------
+* STC_pack
+    * prim.java - coded adapted from codde by Aakash Hasija (used)
+    * kruskal.java - code copied from Aakash Hasija (not used)
+* MST_Input.txt / MST_Output.txt
+    * Files that are written to and from for Prim's MST Algorithm
+* Running_pMST.java
+    * Contatins Code that writes to and from Input and Output files
+    * Contains code to interface with STC_Pack (prim.java)
+* pMST_Run_Java .bat/.sh
+    * Runs Prim Java file (Running_pMST)
+    * Gets called in DARP_Python_Main.py
+
+   
+    
 
