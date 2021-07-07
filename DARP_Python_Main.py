@@ -7,6 +7,8 @@ import os
 import random
 import time
 import math
+
+# constants
 MARKERSIZE=15
 TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
@@ -77,7 +79,7 @@ class Run_Algorithm:
             self.rip_sml[r][1] = self.rip_temp[r][1]
          
     def main(self):
-    #  DARP SECTION
+        #  DARP SECTION
         timestart = time.time_ns()
         self.enclosed_space_handler()
         self.general_error_handling()
@@ -94,8 +96,7 @@ class Run_Algorithm:
                         (self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
                     self.maxDiscr = np.max(self.AOEperc)
                     if self.show_grid == True:
-                        self.print_DARP_graph()
-                        self.cont_DARP_graph()
+                        self.print_DARP_graph() # prints a graph for each iteration
                     self.runs += 1
                     self.total_iterations = self.total_iterations + self.iterations
                     if self.DARP_success == True:
@@ -110,7 +111,15 @@ class Run_Algorithm:
             self.obs = len(np.argwhere(self.Grid == 1))
             print("Aborting Algorithm...")
 
-        self.time_elapsed = time.time_ns() - timestart
+        self.time_DARP_total = time.time_ns() - timestart
+        
+        # PRIM MST SECTION
+        if self.show_grid==True:
+            self.cont_DARP_graph() # prints final graph
+        
+        timestart = time.time_ns()
+        self.primMST()
+        self.time_prim = time.time_ns() - timestart
 
         # Logging
         file_log = open(self.log_filename, "a")
@@ -143,7 +152,9 @@ class Run_Algorithm:
             file_log.write(",")
             file_log.write(str(self.iterations))
             file_log.write(",")
-            file_log.write(str(self.time_elapsed))
+            file_log.write(str(self.time_DARP_total))
+            file_log.write(",")
+            file_log.write(str(self.time_prim))
             file_log.write(",")
             AOEstring = str(self.ArrayOfElements)
             AOEstring = AOEstring.replace("\n", '')
@@ -216,7 +227,9 @@ class Run_Algorithm:
             file_log.write(",")
             file_log.write("None")
             file_log.write(",")
-            file_log.write(str(self.time_elapsed))
+            file_log.write(str(self.time_DARP_total))
+            file_log.write(",")
+            file_log.write(str(self.time_prim))
             file_log.write(",")
             file_log.write("None")
             file_log.write(",")
@@ -241,9 +254,6 @@ class Run_Algorithm:
             file_log.write(str(self.total_iterations))
             file_log.write('\n')
         file_log.close()
-
-    # PRIM MST SECTION
-        self.primMST()
 
     def primMST(self):
         pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_sml,self.small_cell)
@@ -395,7 +405,7 @@ class Run_Algorithm:
                     plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
                              colour_assignments[self.A[j][i]])
 
-        plt.title("DARP with Spanning Tree Results")
+        plt.title("DARP Results")
     
     def cont_DARP_graph(self):
         plt.rc('font', size=12)
@@ -417,9 +427,12 @@ class Run_Algorithm:
 
         # Robot positions
         for r in range(self.n_r):
-            ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*self.small_cell
-            ripx = (self.rip_sml[r][1] + 0.5)*self.small_cell
-            plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
+            # ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*self.small_cell
+            # ripx = (self.rip_sml[r][1] + 0.5)*self.small_cell
+            # plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
+            ripy = self.small_cell*(self.rows*2) - self.rip_cont[r][0]
+            ripx = self.rip_cont[r][1]
+            plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)            
 
         # Ticks and Grid
         ax.set_xticks(np.arange(0, (self.cols*2+1)*self.small_cell, step=2*self.small_cell),minor=False)
@@ -460,6 +473,120 @@ class Run_Algorithm:
                         return(self.import_bool(c))
             print("ERROR: failed to import boolean value from -> ", string)
             return(-1)
+
+# DARP related
+class enclosed_space_check:
+    def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
+        self.n_r = n_r
+        self.n_rows = n_rows
+        self.n_cols = n_cols
+        self.binary_grid = np.copy(EnvironmentGrid)
+        self.rip = rip
+        self.create_binary_grid()
+        self.final_labels = self.compact_labeling()
+
+    def create_binary_grid(self):
+        for ind in self.rip:
+            self.binary_grid[ind[0]][ind[1]] = 0
+        indices_one = self.binary_grid == 1
+        indices_zero = self.binary_grid == 0
+        self.binary_grid[indices_one] = 0
+        self.binary_grid[indices_zero] = 1
+
+    def transform2Dto1D(self, array2D):
+        length = len(array2D)*len(array2D[0])
+        array1D = np.reshape(array2D, length)
+        return(array1D)
+
+    def labeling(self, bin1D):
+        rst = np.zeros([self.n_rows*self.n_cols], dtype=int)
+        self.parent = np.zeros([self.MAX_LABELS], dtype=int)
+        self.labels = np.zeros([self.MAX_LABELS])
+
+        next_region = 1
+        for i in range(self.n_rows):  # height
+            for j in range(self.n_cols):  # width
+                if (bin1D[i*self.n_cols+j] == 0):
+                    continue
+                k = 0
+                connected = False
+
+                # Check if connected to the left
+                if ((j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j])):
+                    k = rst[i*self.n_cols+j-1]
+                    connected = True
+                # Check if connected to the top
+                if ((i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and ((connected == False) or (bin1D[(i-1)*self.n_cols+j] < k))):
+                    k = rst[(i-1)*self.n_cols+j]
+                    connected = True
+                if(connected == False):
+                    k = next_region
+                    next_region += 1
+
+                rst[i*self.n_cols+j] = k
+                if ((j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j]) and rst[i*self.n_cols+j-1] != k):
+                    self.uf_union(k, rst[i*self.n_cols+j-1])
+                if ((i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and rst[(i-1)*self.n_cols+j] != k):
+                    self.uf_union(k, rst[(i-1)*self.n_cols+j])
+
+        self.next_label = 1
+        for ind in range(self.n_cols*self.n_rows):
+            if ((bin1D[ind] != 0)):
+                rst[ind] = self.uf_find(rst[ind])
+        self.next_label -= 1
+        return(rst)
+
+    def compact_labeling(self):
+        bin_1D = self.transform2Dto1D(self.binary_grid)
+        self.MAX_LABELS = self.n_rows * self.n_cols
+
+        # Label the different regions
+        label1D = self.labeling(bin_1D)
+        self.max_label = self.next_label
+
+        stat = np.zeros(self.max_label+1)
+        for l in range(0, self.max_label+1):
+            stat[l] = len(np.argwhere(label1D == l))
+        if sum(stat) != self.n_cols*self.n_rows:
+            print("WARNING: labelling error - line 63-69")
+        stat[0] = 0
+
+        counter = 1
+        for l in range(self.max_label+1):
+            if stat[l] != 0:
+                stat[l] = counter
+                counter += 1
+
+        # Seems kind of redundant - need to see if it is really useful
+        if self.max_label != counter - 1:
+            print("Line 81 activated")
+            self.max_label == counter - 1
+            for ind in range(len(bin_1D)):
+                label1D[ind] = stat[label1D[ind]]
+
+        label2D = np.reshape(label1D, [self.n_rows, self.n_cols])
+        return(label2D)
+
+    def uf_union(self, a, b):
+        a = int(a)
+        b = int(b)
+        while (self.parent[a] > 0):
+            a = self.parent[a]
+        while (self.parent[b] > 0):
+            b = self.parent[b]
+        if (a != b):
+            if (a > b):
+                self.parent[a] = b
+            else:
+                self.parent[b] = a
+
+    def uf_find(self, r):
+        while (self.parent[r] > 0):
+            r = self.parent[r]
+        if (self.labels[r] == 0):
+            self.labels[r] = self.next_label
+            self.next_label += 1
+        return self.labels[r]
 
 # Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
@@ -856,31 +983,33 @@ class Prim_MST_maker:
         self.wpnt_ind+=1
     
     def draw_graph(self,nodes,parents,wpnts):
-        None
-        # # Plot spanning tree
-        # for node in nodes:
-        #     x = (node[1])*2 + 0.5
-        #     y = (self.rows - node[0] - 1)*2 + 0.5
-        #     plt.plot(x,y,".w")
-        # for i in range(1,len(parents)):
-        #      x0 = (nodes[i][1])*2 + 0.5
-        #      x1 = (nodes[parents[i]][1])*2 + 0.5
-        #      y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
-        #      y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
-        #      plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+        # Draws graph on old DARP graph - not using anymore
+        # Plot spanning tree
+        for node in nodes:
+            x = (node[1])*2 + 0.5
+            y = (self.rows - node[0] - 1)*2 + 0.5
+            plt.plot(x,y,".w")
+        for i in range(1,len(parents)):
+             x0 = (nodes[i][1])*2 + 0.5
+             x1 = (nodes[parents[i]][1])*2 + 0.5
+             y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
+             y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
+             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
-        # # Plot waypoints
-        # px = np.zeros(len(wpnts),dtype=int)
-        # py = np.zeros(len(wpnts),dtype=int)
-        # for pi in range(len(wpnts)):
-        #     py[pi] = self.rows*2 - wpnts[pi][0] - 1
-        #     px[pi] = wpnts[pi][1]
-        # plt.plot(px,py,'-k') # linewidth=2
-        # plt.plot(px,py,'.k')
-        # for r in range(self.n_r):
-        #     plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
+        # Plot waypoints
+        px = np.zeros(len(wpnts),dtype=int)
+        py = np.zeros(len(wpnts),dtype=int)
+        for pi in range(len(wpnts)):
+            py[pi] = self.rows*2 - wpnts[pi][0] - 1
+            px[pi] = wpnts[pi][1]
+        plt.plot(px,py,'-k') # linewidth=2
+        plt.plot(px,py,'.k')
+        for r in range(self.n_r):
+            plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
+    
     def draw_cont_graph(self,nodes,parents,wpnts):
-        # # Plot spanning tree
+        # Draws graph on continuous space graph
+        # Plot spanning tree
         for node in nodes:
             x = ( (node[1])*2 + 0.5 + 0.5 )*self.small_cell
             y = ( (self.rows - node[0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
@@ -892,7 +1021,7 @@ class Prim_MST_maker:
              y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5 + 0.5 )*self.small_cell
              plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
-        # # Plot waypoints
+        # Plot waypoints
         px = np.zeros(len(wpnts),dtype=int)
         py = np.zeros(len(wpnts),dtype=int)
         for pi in range(len(wpnts)):
@@ -903,119 +1032,7 @@ class Prim_MST_maker:
         for r in range(self.n_r):
             plt.plot((self.rip_sml[r][1] + 0.5)*self.small_cell,(self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*self.small_cell,'.w',markersize=int(MARKERSIZE/3))
 
-class enclosed_space_check:
-    def __init__(self, n_r, n_rows, n_cols, EnvironmentGrid, rip):
-        self.n_r = n_r
-        self.n_rows = n_rows
-        self.n_cols = n_cols
-        self.binary_grid = np.copy(EnvironmentGrid)
-        self.rip = rip
-        self.create_binary_grid()
-        self.final_labels = self.compact_labeling()
-
-    def create_binary_grid(self):
-        for ind in self.rip:
-            self.binary_grid[ind[0]][ind[1]] = 0
-        indices_one = self.binary_grid == 1
-        indices_zero = self.binary_grid == 0
-        self.binary_grid[indices_one] = 0
-        self.binary_grid[indices_zero] = 1
-
-    def transform2Dto1D(self, array2D):
-        length = len(array2D)*len(array2D[0])
-        array1D = np.reshape(array2D, length)
-        return(array1D)
-
-    def labeling(self, bin1D):
-        rst = np.zeros([self.n_rows*self.n_cols], dtype=int)
-        self.parent = np.zeros([self.MAX_LABELS], dtype=int)
-        self.labels = np.zeros([self.MAX_LABELS])
-
-        next_region = 1
-        for i in range(self.n_rows):  # height
-            for j in range(self.n_cols):  # width
-                if (bin1D[i*self.n_cols+j] == 0):
-                    continue
-                k = 0
-                connected = False
-
-                # Check if connected to the left
-                if ((j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j])):
-                    k = rst[i*self.n_cols+j-1]
-                    connected = True
-                # Check if connected to the top
-                if ((i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and ((connected == False) or (bin1D[(i-1)*self.n_cols+j] < k))):
-                    k = rst[(i-1)*self.n_cols+j]
-                    connected = True
-                if(connected == False):
-                    k = next_region
-                    next_region += 1
-
-                rst[i*self.n_cols+j] = k
-                if ((j > 0) and (bin1D[i*self.n_cols+j-1] == bin1D[i*self.n_cols+j]) and rst[i*self.n_cols+j-1] != k):
-                    self.uf_union(k, rst[i*self.n_cols+j-1])
-                if ((i > 0) and (bin1D[(i-1)*self.n_cols+j] == bin1D[i*self.n_cols+j]) and rst[(i-1)*self.n_cols+j] != k):
-                    self.uf_union(k, rst[(i-1)*self.n_cols+j])
-
-        self.next_label = 1
-        for ind in range(self.n_cols*self.n_rows):
-            if ((bin1D[ind] != 0)):
-                rst[ind] = self.uf_find(rst[ind])
-        self.next_label -= 1
-        return(rst)
-
-    def compact_labeling(self):
-        bin_1D = self.transform2Dto1D(self.binary_grid)
-        self.MAX_LABELS = self.n_rows * self.n_cols
-
-        # Label the different regions
-        label1D = self.labeling(bin_1D)
-        self.max_label = self.next_label
-
-        stat = np.zeros(self.max_label+1)
-        for l in range(0, self.max_label+1):
-            stat[l] = len(np.argwhere(label1D == l))
-        if sum(stat) != self.n_cols*self.n_rows:
-            print("WARNING: labelling error - line 63-69")
-        stat[0] = 0
-
-        counter = 1
-        for l in range(self.max_label+1):
-            if stat[l] != 0:
-                stat[l] = counter
-                counter += 1
-
-        # Seems kind of redundant - need to see if it is really useful
-        if self.max_label != counter - 1:
-            print("Line 81 activated")
-            self.max_label == counter - 1
-            for ind in range(len(bin_1D)):
-                label1D[ind] = stat[label1D[ind]]
-
-        label2D = np.reshape(label1D, [self.n_rows, self.n_cols])
-        return(label2D)
-
-    def uf_union(self, a, b):
-        a = int(a)
-        b = int(b)
-        while (self.parent[a] > 0):
-            a = self.parent[a]
-        while (self.parent[b] > 0):
-            b = self.parent[b]
-        if (a != b):
-            if (a > b):
-                self.parent[a] = b
-            else:
-                self.parent[b] = a
-
-    def uf_find(self, r):
-        while (self.parent[r] > 0):
-            r = self.parent[r]
-        if (self.labels[r] == 0):
-            self.labels[r] = self.next_label
-            self.next_label += 1
-        return self.labels[r]
-
+# Prim Related
 class mst_node:
     def __init__(self,i,x,y):
         self.node_number = i
@@ -1061,6 +1078,7 @@ class mst_arrow:
         self.end_node = end_node
         self.direction = direction
 
+# Environment grid creation
 class generate_rand_grid:
     def __init__(self, rows, cols, robots, obs):
         self.rows = rows
@@ -1143,8 +1161,8 @@ class generate_grid:
         for r in range(self.n_r):
             self.rip_sml[r][0] = self.rip[r][0]*2
             self.rip_sml[r][1] = self.rip[r][1]*2
-            self.rip_cont[r][0] = self.rip_sml[r][0]*self.small_cell
-            self.rip_cont[r][0] = self.rip_sml[r][0]*self.small_cell
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*self.small_cell
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*self.small_cell
     def randomise_obs(self,obs_perc):
         self.obs = math.floor(self.rows*self.cols*obs_perc/100)
         if self.obs < (self.rows*self.cols-self.n_r):
@@ -1220,7 +1238,7 @@ if __name__ == "__main__":
     #                 if print_graph == True:
     #                     plt.show()
  
-## RUN AN INDIVIDUAL CASE ##
+## RUN AN INDIVIDUAL CASE -> old ##
     # FIXED PARAMETERS #
         # Imp = False
         # maxIter = 10000
@@ -1290,19 +1308,16 @@ if __name__ == "__main__":
     print_graphs = True
 
     # RUNNING SIMULATION #
-    file_log = "Logging_004.txt"
+    file_log = "Logging_005.txt"
     EnvironmentGrid = GG.GRID
 
     #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
     algorithm_start(recompile=True)
-    # Call this to run DARP and MST
 
+    # Call this to run DARP and MST
     RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs)
     RA.set_continuous(horizontal,vertical,GG.small_cell,GG.large_cell,GG.rip_sml,GG.rip_cont)
     RA.main()
 
     if print_graphs == True:
         plt.show()
-
-# TODO: Include dynamic constraints
-    # The first waypoint is the robot starting position regardless of whether it is a node centre
