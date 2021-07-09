@@ -17,6 +17,7 @@ General
 
 DARP Related
 -------------
+Find original code by creators of DARP [here](https://github.com/athakapo/DARP) and the journal article [here](https://kapoutsis.info/wp-content/uploads/2017/02/j3.pdf).
 * DARP_data
     * Code used to check cases where DARP broke historically - a lot of the debugging happened here
     * Target_case_checker is easier to use. You just have to follow a specific file format.
