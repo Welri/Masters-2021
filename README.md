@@ -40,6 +40,8 @@ Wrote an alternative in python under DARP_Python_Main.py.
 It slows the code down - in 1km^2 area it now consumed 95% of computation time instead of 80%.
 However it is easier to interface - Going to do development there and just eventually migrate it all to Java - potentially only going to happen post hand-in of project.
 
+Find an explanation of Prim's with example code at [geeks for geeks](https://www.geeksforgeeks.org/prims-minimum-spanning-tree-mst-greedy-algo-5/) or [programiz](https://www.programiz.com/dsa/prim-algorithm).
+
 * STC_pack
     * prim.java - coded adapted from codde by Aakash Hasija (used)
     * kruskal.java - code copied from Aakash Hasija (not used)
