@@ -163,6 +163,8 @@ class Run_Algorithm:
             file_log.write(",")
             file_log.write(str(self.time_prim))
             file_log.write(",")
+            file_log.write(str(self.show_grid))
+            file_log.write(",")
             AOEstring = str(self.ArrayOfElements)
             AOEstring = AOEstring.replace("\n", '')
             AOEstring = AOEstring.replace("[", '')
@@ -237,6 +239,8 @@ class Run_Algorithm:
             file_log.write(str(self.time_DARP_total))
             file_log.write(",")
             file_log.write(str(self.time_prim))
+            file_log.write(",")
+            file_log.write(str(self.show_grid))
             file_log.write(",")
             file_log.write("None")
             file_log.write(",")
@@ -605,7 +609,6 @@ class Prim_MST_maker:
         self.rip = rip
         self.grids = Ilabel
         self.rip_sml = rip_sml
-        # self.small_cell_grids = np.zeros([self.n_r,self.rows*2,self.cols*2])
 
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
@@ -624,7 +627,7 @@ class Prim_MST_maker:
 
             # Making graph for prim algorithm
             graph = np.zeros([vertices,vertices],dtype = int)
-            parents = np.zeros(vertices,dtype = int) 
+            parents = np.zeros(vertices,dtype = int)
             node_ind = 0
             for node_ind in range(vertices):
                 node = free_nodes[node_ind]
@@ -640,9 +643,12 @@ class Prim_MST_maker:
                                 graph[node_ind][neighbour_node_ind[0][0]] = FOV_H # weights are just distance for now
                             elif(classification=='V'):
                                 graph[node_ind][neighbour_node_ind[0][0]] = FOV_V # weights are just distance for now
-            self.write_input(graph,vertices)
-            self.run_subprocess()
-            parents = self.read_output(vertices)
+
+            # JAVA MST COMMENTED OUT - indented
+                # self.write_input(graph,vertices)
+                # self.run_subprocess()
+                # parents = self.read_output(vertices)
+            parents = self.prim_algorithm(graph,vertices)
 
             self.free_nodes_list.append(free_nodes) # List of free mode coordinates per robot
             self.vertices_list.append(vertices)     # List of number of vertices per robot
@@ -716,49 +722,36 @@ class Prim_MST_maker:
             wpnts_updated[ind] = wpnts[p]
             self.wpnts_list[r] = wpnts_updated
 
-    def write_input(self,graph,dim):
-        # write graphs to file
-        file_in = open("MST_Input.txt","w")
-        file_in.write(str(dim))
-        file_in.write("\n")
-        for i in range(dim):
-            for j in range(dim):
-                file_in.write(str(graph[i][j]))
-                file_in.write("\n")
-        file_in.close()
-    
-    def run_subprocess(self):
-        # Run the OS appropriate script to run the Java program for Prim's MST Algorithm for individual area searches
-        if (os.name == 'nt'):
-            # print("The current operating system is WINDOWS")
-            subprocess.call([r'pMST_Run_Java.bat'])
-        elif (os.name == 'posix'):
-            # print("The current operating system is UBUNTU")
-            subprocess.call("./pMST_Run_Java.sh")
-        else:
-            print("WARNING: Unrecognised operating system")
-    
-    def read_output(self,dim):
-        file_out = open("MST_Output.txt","r")
-        parents = np.zeros(dim,dtype=int)
-        for d in range(dim):
-            parents[d] = int(file_out.readline())
-        file_out.close()
-        return(parents)
-
-    def small_cell_grid(self,grid,rows,cols):
-        SC_grid = np.zeros([rows*2,cols*2],dtype=int)
-        for i in range(rows):
-            for j in range(cols):
-                i_SC = i*2 # i starting index for bigger grid
-                j_SC = j*2 # j starting index for bigger grid
-                val = grid[i][j]
-                # Assign one grid value to every four cells
-                SC_grid[i_SC][j_SC] = val
-                SC_grid[i_SC+1][j_SC] = val
-                SC_grid[i_SC][j_SC+1] = val
-                SC_grid[i_SC+1][j_SC+1] = val
-        return(SC_grid)
+    # JAVA MST COMMENTED OUT - indented
+        # def write_input(self,graph,dim):
+        #     # write graphs to file
+        #     file_in = open("MST_Input.txt","w")
+        #     file_in.write(str(dim))
+        #     file_in.write("\n")
+        #     for i in range(dim):
+        #         for j in range(dim):
+        #             file_in.write(str(graph[i][j]))
+        #             file_in.write("\n")
+        #     file_in.close()
+        
+        # def run_subprocess(self):
+        #     # Run the OS appropriate script to run the Java program for Prim's MST Algorithm for individual area searches
+        #     if (os.name == 'nt'):
+        #         # print("The current operating system is WINDOWS")
+        #         subprocess.call([r'pMST_Run_Java.bat'])
+        #     elif (os.name == 'posix'):
+        #         # print("The current operating system is UBUNTU")
+        #         subprocess.call("./pMST_Run_Java.sh")
+        #     else:
+        #         print("WARNING: Unrecognised operating system")
+        
+        # def read_output(self,dim):
+        #     file_out = open("MST_Output.txt","r")
+        #     parents = np.zeros(dim,dtype=int)
+        #     for d in range(dim):
+        #         parents[d] = int(file_out.readline())
+        #     file_out.close()
+        #     return(parents)
 
     def select_start_node(self,nodes):
         for node in nodes:
@@ -1043,6 +1036,31 @@ class Prim_MST_maker:
         for r in range(self.n_r):
             plt.plot((self.rip_sml[r][1] + 0.5)*FOV_H,(self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*FOV_V,'.w',markersize=int(MARKERSIZE/3))
 
+    def prim_algorithm(self,graph,vertices):
+        selected = np.zeros([vertices],dtype=bool)
+        parents = np.zeros([vertices],dtype=int)
+        weights = np.zeros([vertices])
+        total_weight = 0
+        selected[0] = True
+        parents[0] = -1
+        edges=0
+        while(edges<vertices-1):
+            minimum = np.inf
+            for i in range(vertices):
+                if(selected[i]):
+                    for j in range(vertices):
+                        if(not(selected[j]))and(graph[i][j]):
+                            if(graph[i][j]<minimum):
+                                minimum=graph[i][j] # update min
+                                row = i 
+                                col = j
+            selected[col] = True
+            parents[col] = row
+            weights[col] = minimum
+            total_weight+=minimum
+            edges += 1
+        return(parents)
+
 # Prim Related
 class mst_node:
     def __init__(self,i,x,y):
@@ -1128,16 +1146,10 @@ class generate_rand_grid:
 
 class generate_grid:
     def __init__(self,hor,vert):
-        # Get continuous dimensions too
-        # self.small_cell = FOV_V
-        # self.large_cell = FOV_V*2 # large cell size in km
-
         # Divide Environment Into Large Nodes
         self.rows = math.ceil(vert/(FOV_V*2))
         self.cols = math.ceil(hor/(FOV_H*2))
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
-        # self.GRID_smaller = np.zeros([int(self.rows/3), int(self.cols/3)], dtype=int)
-        # self.possible_indexes_s = np.argwhere(self.GRID_smaller == 0)
         self.possible_indexes = np.argwhere(self.GRID == 0)
         np.random.shuffle(self.possible_indexes)
     def set_robots(self,n_r,coords):
@@ -1291,8 +1303,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 250.0 # m
-    vertical = 250.0 # m
+    horizontal = 1000.0 # m
+    vertical = 1000.0 # m
 
     # Establish Small Node size
     
@@ -1314,7 +1326,7 @@ if __name__ == "__main__":
     
     rows = GG.rows
     cols = GG.cols
-    dcells = int(rows*cols/10)+1
+    dcells = math.ceil(rows*cols/10)
     
     print_graphs = True
 

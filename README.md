@@ -31,8 +31,14 @@ DARP Related
 * Input.txt / Output.txt
     * Files that are written to and from for DARP
 
-MST Related
+MST Related - NOT CURRENTLY USED
 ------------
+The code to interface with this is still in DARP_Python_Main.py, it is simply commented out (not the indent under funtions).
+These areas are labelled "JAVA MST COMMENTED OUT".
+Wrote an alternative in python under DARP_Python_Main.py. 
+It slows the code down - in 1km^2 area it now consumed 95% of computation time instead of 80%.
+However it is easier to interface - Going to do development there and just eventually migrate it all to Java - potentially only going to happen post hand-in of project
+
 * STC_pack
     * prim.java - coded adapted from codde by Aakash Hasija (used)
     * kruskal.java - code copied from Aakash Hasija (not used)
