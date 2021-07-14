@@ -9,7 +9,7 @@ General
     * Runs both DARP and PrimMST algorithm
 * compiling .bat/.sh
     * Batch file / Bash file: WINDOWS / UBUNTU
-    * Compiles all the necessary Java files
+    * Compiles all the necessary Java files - CURRENTLY INCLUDES PRIM FILES THAT AREN'T BENIG USED
     * Gets called in DARP_Python_Main.py
 * Logging_xxx.txt
     * Log files that store information about algorithm runs

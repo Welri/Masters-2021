@@ -22,6 +22,11 @@ AR = V/H # Aspect ratio (V/H)
 FOV_H = 2*Height*math.tan( (AOV/2) * math.pi/180.0 )
 FOV_V = FOV_H*AR
 
+MAX_FLIGHT_TIME = 31*60 # s - no wind at constant 25kph
+MAX_FLIGHT_DIST = 18*1000 # m - not wind at constant 50kph  
+MAX_SPEED = 72*1000/3600 # m/s
+MAX_TRANSMISSION_DIST = 6000 # m - unobstructed view
+
 class algorithm_start:
     def __init__(self,recompile=True):
          # DIRECTORY MANAGEMENT
@@ -1303,8 +1308,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 1000.0 # m
-    vertical = 1000.0 # m
+    horizontal = 6000.0 # m
+    vertical = 6000.0 # m
 
     # Establish Small Node size
     
@@ -1328,7 +1333,7 @@ if __name__ == "__main__":
     cols = GG.cols
     dcells = math.ceil(rows*cols/10)
     
-    print_graphs = True
+    print_graphs = False
 
     # RUNNING SIMULATION #
     file_log = "Logging_005.txt"
