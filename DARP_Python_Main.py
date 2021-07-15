@@ -272,7 +272,7 @@ class Run_Algorithm:
         file_log.close()
 
     def primMST(self):
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_sml)
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_cont,self.vertical,self.rip_sml)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -395,6 +395,7 @@ class Run_Algorithm:
                 c = 0
             colour_assignments[self.n_r] = "k"
 
+        # Print RIP
         for r in range(self.n_r):
             ripy = self.rows*2 - self.rip_sml[r][0] - 1
             ripx = self.rip_sml[r][1]
@@ -606,14 +607,16 @@ class enclosed_space_check:
 
 # Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_sml):
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_cont,vertical,rip_sml):
         self.A = A
         self.n_r = n_r
         self.rows = rows
         self.cols = cols
         self.rip = rip
         self.grids = Ilabel
+        self.rip_cont = rip_cont
         self.rip_sml = rip_sml
+        self.vertical = vertical
 
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
@@ -623,7 +626,8 @@ class Prim_MST_maker:
         self.vertices_list = list()
         self.parents_list = list()
         self.nodes_list = list()
-        self.wpnts_list = list()
+        # self.wpnts_list = list()
+        self.wpnts_cont_list = list()
         # self.arw_list = list()
         
         for r in range(self.n_r):   
@@ -672,7 +676,8 @@ class Prim_MST_maker:
             self.nodes_list.append(nodes)           # List of node objects (using free nodes and parents) per robot
 
             # Start Arrow Creation
-            self.waypoints = np.empty([vertices*4,2],dtype=mst_node)
+            # self.waypoints = np.empty([vertices*4,2],dtype=int)
+            self.waypoints_cont = np.empty([vertices*4,2],dtype=float)
             self.wpnt_ind = 0
             no_arws = (vertices-1)*2 # edges = nodes-1, arrows = edges*2
             arrows = np.empty(no_arws,dtype=mst_arrow) 
@@ -696,20 +701,25 @@ class Prim_MST_maker:
                 arw_ind += 1
 
             # Final waypoints for last arrow
-            self.wpnts_list.append(self.waypoints)
+            # self.wpnts_list.append(self.waypoints)
+            self.wpnts_cont_list.append(self.waypoints_cont)
             # self.arw_list.append(arrows)
         
         self.update_wpnts()
 
         if print_graph == True:
             for r in range(self.n_r):
-                self.draw_cont_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_list[r])
+                self.draw_cont_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_cont_list[r])
    
     def update_wpnts(self):
         for r in range(self.n_r):
-            wpnts = self.wpnts_list[r]
-            wpnts_updated = np.zeros([len(wpnts)+1,2],dtype=int)
-            rip = self.rip_sml[r]
+            wpnts = self.wpnts_cont_list[r]
+            wpnts_updated = np.zeros([len(wpnts)+1,2],dtype=float)
+            # wpnts_cont = np.zeros([len(wpnts)+1,2],dtype=float)
+            # rip = self.rip_sml[r]
+            rip = np.zeros(2,dtype=float)
+            rip[0] = ( self.rows*2 - self.rip_sml[r][0] - 0.5 )*FOV_V
+            rip[1] = ( self.rip_sml[r][1] +0.5 )*FOV_H
             for w in range(len(wpnts)):
                 if(wpnts[w][0]==rip[0])and(wpnts[w][1]==rip[1]):
                     p = w
@@ -725,7 +735,7 @@ class Prim_MST_maker:
                 ind_p+=1
                 ind+=1
             wpnts_updated[ind] = wpnts[p]
-            self.wpnts_list[r] = wpnts_updated
+            self.wpnts_cont_list[r] = wpnts_updated
 
     # JAVA MST COMMENTED OUT - indented
         # def write_input(self,graph,dim):
@@ -843,8 +853,10 @@ class Prim_MST_maker:
             # This means it went from N-W
             x = 2*X + 1
             y = 2*Y + 1
-        self.waypoints[self.wpnt_ind][0] = y # row
-        self.waypoints[self.wpnt_ind][1] = x # col
+        # self.waypoints[self.wpnt_ind][0] = y # row
+        # self.waypoints[self.wpnt_ind][1] = x # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x + 0.5)*FOV_H
         self.wpnt_ind+=1
     
     def fw_turn_wpnts(self,arrow):
@@ -877,11 +889,15 @@ class Prim_MST_maker:
             y1 = 2*Y + 1
             x2 = 2*X + 1
             y2 = 2*Y + 1
-        self.waypoints[self.wpnt_ind][0] = y1 # row
-        self.waypoints[self.wpnt_ind][1] = x1 # col
+        # self.waypoints[self.wpnt_ind][0] = y1 # row
+        # self.waypoints[self.wpnt_ind][1] = x1 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y1 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x1 + 0.5)*FOV_H
         self.wpnt_ind+=1
-        self.waypoints[self.wpnt_ind][0] = y2 # row
-        self.waypoints[self.wpnt_ind][1] = x2 # col
+        # self.waypoints[self.wpnt_ind][0] = y2 # row
+        # self.waypoints[self.wpnt_ind][1] = x2 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y2 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x2 + 0.5)*FOV_H
         self.wpnt_ind+=1
     
     def right_turn_wpnts(self,arrow):
@@ -922,14 +938,20 @@ class Prim_MST_maker:
             y2 = 2*Y + 1
             x3 = 2*X + 1
             y3 = 2*Y + 1
-        self.waypoints[self.wpnt_ind][0] = y1 # row
-        self.waypoints[self.wpnt_ind][1] = x1 # col
+        # self.waypoints[self.wpnt_ind][0] = y1 # row
+        # self.waypoints[self.wpnt_ind][1] = x1 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y1 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x1 + 0.5)*FOV_H
         self.wpnt_ind+=1
-        self.waypoints[self.wpnt_ind][0] = y2 # row
-        self.waypoints[self.wpnt_ind][1] = x2 # col
+        # self.waypoints[self.wpnt_ind][0] = y2 # row
+        # self.waypoints[self.wpnt_ind][1] = x2 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y2 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x2 + 0.5)*FOV_H
         self.wpnt_ind+=1
-        self.waypoints[self.wpnt_ind][0] = y3 # row
-        self.waypoints[self.wpnt_ind][1] = x3 # col
+        # self.waypoints[self.wpnt_ind][0] = y3 # row
+        # self.waypoints[self.wpnt_ind][1] = x3 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y3 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x3 + 0.5)*FOV_H
         self.wpnt_ind+=1
     
     def back_turn_wpnts(self,arrow):
@@ -978,21 +1000,29 @@ class Prim_MST_maker:
             y3 = 2*Y + 1
             x4 = 2*X + 1
             y4 = 2*Y + 1
-        self.waypoints[self.wpnt_ind][0] = y1 # row
-        self.waypoints[self.wpnt_ind][1] = x1 # col
+        # self.waypoints[self.wpnt_ind][0] = y1 # row
+        # self.waypoints[self.wpnt_ind][1] = x1 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y1 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x1 + 0.5)*FOV_H
         self.wpnt_ind+=1
-        self.waypoints[self.wpnt_ind][0] = y2 # row
-        self.waypoints[self.wpnt_ind][1] = x2 # col
+        # self.waypoints[self.wpnt_ind][0] = y2 # row
+        # self.waypoints[self.wpnt_ind][1] = x2 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y2 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x2 + 0.5)*FOV_H
         self.wpnt_ind+=1
-        self.waypoints[self.wpnt_ind][0] = y3 # row
-        self.waypoints[self.wpnt_ind][1] = x3 # col
+        # self.waypoints[self.wpnt_ind][0] = y3 # row
+        # self.waypoints[self.wpnt_ind][1] = x3 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y3 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x3 + 0.5)*FOV_H
         self.wpnt_ind+=1
-        self.waypoints[self.wpnt_ind][0] = y4 # row
-        self.waypoints[self.wpnt_ind][1] = x4 # col
+        # self.waypoints[self.wpnt_ind][0] = y4 # row
+        # self.waypoints[self.wpnt_ind][1] = x4 # col
+        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y4 - 0.5)*FOV_V
+        self.waypoints_cont[self.wpnt_ind][1] = (x4 + 0.5)*FOV_H
         self.wpnt_ind+=1
     
     def draw_graph(self,nodes,parents,wpnts):
-        # Draws graph on old DARP graph - not using anymore
+        # Draws graph on old DARP graph - not using anymore (needs rip_sml)
         # Plot spanning tree
         for node in nodes:
             x = (node[1])*2 + 0.5
@@ -1020,26 +1050,28 @@ class Prim_MST_maker:
         # Draws graph on continuous space graph
         # Plot spanning tree
         for node in nodes:
-            x = ( (node[1])*2 + 0.5 + 0.5 )*FOV_H
-            y = ( (self.rows - node[0] - 1)*2 + 0.5 + 0.5 )*FOV_V
+            x = ( (node[1])*2 +1 )*FOV_H
+            y = ( (self.rows - node[0] - 1)*2 + 1 )*FOV_V
             plt.plot(x,y,".w")
         for i in range(1,len(parents)):
-             x0 = ( (nodes[i][1])*2 + 0.5 + 0.5 )*FOV_H
-             x1 = ( (nodes[parents[i]][1])*2 + 0.5 + 0.5 )*FOV_H
-             y0 = ( (self.rows - nodes[i][0] - 1)*2 + 0.5 + 0.5 )*FOV_V
-             y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5 + 0.5 )*FOV_V
+             x0 = ( (nodes[i][1])*2 + 1 )*FOV_H
+             x1 = ( (nodes[parents[i]][1])*2 + 1 )*FOV_H
+             y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*FOV_V
+             y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*FOV_V
              plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
         # Plot waypoints
-        px = np.zeros(len(wpnts),dtype=int)
-        py = np.zeros(len(wpnts),dtype=int)
+        px = np.zeros(len(wpnts),dtype=float)
+        py = np.zeros(len(wpnts),dtype=float)
         for pi in range(len(wpnts)):
-            py[pi] = ( self.rows*2 - wpnts[pi][0] - 1 + 0.5 )*FOV_V
-            px[pi] = ( wpnts[pi][1] + 0.5 )*FOV_H
+            py[pi] = wpnts[pi][0]
+            px[pi] = wpnts[pi][1]
+            # py[pi] = ( self.rows*2 - wpnts[pi][0] - 1 + 0.5 )*FOV_V
+            # px[pi] = ( wpnts[pi][1] + 0.5 )*FOV_H
         plt.plot(px,py,'-k') # linewidth=2
         plt.plot(px,py,'.k')
         for r in range(self.n_r):
-            plt.plot((self.rip_sml[r][1] + 0.5)*FOV_H,(self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*FOV_V,'.w',markersize=int(MARKERSIZE/3))
+            plt.plot(self.rip_cont[r][1],self.vertical - self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
 
     def prim_algorithm(self,graph,vertices):
         selected = np.zeros([vertices],dtype=bool)
@@ -1308,8 +1340,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 6000.0 # m
-    vertical = 6000.0 # m
+    horizontal = 100.0 # m
+    vertical = 100.0 # m
 
     # Establish Small Node size
     
@@ -1333,7 +1365,7 @@ if __name__ == "__main__":
     cols = GG.cols
     dcells = math.ceil(rows*cols/10)
     
-    print_graphs = False
+    print_graphs = True
 
     # RUNNING SIMULATION #
     file_log = "Logging_005.txt"
