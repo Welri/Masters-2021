@@ -677,7 +677,7 @@ class Prim_MST_maker:
 
             # Start Arrow Creation
             # self.waypoints = np.empty([vertices*4,2],dtype=int)
-            self.waypoints_cont = np.empty([vertices*4,2],dtype=float)
+            self.waypoints_cont = np.zeros([vertices*4,2],dtype=float)
             self.wpnt_ind = 0
             no_arws = (vertices-1)*2 # edges = nodes-1, arrows = edges*2
             arrows = np.empty(no_arws,dtype=mst_arrow) 
@@ -720,9 +720,16 @@ class Prim_MST_maker:
             rip = np.zeros(2,dtype=float)
             rip[0] = ( self.rows*2 - self.rip_sml[r][0] - 0.5 )*FOV_V
             rip[1] = ( self.rip_sml[r][1] +0.5 )*FOV_H
+            min_dist = np.sqrt( (rip[1]-wpnts[0][1])**2 + (rip[0]-wpnts[0][0])**2 )
             for w in range(len(wpnts)):
+                dist = np.sqrt( (rip[1]-wpnts[w][1])**2 + (rip[0]-wpnts[w][0])**2 )
+                if(dist<min_dist):
+                    min_dist = dist
+                    p = w
                 if(wpnts[w][0]==rip[0])and(wpnts[w][1]==rip[1]):
                     p = w
+                    break
+            
             ind = 0
             ind_p = p
             while(ind_p!=len(wpnts)):
@@ -841,22 +848,48 @@ class Prim_MST_maker:
             # This means it went from E-N
             x = 2*X
             y = 2*Y + 1
+            x = (x + 0.5)*FOV_H # added waypoint
+            y = (self.rows*2 - y - 0.5)*FOV_V # added waypoint
         elif(direction==1):
             # This means it went from S-E
             x = 2*X
             y = 2*Y
+            x = (x + 0.5)*FOV_H
+            y = (self.rows*2 - y - 0.5)*FOV_V
         elif(direction==2):
             # This means it went from W-S
             x = 2*X + 1
             y = 2*Y
+            x = (x + 0.5)*FOV_H
+            y = (self.rows*2 - y - 0.5)*FOV_V
         elif(direction==3):        
             # This means it went from N-W
             x = 2*X + 1
             y = 2*Y + 1
-        # self.waypoints[self.wpnt_ind][0] = y # row
-        # self.waypoints[self.wpnt_ind][1] = x # col
-        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y - 0.5)*FOV_V
-        self.waypoints_cont[self.wpnt_ind][1] = (x + 0.5)*FOV_H
+            x = (x + 0.5)*FOV_H
+            y = (self.rows*2 - y - 0.5)*FOV_V
+            # Delete previous 2 indexes
+            self.wpnt_ind-=1
+            self.waypoints_cont = np.delete(self.waypoints_cont,self.wpnt_ind,axis=0)
+            self.wpnt_ind-=1
+            start = self.waypoints_cont[self.wpnt_ind] # save start of curve
+            self.waypoints_cont = np.delete(self.waypoints_cont,self.wpnt_ind,axis=0)            
+            end = np.array([y,x]) # save end of curve
+            # Generate points
+            pnts = 7
+            x_arc = np.linspace(start[1],end[1],pnts)
+            y_arc = 1-((x_arc-end[1])**2)/(FOV_H**2)
+            y_arc = abs(y_arc)
+            y_arc = np.sqrt(y_arc)
+            y_arc = FOV_V*y_arc
+            y_arc = start[0]+y_arc
+            # Insert points
+            for i in range(pnts):
+                self.waypoints_cont = np.insert(self.waypoints_cont,self.wpnt_ind,np.array([y_arc[i],x_arc[i]]),axis=0)
+                self.wpnt_ind+=1
+            
+        self.waypoints_cont[self.wpnt_ind][0] = y
+        self.waypoints_cont[self.wpnt_ind][1] = x
         self.wpnt_ind+=1
     
     def fw_turn_wpnts(self,arrow):
