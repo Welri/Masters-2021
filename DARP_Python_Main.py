@@ -12,8 +12,6 @@ import math
 MARKERSIZE=15
 TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
-ARC_PNTS = 5 # for a quarter ellipse
-ARC_8 = False
 
 # FOV Constants - Mavic Pro 2
 Height = 10 # m above ground
@@ -849,24 +847,24 @@ class Prim_MST_maker:
         if(direction==0):
             # This means it went from E-N
             x = 2*X
-            y = 2*Y + 1
+            y = 2*Y + 1 + 0.5
             x = (x + 0.5)*FOV_H # added waypoint
             y = (self.rows*2 - y - 0.5)*FOV_V # added waypoint
         elif(direction==1):
             # This means it went from S-E
-            x = 2*X
+            x = 2*X - 0.5
             y = 2*Y
             x = (x + 0.5)*FOV_H
             y = (self.rows*2 - y - 0.5)*FOV_V
         elif(direction==2):
             # This means it went from W-S
             x = 2*X + 1
-            y = 2*Y
+            y = 2*Y - 0.5
             x = (x + 0.5)*FOV_H
             y = (self.rows*2 - y - 0.5)*FOV_V
         elif(direction==3):        
             # This means it went from N-W
-            x = 2*X + 1
+            x = 2*X + 1 + 0.5
             y = 2*Y + 1
             x = (x + 0.5)*FOV_H
             y = (self.rows*2 - y - 0.5)*FOV_V
@@ -903,36 +901,52 @@ class Prim_MST_maker:
         if(direction==0):
             # This means it went from N-N
             x1 = 2*X
-            y1 = 2*Y + 2
+            y1 = 2*Y + 2 + 0.5
             x2 = 2*X
-            y2 = 2*Y + 1
+            y2 = 2*Y + 1 + 0.5
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
         elif(direction==1):
             # This means it went from E-E
-            x1 = 2*X - 1
+            x1 = 2*X - 1 - 0.5
             y1 = 2*Y
-            x2 = 2*X
+            x2 = 2*X - 0.5
             y2 = 2*Y
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
         elif(direction==2):
             # This means it went from S-S
             x1 = 2*X + 1
-            y1 = 2*Y - 1
+            y1 = 2*Y - 1 - 0.5
             x2 = 2*X + 1
-            y2 = 2*Y
+            y2 = 2*Y - 0.5
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
         elif(direction==3):        
             # This means it went from W-W
-            x1 = 2*X + 2
+            x1 = 2*X + 2 + 0.5
             y1 = 2*Y + 1
-            x2 = 2*X + 1
+            x2 = 2*X + 1 + 0.5
             y2 = 2*Y + 1
-        # self.waypoints[self.wpnt_ind][0] = y1 # row
-        # self.waypoints[self.wpnt_ind][1] = x1 # col
-        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y1 - 0.5)*FOV_V
-        self.waypoints_cont[self.wpnt_ind][1] = (x1 + 0.5)*FOV_H
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+        self.waypoints_cont[self.wpnt_ind][0] = y1
+        self.waypoints_cont[self.wpnt_ind][1] = x1
         self.wpnt_ind+=1
-        # self.waypoints[self.wpnt_ind][0] = y2 # row
-        # self.waypoints[self.wpnt_ind][1] = x2 # col
-        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y2 - 0.5)*FOV_V
-        self.waypoints_cont[self.wpnt_ind][1] = (x2 + 0.5)*FOV_H
+        self.waypoints_cont[self.wpnt_ind][0] = y2
+        self.waypoints_cont[self.wpnt_ind][1] = x2
         self.wpnt_ind+=1
     
     def right_turn_wpnts(self,arrow):
@@ -943,44 +957,72 @@ class Prim_MST_maker:
         Y = end_node.coord_y
         if(direction==0):
             # This means it went from W-N
-            x1 = 2*X
+            x1 = 2*X + 0.5
             y1 = 2*Y + 3
             x2 = 2*X 
-            y2 = 2*Y + 2
+            y2 = 2*Y + 2 + 0.5
             x3 = 2*X
-            y3 = 2*Y + 1
+            y3 = 2*Y + 1 + 0.5
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            x3 = (x3 + 0.5)*FOV_H
         elif(direction==1):
             # This means it went from N-E
             x1 = 2*X - 2
-            y1 = 2*Y
-            x2 = 2*X - 1
+            y1 = 2*Y + 0.5
+            x2 = 2*X - 1 - 0.5
             y2 = 2*Y
-            x3 = 2*X
+            x3 = 2*X - 0.5
             y3 = 2*Y
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            x3 = (x3 + 0.5)*FOV_H
         elif(direction==2):
             # This means it went from E-S
-            x1 = 2*X + 1
+            x1 = 2*X + 1 - 0.5
             y1 = 2*Y - 2
             x2 = 2*X + 1
-            y2 = 2*Y - 1
+            y2 = 2*Y - 1 - 0.5
             x3 = 2*X + 1
-            y3 = 2*Y
+            y3 = 2*Y - 0.5
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            x3 = (x3 + 0.5)*FOV_H
         elif(direction==3):        
             # This means it went from S-W
             x1 = 2*X + 3
-            y1 = 2*Y + 1
-            x2 = 2*X + 2
+            y1 = 2*Y + 1 - 0.5
+            x2 = 2*X + 2 + 0.5
             y2 = 2*Y + 1
-            x3 = 2*X + 1
+            x3 = 2*X + 1 + 0.5
             y3 = 2*Y + 1
-        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y1 - 0.5)*FOV_V
-        self.waypoints_cont[self.wpnt_ind][1] = (x1 + 0.5)*FOV_H
+            # Change to continuous
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x1 = (x1 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            x3 = (x3 + 0.5)*FOV_H
+        self.waypoints_cont[self.wpnt_ind][0] = y1
+        self.waypoints_cont[self.wpnt_ind][1] = x1
         self.wpnt_ind+=1
-        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y2 - 0.5)*FOV_V
-        self.waypoints_cont[self.wpnt_ind][1] = (x2 + 0.5)*FOV_H
+        self.waypoints_cont[self.wpnt_ind][0] = y2
+        self.waypoints_cont[self.wpnt_ind][1] = x2
         self.wpnt_ind+=1
-        self.waypoints_cont[self.wpnt_ind][0] = (self.rows*2 - y3 - 0.5)*FOV_V
-        self.waypoints_cont[self.wpnt_ind][1] = (x3 + 0.5)*FOV_H
+        self.waypoints_cont[self.wpnt_ind][0] = y3
+        self.waypoints_cont[self.wpnt_ind][1] = x3
         self.wpnt_ind+=1
     
     def back_turn_wpnts(self,arrow):
@@ -991,161 +1033,174 @@ class Prim_MST_maker:
         Y = end_node.coord_y
         if(direction==0):
             # This means it went from S-N
-            # x1 = 2*X + 1
-            # y1 = 2*Y + 3
-            # x2 = 2*X 
-            # y2 = 2*Y + 3
+            x1 = 2*X + 1
+            y1 = 2*Y + 3 - 0.5
+            x2 = 2*X + 0.5
+            y2 = 2*Y + 3
             x3 = 2*X
-            y3 = 2*Y + 2
+            y3 = 2*Y + 2 + 0.5
             x4 = 2*X
-            y4 = 2*Y + 1
+            y4 = 2*Y + 1 + 0.5
             # adjust to continuous values
+            x1 = (x1 + 0.5)*FOV_H
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
             x3 = (x3 + 0.5)*FOV_H
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
             x4 = (x4 + 0.5)*FOV_H
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
-            # parameters for arc
-            if(self.wpnt_ind==0):
-                # if it is the first arrow - start position must be found manually
-                start_x = 2*X + 1
-                start_y = 2*Y + 2
-                start_x = (start_x + 0.5)*FOV_H
-                start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-                start = np.array([start_y,start_x])
-            else:
-                start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            end = np.array([y3,x3])
-            a = -FOV_V # to make it the lower half the ellipse (a>b convention is not applied here)
-            b = FOV_H/2
-            y_offset = start[0]
-            x_offset = end[1] + ( (start[1]-end[1])/2 ) # start_x > end_x
-            # arc x values
-            x_arc = np.linspace(start[1],end[1],ARC_PNTS*2)
-            # arc y values
-            if(ARC_8==True):
-                y_arc = y_offset + a * np.sqrt( np.sqrt( np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) ) ) )
-            else:
-                y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
+            # # parameters for arc
+            # if(self.wpnt_ind==0):
+            #     # if it is the first arrow - start position must be found manually
+            #     start_x = 2*X + 1
+            #     start_y = 2*Y + 2
+            #     start_x = (start_x + 0.5)*FOV_H
+            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
+            #     start = np.array([start_y,start_x])
+            # else:
+            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
+            # end = np.array([y3,x3])
+            # a = -FOV_V # to make it the lower half the ellipse (a>b convention is not applied here)
+            # b = FOV_H/2
+            # y_offset = start[0]
+            # x_offset = end[1] + ( (start[1]-end[1])/2 ) # start_x > end_x
+            # # arc x values
+            # x_arc = np.linspace(start[1],end[1],ARC_PNTS*2)
+            # # arc y values
+            # y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
         elif(direction==1):
             # This means it went from W-E
-            # x1 = 2*X - 2
-            # y1 = 2*Y + 1
-            # x2 = 2*X - 2
-            # y2 = 2*Y
-            x3 = 2*X - 1
+            x1 = 2*X - 2 + 0.5
+            y1 = 2*Y + 1
+            x2 = 2*X - 2
+            y2 = 2*Y + 0.5
+            x3 = 2*X - 1 - 0.5
             y3 = 2*Y
-            x4 = 2*X
+            x4 = 2*X - 0.5
             y4 = 2*Y
             # adjust to continuous values
+            x1 = (x1 + 0.5)*FOV_H
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
             x3 = (x3 + 0.5)*FOV_H
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
             x4 = (x4 + 0.5)*FOV_H
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
-            # arc making
-            if(self.wpnt_ind==0):
-                # if it is the first arrow - start position must be found manually
-                start_x = 2*X - 1 
-                start_y = 2*Y + 1
-                start_x = (start_x + 0.5)*FOV_H
-                start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-                start = np.array([start_y,start_x])
-            else:
-                start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            end = np.array([y3,x3])
-            a = -FOV_H
-            b = FOV_V/2
-            x_offset = start[1]
-            y_offset = start[0] + (end[0]-start[0])/2
-            # arc y values
-            y_arc = np.linspace(start[0],end[0],ARC_PNTS*2)
-            # arc y values
-            if(ARC_8==True):
-                x_arc = x_offset + a * np.sqrt( np.sqrt( np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) ) ) )
-            else:
-                x_arc = x_offset + a * np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) )
+            # # arc making
+            # if(self.wpnt_ind==0):
+            #     # if it is the first arrow - start position must be found manually
+            #     start_x = 2*X - 1 
+            #     start_y = 2*Y + 1
+            #     start_x = (start_x + 0.5)*FOV_H
+            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
+            #     start = np.array([start_y,start_x])
+            # else:
+            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
+            # end = np.array([y3,x3])
+            # a = -FOV_H
+            # b = FOV_V/2
+            # x_offset = start[1]
+            # y_offset = start[0] + (end[0]-start[0])/2
+            # # arc y values
+            # y_arc = np.linspace(start[0],end[0],ARC_PNTS*2)
+            # # arc y values
+            # x_arc = x_offset + a * np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) )
         elif(direction==2):
             # This means it went from N-S
-            # x1 = 2*X
-            # y1 = 2*Y - 2
-            # x2 = 2*X + 1
-            # y2 = 2*Y - 2
+            x1 = 2*X
+            y1 = 2*Y - 2 + 0.5
+            x2 = 2*X + 1 - 0.5
+            y2 = 2*Y - 2
             x3 = 2*X + 1
-            y3 = 2*Y - 1
+            y3 = 2*Y - 1 - 0.5
             x4 = 2*X + 1
-            y4 = 2*Y
+            y4 = 2*Y - 0.5
             # adjust to continuous values
+            x1 = (x1 + 0.5)*FOV_H
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
             x3 = (x3 + 0.5)*FOV_H
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
             x4 = (x4 + 0.5)*FOV_H
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
-            # arc making
-            if(self.wpnt_ind==0):
-                # if it is the first arrow - start position must be found manually
-                start_x = 2*X + 0
-                start_y = 2*Y - 1
-                start_x = (start_x + 0.5)*FOV_H
-                start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-                start = np.array([start_y,start_x])
-            else:
-                start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            end = np.array([y3,x3])
-            a = FOV_V
-            b = FOV_H/2
-            y_offset = start[0]
-            x_offset = start[1] + ( (end[1]-start[1])/2 ) # end_x > start_x
-            # arc x values
-            x_arc = np.linspace(start[1],end[1],ARC_PNTS*2)
-            # arc y values
-            if(ARC_8==True):
-                y_arc = y_offset + a * np.sqrt( np.sqrt( np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) ) ) )
-            else:
-                y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
+            # # arc making
+            # if(self.wpnt_ind==0):
+            #     # if it is the first arrow - start position must be found manually
+            #     start_x = 2*X + 0
+            #     start_y = 2*Y - 1
+            #     start_x = (start_x + 0.5)*FOV_H
+            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
+            #     start = np.array([start_y,start_x])
+            # else:
+            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
+            # end = np.array([y3,x3])
+            # a = FOV_V
+            # b = FOV_H/2
+            # y_offset = start[0]
+            # x_offset = start[1] + ( (end[1]-start[1])/2 ) # end_x > start_x
+            # # arc x values
+            # x_arc = np.linspace(start[1],end[1],ARC_PNTS*2)
+            # # arc y values
+            # y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
         elif(direction==3):        
             # This means it went from E-W
-            # x1 = 2*X + 3
-            # y1 = 2*Y
-            # x2 = 2*X + 3
-            # y2 = 2*Y + 1
-            x3 = 2*X + 2
+            x1 = 2*X + 3 - 0.5
+            y1 = 2*Y
+            x2 = 2*X + 3
+            y2 = 2*Y + 1 - 0.5
+            x3 = 2*X + 2 + 0.5
             y3 = 2*Y + 1
-            x4 = 2*X + 1
+            x4 = 2*X + 1 + 0.5
             y4 = 2*Y + 1
             # adjust to continuous values
+            x1 = (x1 + 0.5)*FOV_H
+            y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            x2 = (x2 + 0.5)*FOV_H
+            y2 = (self.rows*2 - y2 - 0.5)*FOV_V
             x3 = (x3 + 0.5)*FOV_H
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
             x4 = (x4 + 0.5)*FOV_H
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
-            # arc making
-            if(self.wpnt_ind==0):
-                # if it is the first arrow - start position must be found manually
-                start_x = 2*X + 2
-                start_y = 2*Y
-                start_x = (start_x + 0.5)*FOV_H
-                start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-                start = np.array([start_y,start_x])
-            else:
-                start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            end = np.array([y3,x3])
-            a = FOV_H
-            b = FOV_V/2
-            x_offset = start[1]
-            y_offset = end[0] + (start[0]-end[0])/2
-             # arc y values
-            y_arc = np.linspace(start[0],end[0],ARC_PNTS*2)
-            # arc y values
-            if(ARC_8==True):
-                x_arc = x_offset + a * np.sqrt( np.sqrt( np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) ) ) )
-            else:
-                x_arc = x_offset + a * np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) )
-        # Add three points normally
-        for pnt in range(1,4):
-            self.waypoints_cont[self.wpnt_ind] = np.array([y_arc[pnt],x_arc[pnt]])
-            self.wpnt_ind+=1
-        # Insert other points - array only has space for four points
-        for pnt in range(4,ARC_PNTS*2):
-            self.waypoints_cont = np.insert(self.waypoints_cont,self.wpnt_ind,np.array([y_arc[pnt],x_arc[pnt]]),axis=0)
-            self.wpnt_ind+=1
+            # # arc making
+            # if(self.wpnt_ind==0):
+            #     # if it is the first arrow - start position must be found manually
+            #     start_x = 2*X + 2
+            #     start_y = 2*Y
+            #     start_x = (start_x + 0.5)*FOV_H
+            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
+            #     start = np.array([start_y,start_x])
+            # else:
+            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
+            # end = np.array([y3,x3])
+            # a = FOV_H
+            # b = FOV_V/2
+            # x_offset = start[1]
+            # y_offset = end[0] + (start[0]-end[0])/2
+            #  # arc y values
+            # y_arc = np.linspace(start[0],end[0],ARC_PNTS*2)
+            # # arc y values
+            # x_arc = x_offset + a * np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) )
+        # # Add three points normally
+        # for pnt in range(1,4):
+        #     self.waypoints_cont[self.wpnt_ind] = np.array([y_arc[pnt],x_arc[pnt]])
+        #     self.wpnt_ind+=1
+        # # Insert other points - array only has space for four points
+        # for pnt in range(4,ARC_PNTS*2):
+        #     self.waypoints_cont = np.insert(self.waypoints_cont,self.wpnt_ind,np.array([y_arc[pnt],x_arc[pnt]]),axis=0)
+        #     self.wpnt_ind+=1
         # Add final point normally
+        self.waypoints_cont[self.wpnt_ind][0] = y1
+        self.waypoints_cont[self.wpnt_ind][1] = x1
+        self.wpnt_ind+=1
+        self.waypoints_cont[self.wpnt_ind][0] = y2
+        self.waypoints_cont[self.wpnt_ind][1] = x2
+        self.wpnt_ind+=1
+        self.waypoints_cont[self.wpnt_ind][0] = y3
+        self.waypoints_cont[self.wpnt_ind][1] = x3
+        self.wpnt_ind+=1
         self.waypoints_cont[self.wpnt_ind][0] = y4
         self.waypoints_cont[self.wpnt_ind][1] = x4
         self.wpnt_ind+=1
