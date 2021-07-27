@@ -14,7 +14,7 @@ TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 
 # FOV Constants - Mavic Pro 2
-Height = 10 # m above ground
+Height = 20 # m above ground
 AOV = 78.8 # Angle of view
 V = 3 
 H = 4
@@ -60,8 +60,8 @@ class Run_Algorithm:
         self.Imp = Imp
         self.rows = len(self.Grid)
         self.cols = len(self.Grid[0])
-        self.rip = np.argwhere(self.Grid == 2)
-        self.rip_temp = rip
+        self.rip = np.argwhere(self.Grid == 2) # rip in correct order
+        self.rip_temp = rip # rip in incorrect order - same as rip_sml and rip_cont
         self.n_r = len(self.rip)
         self.ArrayOfElements = np.zeros(self.n_r, dtype=int)
         self.fairDiv = self.rows*self.cols/self.n_r
@@ -79,16 +79,23 @@ class Run_Algorithm:
         self.rip_cont = rip_cont
         self.rip_sml = rip_sml
         ind = np.zeros([self.n_r],dtype=int)
+        rip_sml_temp = np.zeros([self.n_r,2],dtype=int)
+        rip_cnt_temp = np.zeros([self.n_r,2])
+        # Re-ordering the initial positions as necessary
         for r_0 in range(self.n_r):
             for r_1 in range(self.n_r):
                 if(self.rip[r_0][0] == self.rip_temp[r_1][0])and(self.rip[r_0][1] == self.rip_temp[r_1][1]):
                     ind[r_0] = r_1
         for r in range(self.n_r):
-            self.rip_temp[r][0] = self.rip_sml[ind[r]][0]
-            self.rip_temp[r][1] = self.rip_sml[ind[r]][1]
+            rip_sml_temp[r][0] = self.rip_sml[ind[r]][0]
+            rip_sml_temp[r][1] = self.rip_sml[ind[r]][1]
+            rip_cnt_temp[r][0] = self.rip_cont[ind[r]][0]
+            rip_cnt_temp[r][1] = self.rip_cont[ind[r]][1]
         for r in range(self.n_r):
-            self.rip_sml[r][0] = self.rip_temp[r][0]
-            self.rip_sml[r][1] = self.rip_temp[r][1]
+            self.rip_sml[r][0] = rip_sml_temp[r][0]
+            self.rip_sml[r][1] = rip_sml_temp[r][1]
+            self.rip_cont[r][0] = self.vertical - rip_cnt_temp[r][0]
+            self.rip_cont[r][1] = rip_cnt_temp[r][1]
          
     def main(self):
         #  DARP SECTION
@@ -272,7 +279,7 @@ class Run_Algorithm:
         file_log.close()
 
     def primMST(self):
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_cont,self.vertical,self.rip_sml)
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_cont,self.rip_sml)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -442,14 +449,14 @@ class Run_Algorithm:
                 c = 0
             colour_assignments[self.n_r] = "k"
 
-        # Robot positions
-        for r in range(self.n_r):
-            # ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*FOV_V
-            # ripx = (self.rip_sml[r][1] + 0.5)*FOV_H
-            # plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
-            ripy = self.vertical - self.rip_cont[r][0]
-            ripx = self.rip_cont[r][1]
-            plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)            
+        # # Robot positions
+        # for r in range(self.n_r):
+        #     # ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*FOV_V
+        #     # ripx = (self.rip_sml[r][1] + 0.5)*FOV_H
+        #     # plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
+        #     ripy = self.vertical - self.rip_cont[r][0]
+        #     ripx = self.rip_cont[r][1]
+        #     plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)            
 
         # Ticks and Grid
         ax.set_xticks(np.arange(0, (self.cols*2+1)*FOV_H, step=2*FOV_H),minor=False) # Large cell grid-lines
@@ -607,7 +614,7 @@ class enclosed_space_check:
 
 # Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_cont,vertical,rip_sml):
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_cont,rip_sml):
         self.A = A
         self.n_r = n_r
         self.rows = rows
@@ -616,7 +623,6 @@ class Prim_MST_maker:
         self.grids = Ilabel
         self.rip_cont = rip_cont
         self.rip_sml = rip_sml
-        self.vertical = vertical
 
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
@@ -715,11 +721,11 @@ class Prim_MST_maker:
         for r in range(self.n_r):
             wpnts = self.wpnts_cont_list[r]
             wpnts_updated = np.zeros([len(wpnts)+1,2],dtype=float)
-            # wpnts_cont = np.zeros([len(wpnts)+1,2],dtype=float)
-            # rip = self.rip_sml[r]
             rip = np.zeros(2,dtype=float)
-            rip[0] = ( self.rows*2 - self.rip_sml[r][0] - 0.5 )*FOV_V
-            rip[1] = ( self.rip_sml[r][1] +0.5 )*FOV_H
+            # rip[0] = ( self.rows*2 - self.rip_sml[r][0] - 0.5 )*FOV_V
+            # rip[1] = ( self.rip_sml[r][1] +0.5 )*FOV_H
+            rip[0] = self.rip_cont[r][0]
+            rip[1] = self.rip_cont[r][1]
             min_dist = np.sqrt( (rip[1]-wpnts[0][1])**2 + (rip[0]-wpnts[0][0])**2 )
             for w in range(len(wpnts)):
                 dist = np.sqrt( (rip[1]-wpnts[w][1])**2 + (rip[0]-wpnts[w][0])**2 )
@@ -729,7 +735,6 @@ class Prim_MST_maker:
                 if(wpnts[w][0]==rip[0])and(wpnts[w][1]==rip[1]):
                     p = w
                     break
-            
             ind = 0
             ind_p = p
             while(ind_p!=len(wpnts)):
@@ -741,7 +746,7 @@ class Prim_MST_maker:
                 wpnts_updated[ind] = wpnts[ind_p]
                 ind_p+=1
                 ind+=1
-            wpnts_updated[ind] = wpnts[p]
+            # wpnts_updated[ind] = wpnts[p]
             self.wpnts_cont_list[r] = wpnts_updated
 
     # JAVA MST COMMENTED OUT - indented
@@ -1255,7 +1260,8 @@ class Prim_MST_maker:
         plt.plot(px,py,'-k') # linewidth=2
         plt.plot(px,py,'.k')
         for r in range(self.n_r):
-            plt.plot(self.rip_cont[r][1],self.vertical - self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
+            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
+            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
 
     def prim_algorithm(self,graph,vertices):
         selected = np.zeros([vertices],dtype=bool)
@@ -1524,8 +1530,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 100.0 # m
-    vertical = 100.0 # m
+    horizontal = 200.0 # m
+    vertical = 200.0 # m
 
     # Establish Small Node size
     
