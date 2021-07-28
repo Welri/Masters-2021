@@ -14,7 +14,7 @@ TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 
 # FOV Constants - Mavic Pro 2
-Height = 20 # m above ground
+Height = 15 # m above ground
 AOV = 78.8 # Angle of view
 V = 3 
 H = 4
@@ -632,11 +632,11 @@ class Prim_MST_maker:
         self.vertices_list = list()
         self.parents_list = list()
         self.nodes_list = list()
-        # self.wpnts_list = list()
         self.wpnts_cont_list = list()
-        # self.arw_list = list()
+        self.p = np.ones([self.n_r],dtype=int)*-1
         
-        for r in range(self.n_r):   
+        for r in range(self.n_r):
+            self.current_r = r
             free_nodes = np.argwhere(self.grids[r]==1) # vertice coordinates
             vertices = len(free_nodes) # number of vertices
 
@@ -707,12 +707,15 @@ class Prim_MST_maker:
                 arw_ind += 1
 
             # Final waypoints for last arrow
-            # self.wpnts_list.append(self.waypoints)
             self.wpnts_cont_list.append(self.waypoints_cont)
-            # self.arw_list.append(arrows)
         
-        self.update_wpnts()
+        # Shifting robot positions by half cell - p is found during waypoint generation
+        for r in range(self.n_r):
+            self.rip_cont[r] = self.wpnts_cont_list[r][self.p[r]]
 
+        # Shifting waypoints to start at robot position and making it closed loop
+        self.update_wpnts()
+        
         if print_graph == True:
             for r in range(self.n_r):
                 self.draw_cont_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_cont_list[r])
@@ -721,20 +724,7 @@ class Prim_MST_maker:
         for r in range(self.n_r):
             wpnts = self.wpnts_cont_list[r]
             wpnts_updated = np.zeros([len(wpnts)+1,2],dtype=float)
-            rip = np.zeros(2,dtype=float)
-            # rip[0] = ( self.rows*2 - self.rip_sml[r][0] - 0.5 )*FOV_V
-            # rip[1] = ( self.rip_sml[r][1] +0.5 )*FOV_H
-            rip[0] = self.rip_cont[r][0]
-            rip[1] = self.rip_cont[r][1]
-            min_dist = np.sqrt( (rip[1]-wpnts[0][1])**2 + (rip[0]-wpnts[0][0])**2 )
-            for w in range(len(wpnts)):
-                dist = np.sqrt( (rip[1]-wpnts[w][1])**2 + (rip[0]-wpnts[w][0])**2 )
-                if(dist<min_dist):
-                    min_dist = dist
-                    p = w
-                if(wpnts[w][0]==rip[0])and(wpnts[w][1]==rip[1]):
-                    p = w
-                    break
+            p = self.p[r]
             ind = 0
             ind_p = p
             while(ind_p!=len(wpnts)):
@@ -852,47 +842,45 @@ class Prim_MST_maker:
         if(direction==0):
             # This means it went from E-N
             x = 2*X
-            y = 2*Y + 1 + 0.5
+            y_c = 2*Y + 1
+            y = y_c + 0.5
+            
             x = (x + 0.5)*FOV_H # added waypoint
-            y = (self.rows*2 - y - 0.5)*FOV_V # added waypoint
+            x_c = x
+            y = (self.rows*2 - y - 0.5)*FOV_V # added waypoint 
+            y_c = (self.rows*2 - y_c - 0.5)*FOV_V
         elif(direction==1):
             # This means it went from S-E
-            x = 2*X - 0.5
+            x_c = 2*X
+            x = x_c - 0.5
             y = 2*Y
+
             x = (x + 0.5)*FOV_H
+            x_c = (x_c + 0.5)*FOV_H
             y = (self.rows*2 - y - 0.5)*FOV_V
+            y_c = y
         elif(direction==2):
             # This means it went from W-S
             x = 2*X + 1
-            y = 2*Y - 0.5
+            y_c = 2*Y
+            y = y_c - 0.5
+            
             x = (x + 0.5)*FOV_H
+            x_c = x
             y = (self.rows*2 - y - 0.5)*FOV_V
+            y_c = (self.rows*2 - y_c - 0.5)*FOV_V
         elif(direction==3):        
             # This means it went from N-W
-            x = 2*X + 1 + 0.5
+            x_c = 2*X + 1
+            x = x_c + 0.5
             y = 2*Y + 1
+
             x = (x + 0.5)*FOV_H
+            x_c = (x_c + 0.5)*FOV_H
             y = (self.rows*2 - y - 0.5)*FOV_V
-            # # Delete previous 2 indexes
-            # self.wpnt_ind-=1
-            # self.waypoints_cont = np.delete(self.waypoints_cont,self.wpnt_ind,axis=0)
-            # self.wpnt_ind-=1
-            # start = self.waypoints_cont[self.wpnt_ind] # save start of curve
-            # self.waypoints_cont = np.delete(self.waypoints_cont,self.wpnt_ind,axis=0)            
-            # end = np.array([y,x]) # save end of curve
-            # # Generate points
-            # pnts = 7
-            # x_arc = np.linspace(start[1],end[1],pnts)
-            # y_arc = 1-((x_arc-end[1])**2)/(FOV_H**2)
-            # y_arc = abs(y_arc)
-            # y_arc = np.sqrt(y_arc)
-            # y_arc = FOV_V*y_arc
-            # y_arc = start[0]+y_arc
-            # # Insert points
-            # for i in range(pnts):
-            #     self.waypoints_cont = np.insert(self.waypoints_cont,self.wpnt_ind,np.array([y_arc[i],x_arc[i]]),axis=0)
-            #     self.wpnt_ind+=1
-            
+            y_c = y           
+        if(math.isclose(self.rip_cont[self.current_r][0],y_c))and(math.isclose(self.rip_cont[self.current_r][1],x_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y
         self.waypoints_cont[self.wpnt_ind][1] = x
         self.wpnt_ind+=1
@@ -906,50 +894,89 @@ class Prim_MST_maker:
         if(direction==0):
             # This means it went from N-N
             x1 = 2*X
-            y1 = 2*Y + 2 + 0.5
+            y1_c = 2*Y + 2
+            y1 = y1_c + 0.5
+            
             x2 = 2*X
-            y2 = 2*Y + 1 + 0.5
+            y2_c = 2*Y + 1
+            y2 = y2_c + 0.5
+            
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = (self.rows*2 - y1_c - 0.5)*FOV_V
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = x1
+
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = (self.rows*2 - y2_c - 0.5)*FOV_V
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = x2
         elif(direction==1):
             # This means it went from E-E
-            x1 = 2*X - 1 - 0.5
+            x1_c = 2*X - 1
+            x1 = x1_c - 0.5
             y1 = 2*Y
-            x2 = 2*X - 0.5
+
+            x2_c = 2*X
+            x2 = x2_c - 0.5
             y2 = 2*Y
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = y1
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = (x1_c + 0.5)*FOV_H
+
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = y2
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = (x2_c + 0.5)*FOV_H
         elif(direction==2):
             # This means it went from S-S
             x1 = 2*X + 1
-            y1 = 2*Y - 1 - 0.5
+            y1_c = 2*Y - 1
+            y1 = y1_c - 0.5
+
             x2 = 2*X + 1
-            y2 = 2*Y - 0.5
+            y2_c = 2*Y
+            y2 = y2_c - 0.5
+            
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = (self.rows*2 - y1_c - 0.5)*FOV_V
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = x1
+
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = (self.rows*2 - y2_c - 0.5)*FOV_V
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = x2
         elif(direction==3):        
             # This means it went from W-W
-            x1 = 2*X + 2 + 0.5
+            x1_c = 2*X + 2
+            x1 = x1_c + 0.5
             y1 = 2*Y + 1
-            x2 = 2*X + 1 + 0.5
+
+            x2_c = 2*X + 1
+            x2 = x2_c + 0.5
             y2 = 2*Y + 1
+
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = y1
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = (x1_c + 0.5)*FOV_H
+
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = y2
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = (x2_c + 0.5)*FOV_H
+        if(math.isclose(self.rip_cont[self.current_r][0],y1_c))and(math.isclose(self.rip_cont[self.current_r][1],x1_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y1
         self.waypoints_cont[self.wpnt_ind][1] = x1
         self.wpnt_ind+=1
+        if(math.isclose(self.rip_cont[self.current_r][0],y2_c))and(math.isclose(self.rip_cont[self.current_r][1],x2_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y2
         self.waypoints_cont[self.wpnt_ind][1] = x2
         self.wpnt_ind+=1
@@ -962,70 +989,130 @@ class Prim_MST_maker:
         Y = end_node.coord_y
         if(direction==0):
             # This means it went from W-N
-            x1 = 2*X + 0.5
+            x1_c = 2*X
+            x1 = x1_c + 0.5
             y1 = 2*Y + 3
+
             x2 = 2*X 
-            y2 = 2*Y + 2 + 0.5
+            y2_c = 2*Y + 2
+            y2 = y2_c + 0.5
+
             x3 = 2*X
-            y3 = 2*Y + 1 + 0.5
+            y3_c = 2*Y + 1
+            y3 = y3_c + 0.5
+
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = y1
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = (x1_c + 0.5)*FOV_H
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = (self.rows*2 - y2_c - 0.5)*FOV_V
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = x2
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = (self.rows*2 - y3_c - 0.5)*FOV_V
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = x3
         elif(direction==1):
             # This means it went from N-E
             x1 = 2*X - 2
-            y1 = 2*Y + 0.5
-            x2 = 2*X - 1 - 0.5
+            y1_c = 2*Y
+            y1 = y1_c + 0.5
+
+            x2_c = 2*X - 1
+            x2 = x2_c - 0.5
             y2 = 2*Y
-            x3 = 2*X - 0.5
+
+            x3_c = 2*X
+            x3 = x3_c - 0.5
             y3 = 2*Y
+
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = (self.rows*2 - y1_c - 0.5)*FOV_V
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = x1
+
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = y2
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = (x2_c + 0.5)*FOV_H
+
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = y3
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = (x3_c + 0.5)*FOV_H
         elif(direction==2):
             # This means it went from E-S
-            x1 = 2*X + 1 - 0.5
+            x1_c = 2*X + 1
+            x1 = x1_c - 0.5
             y1 = 2*Y - 2
+
             x2 = 2*X + 1
-            y2 = 2*Y - 1 - 0.5
+            y2_c = 2*Y - 1 
+            y2 = y2_c - 0.5
+
             x3 = 2*X + 1
-            y3 = 2*Y - 0.5
+            y3_c = 2*Y
+            y3 = y3_c - 0.5
+
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = y1
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = (x1_c + 0.5)*FOV_H
+
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = (self.rows*2 - y2_c - 0.5)*FOV_V
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = x2
+
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = (self.rows*2 - y3_c - 0.5)*FOV_V
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = x3
         elif(direction==3):        
             # This means it went from S-W
             x1 = 2*X + 3
-            y1 = 2*Y + 1 - 0.5
-            x2 = 2*X + 2 + 0.5
+            y1_c = 2*Y + 1
+            y1 = y1_c - 0.5
+
+            x2_c = 2*X + 2
+            x2 = x2_c + 0.5
             y2 = 2*Y + 1
-            x3 = 2*X + 1 + 0.5
+
+            x3_c = 2*X + 1
+            x3 = x3_c + 0.5
             y3 = 2*Y + 1
+
             # Change to continuous
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = (self.rows*2 - y1_c - 0.5)*FOV_V
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = x1
+
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = y2
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = (x2_c + 0.5)*FOV_H
+
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = y3
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = (x3_c + 0.5)*FOV_H
+        if(math.isclose(self.rip_cont[self.current_r][0],y1_c))and(math.isclose(self.rip_cont[self.current_r][1],x1_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y1
         self.waypoints_cont[self.wpnt_ind][1] = x1
         self.wpnt_ind+=1
+        if(math.isclose(self.rip_cont[self.current_r][0],y2_c))and(math.isclose(self.rip_cont[self.current_r][1],x2_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y2
         self.waypoints_cont[self.wpnt_ind][1] = x2
         self.wpnt_ind+=1
+        if(math.isclose(self.rip_cont[self.current_r][0],y3_c))and(math.isclose(self.rip_cont[self.current_r][1],x3_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y3
         self.waypoints_cont[self.wpnt_ind][1] = x3
         self.wpnt_ind+=1
@@ -1039,22 +1126,41 @@ class Prim_MST_maker:
         if(direction==0):
             # This means it went from S-N
             x1 = 2*X + 1
-            y1 = 2*Y + 3 - 0.5
-            x2 = 2*X + 0.5
+            y1_c = 2*Y + 3
+            y1 = y1_c - 0.5
+
+            x2_c = 2*X
+            x2 = x2_c + 0.5
             y2 = 2*Y + 3
+
             x3 = 2*X
-            y3 = 2*Y + 2 + 0.5
+            y3_c = 2*Y + 2
+            y3 = y3_c + 0.5
+
             x4 = 2*X
-            y4 = 2*Y + 1 + 0.5
+            y4_c = 2*Y + 1
+            y4 = y4_c + 0.5
+
             # adjust to continuous values
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = x1
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = (self.rows*2 - y1_c - 0.5)*FOV_V
+
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = (x2_c + 0.5)*FOV_H
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = y2
+
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = x3 
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = (self.rows*2 - y3_c - 0.5)*FOV_V
+
             x4 = (x4 + 0.5)*FOV_H
+            x4_c = x4
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
+            y4_c = (self.rows*2 - y4_c - 0.5)*FOV_V
             # # parameters for arc
             # if(self.wpnt_ind==0):
             #     # if it is the first arrow - start position must be found manually
@@ -1076,23 +1182,42 @@ class Prim_MST_maker:
             # y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
         elif(direction==1):
             # This means it went from W-E
-            x1 = 2*X - 2 + 0.5
+            x1_c = 2*X - 2
+            x1 = x1_c + 0.5
             y1 = 2*Y + 1
+
             x2 = 2*X - 2
-            y2 = 2*Y + 0.5
-            x3 = 2*X - 1 - 0.5
+            y2_c = 2*Y
+            y2 = y2_c + 0.5
+
+            x3_c = 2*X - 1
+            x3 = x3_c - 0.5
             y3 = 2*Y
-            x4 = 2*X - 0.5
+
+            x4_c = 2*X
+            x4 = x4_c - 0.5
             y4 = 2*Y
+
             # adjust to continuous values
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = (x1_c + 0.5)*FOV_H
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = y1
+
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = x2
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = (self.rows*2 - y2_c - 0.5)*FOV_V
+
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = (x3_c + 0.5)*FOV_H
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = y3
+
             x4 = (x4 + 0.5)*FOV_H
+            x4_c = (x4_c + 0.5)*FOV_H
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
+            y4_c = y4
             # # arc making
             # if(self.wpnt_ind==0):
             #     # if it is the first arrow - start position must be found manually
@@ -1115,22 +1240,41 @@ class Prim_MST_maker:
         elif(direction==2):
             # This means it went from N-S
             x1 = 2*X
-            y1 = 2*Y - 2 + 0.5
-            x2 = 2*X + 1 - 0.5
+            y1_c = 2*Y - 2
+            y1 = y1_c + 0.5
+
+            x2_c = 2*X + 1
+            x2 = x2_c - 0.5
             y2 = 2*Y - 2
+
             x3 = 2*X + 1
-            y3 = 2*Y - 1 - 0.5
+            y3_c = 2*Y - 1
+            y3 = y3_c - 0.5
+
             x4 = 2*X + 1
-            y4 = 2*Y - 0.5
+            y4_c = 2*Y
+            y4 = y4_c - 0.5
+
             # adjust to continuous values
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = x1
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = (self.rows*2 - y1_c - 0.5)*FOV_V
+            
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = (x2_c + 0.5)*FOV_H 
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = y2
+            
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = x3
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = (self.rows*2 - y3_c - 0.5)*FOV_V 
+            
             x4 = (x4 + 0.5)*FOV_H
+            x4_c = x4
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
+            y4_c = (self.rows*2 - y4_c - 0.5)*FOV_V
             # # arc making
             # if(self.wpnt_ind==0):
             #     # if it is the first arrow - start position must be found manually
@@ -1152,23 +1296,42 @@ class Prim_MST_maker:
             # y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
         elif(direction==3):        
             # This means it went from E-W
-            x1 = 2*X + 3 - 0.5
+            x1_c = 2*X + 3
+            x1 = x1_c - 0.5
             y1 = 2*Y
+
             x2 = 2*X + 3
-            y2 = 2*Y + 1 - 0.5
-            x3 = 2*X + 2 + 0.5
+            y2_c = 2*Y + 1
+            y2 = y2_c - 0.5
+
+            x3_c = 2*X + 2
+            x3 = x3_c + 0.5
             y3 = 2*Y + 1
-            x4 = 2*X + 1 + 0.5
+
+            x4_c = 2*X + 1
+            x4 = x4_c + 0.5
             y4 = 2*Y + 1
+
             # adjust to continuous values
             x1 = (x1 + 0.5)*FOV_H
+            x1_c = (x1_c + 0.5)*FOV_H
             y1 = (self.rows*2 - y1 - 0.5)*FOV_V
+            y1_c = y1
+
             x2 = (x2 + 0.5)*FOV_H
+            x2_c = x2
             y2 = (self.rows*2 - y2 - 0.5)*FOV_V
+            y2_c = (self.rows*2 - y2_c - 0.5)*FOV_V
+
             x3 = (x3 + 0.5)*FOV_H
+            x3_c = (x3_c + 0.5)*FOV_H
             y3 = (self.rows*2 - y3 - 0.5)*FOV_V
+            y3_c = y3
+
             x4 = (x4 + 0.5)*FOV_H
+            x4_c = (x4_c + 0.5)*FOV_H
             y4 = (self.rows*2 - y4 - 0.5)*FOV_V
+            y4_c = y4
             # # arc making
             # if(self.wpnt_ind==0):
             #     # if it is the first arrow - start position must be found manually
@@ -1197,15 +1360,23 @@ class Prim_MST_maker:
         #     self.waypoints_cont = np.insert(self.waypoints_cont,self.wpnt_ind,np.array([y_arc[pnt],x_arc[pnt]]),axis=0)
         #     self.wpnt_ind+=1
         # Add final point normally
+        if(math.isclose(self.rip_cont[self.current_r][0],y1_c))and(math.isclose(self.rip_cont[self.current_r][1],x1_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y1
         self.waypoints_cont[self.wpnt_ind][1] = x1
         self.wpnt_ind+=1
+        if(math.isclose(self.rip_cont[self.current_r][0],y2_c))and(math.isclose(self.rip_cont[self.current_r][1],x2_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y2
         self.waypoints_cont[self.wpnt_ind][1] = x2
         self.wpnt_ind+=1
+        if(math.isclose(self.rip_cont[self.current_r][0],y3_c))and(math.isclose(self.rip_cont[self.current_r][1],x3_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y3
         self.waypoints_cont[self.wpnt_ind][1] = x3
         self.wpnt_ind+=1
+        if(math.isclose(self.rip_cont[self.current_r][0],y4_c))and(math.isclose(self.rip_cont[self.current_r][1],x4_c)):
+            self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y4
         self.waypoints_cont[self.wpnt_ind][1] = x4
         self.wpnt_ind+=1
@@ -1530,8 +1701,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 200.0 # m
-    vertical = 200.0 # m
+    horizontal = 100.0 # m
+    vertical = 100.0 # m
 
     # Establish Small Node size
     
