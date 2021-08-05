@@ -1,6 +1,7 @@
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as pat
 import matplotlib
 import pathlib
 import os
@@ -13,19 +14,28 @@ MARKERSIZE=15
 TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 
-# FOV Constants - Mavic Pro 2
-Height = 15 # m above ground
-AOV = 78.8 # Angle of view
+# Mavic Air 2 Camera (Imagine )
+Height = 350 # m above ground
+focal_length = 24 # mm
 V = 3 
 H = 4
 AR = V/H # Aspect ratio (V/H)
-FOV_H = 2*Height*math.tan( (AOV/2) * math.pi/180.0 )
-FOV_V = FOV_H*AR
+sensor_width = 6.4 # mm
+sensor_height = 4.8 # mm
+FOV_H = Height * sensor_width / focal_length # result in m
+FOV_V = AR*FOV_H # m
+px_h = 4000
+px_w = 3000
+GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
+GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
 
-MAX_FLIGHT_TIME = 31*60 # s - no wind at constant 25kph
-MAX_FLIGHT_DIST = 18*1000 # m - not wind at constant 50kph  
-MAX_SPEED = 72*1000/3600 # m/s
-MAX_TRANSMISSION_DIST = 6000 # m - unobstructed view
+# Fixed wing values
+phi_max = 30 # max bank angle in degrees
+g_acc = 9.81 # m/s
+VEL = 12 # m/s
+r_max = FOV_V/2 # maximum allowable turning radius - m
+v_max = math.sqrt( r_max * g_acc * math.tan(phi_max*math.pi/180) ) # m/s
+r_min = VEL**2 / ( g_acc * math.tan(phi_max*math.pi/180) ) # m
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -132,10 +142,11 @@ class Run_Algorithm:
 
         self.time_DARP_total = time.time_ns() - timestart
         
-        # PRIM MST SECTION
+        # Print DARP
         if self.show_grid==True:
             self.cont_DARP_graph() # prints final graph
         
+        # PRIM MST SECTION
         timestart = time.time_ns()
         self.primMST()
         self.time_prim = time.time_ns() - timestart
@@ -279,7 +290,13 @@ class Run_Algorithm:
         file_log.close()
 
     def primMST(self):
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.show_grid,self.rip_cont,self.rip_sml)
+        # Run MST algorithm
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
+
+        # Print MST on DARP plot
+        if self.show_grid == True:
+            for r in range(self.n_r):
+                pMST.draw_cont_graph(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -436,7 +453,7 @@ class Run_Algorithm:
         plt.rc('axes', titlesize=15) 
 
         # Prints the DARP divisions
-        fig,ax = plt.subplots(figsize=(8, 8))
+        fig,self.ax = plt.subplots(figsize=(8, 8))
 
         # Initialize cell colours
         colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
@@ -449,23 +466,16 @@ class Run_Algorithm:
                 c = 0
             colour_assignments[self.n_r] = "k"
 
-        # # Robot positions
-        # for r in range(self.n_r):
-        #     # ripy = (self.rows*2 - self.rip_sml[r][0] - 1 + 0.5)*FOV_V
-        #     # ripx = (self.rip_sml[r][1] + 0.5)*FOV_H
-        #     # plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
-        #     ripy = self.vertical - self.rip_cont[r][0]
-        #     ripx = self.rip_cont[r][1]
-        #     plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)            
-
         # Ticks and Grid
-        ax.set_xticks(np.arange(0, (self.cols*2+1)*FOV_H, step=2*FOV_H),minor=False) # Large cell grid-lines
-        ax.set_yticks(np.arange(0, (self.rows*2+1)*FOV_V, step=2*FOV_V),minor=False)
-        ax.set_xticks(np.arange(FOV_H, (self.cols*2-0.5)*FOV_H, step=2*FOV_H),minor=True) # Small cell grid_lines
-        ax.set_yticks(np.arange(FOV_V, (self.rows*2-0.5)*FOV_V, step=2*FOV_V),minor=True)
+        self.ax.set_xticks(np.arange(0, (self.cols*2+1)*FOV_H, step=2*FOV_H),minor=False) # Large cell grid-lines
+        self.ax.set_yticks(np.arange(0, (self.rows*2+1)*FOV_V, step=2*FOV_V),minor=False)
+        self.ax.set_xticks(np.arange(FOV_H, (self.cols*2-0.5)*FOV_H, step=2*FOV_H),minor=True) # Small cell grid_lines
+        self.ax.set_yticks(np.arange(FOV_V, (self.rows*2-0.5)*FOV_V, step=2*FOV_V),minor=True)
         plt.xticks(rotation=90)
         plt.grid(which='major',axis='both', color='k',linewidth=1)
         plt.grid(which='minor',axis='both',color='k',linewidth=0.3)
+
+        # Note: Robot initial position are printing in the prim algorithm
 
         # Print Assgnments
         for j in range(self.rows):
@@ -614,7 +624,7 @@ class enclosed_space_check:
 
 # Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel,print_graph,rip_cont,rip_sml):
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,rip_cont,rip_sml):
         self.A = A
         self.n_r = n_r
         self.rows = rows
@@ -633,6 +643,7 @@ class Prim_MST_maker:
         self.parents_list = list()
         self.nodes_list = list()
         self.wpnts_cont_list = list()
+        self.wpnts_class_list = list()
         self.p = np.ones([self.n_r],dtype=int)*-1
         
         for r in range(self.n_r):
@@ -682,8 +693,8 @@ class Prim_MST_maker:
             self.nodes_list.append(nodes)           # List of node objects (using free nodes and parents) per robot
 
             # Start Arrow Creation
-            # self.waypoints = np.empty([vertices*4,2],dtype=int)
             self.waypoints_cont = np.zeros([vertices*4,2],dtype=float)
+            self.waypoint_class = np.zeros([vertices*4],dtype=int) # 1 = Left Turn, 0 = Not bothered to classify
             self.wpnt_ind = 0
             no_arws = (vertices-1)*2 # edges = nodes-1, arrows = edges*2
             arrows = np.empty(no_arws,dtype=mst_arrow) 
@@ -700,7 +711,7 @@ class Prim_MST_maker:
             arrows[arw_ind] = arrow
             arw_ind += 1
 
-            # Update Arrow
+            # Update Arrow and waypoint generation
             while(arw_ind!=no_arws):
                 arrow = self.update_arrow(nodes,arrow.end_node,arrow.direction)
                 arrows[arw_ind] = arrow
@@ -708,6 +719,7 @@ class Prim_MST_maker:
 
             # Final waypoints for last arrow
             self.wpnts_cont_list.append(self.waypoints_cont)
+            self.wpnts_class_list.append(self.waypoint_class)
         
         # Shifting robot positions by half cell - p is found during waypoint generation
         for r in range(self.n_r):
@@ -716,28 +728,34 @@ class Prim_MST_maker:
         # Shifting waypoints to start at robot position and making it closed loop
         self.update_wpnts()
         
-        if print_graph == True:
-            for r in range(self.n_r):
-                self.draw_cont_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_cont_list[r])
+        # if print_graph == True:
+        #     for r in range(self.n_r):
+        #         self.draw_cont_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_cont_list[r])
    
     def update_wpnts(self):
         for r in range(self.n_r):
             wpnts = self.wpnts_cont_list[r]
+            wpnts_class = self.wpnts_class_list[r]
             wpnts_updated = np.zeros([len(wpnts)+1,2],dtype=float)
+            wpnts_class_updated = np.zeros([len(wpnts_class)+1],dtype=float)
             p = self.p[r]
             ind = 0
             ind_p = p
             while(ind_p!=len(wpnts)):
                 wpnts_updated[ind] = wpnts[ind_p]
+                wpnts_class_updated[ind] = wpnts_class[ind_p]
                 ind_p+=1
                 ind+=1
             ind_p=0
             while(ind_p!=p):
                 wpnts_updated[ind] = wpnts[ind_p]
+                wpnts_class_updated[ind] = wpnts_class[ind_p]
                 ind_p+=1
                 ind+=1
-            # wpnts_updated[ind] = wpnts[p]
+            wpnts_updated[ind] = wpnts[p]
+            wpnts_class_updated[ind] = wpnts_class[p]
             self.wpnts_cont_list[r] = wpnts_updated
+            self.wpnts_class_list[r] = wpnts_class_updated
 
     # JAVA MST COMMENTED OUT - indented
         # def write_input(self,graph,dim):
@@ -883,6 +901,7 @@ class Prim_MST_maker:
             self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y
         self.waypoints_cont[self.wpnt_ind][1] = x
+        self.waypoint_class[self.wpnt_ind] = 1
         self.wpnt_ind+=1
     
     def fw_turn_wpnts(self,arrow):
@@ -1406,7 +1425,7 @@ class Prim_MST_maker:
         for r in range(self.n_r):
             plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
     
-    def draw_cont_graph(self,nodes,parents,wpnts):
+    def draw_cont_graph(self,nodes,parents,wpnts,wpnts_class,ax):
         # Draws graph on continuous space graph
         # Plot spanning tree
         for node in nodes:
@@ -1421,15 +1440,63 @@ class Prim_MST_maker:
              plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
         # Plot waypoints
-        px = np.zeros(len(wpnts),dtype=float)
-        py = np.zeros(len(wpnts),dtype=float)
-        for pi in range(len(wpnts)):
-            py[pi] = wpnts[pi][0]
-            px[pi] = wpnts[pi][1]
-            # py[pi] = ( self.rows*2 - wpnts[pi][0] - 1 + 0.5 )*FOV_V
-            # px[pi] = ( wpnts[pi][1] + 0.5 )*FOV_H
-        plt.plot(px,py,'-k') # linewidth=2
-        plt.plot(px,py,'.k')
+        for w in range(len(wpnts)-1):
+            x1 = wpnts[w][1]
+            x2 = wpnts[w+1][1]
+            y1 = wpnts[w][0]
+            y2 = wpnts[w+1][0]
+            if(x2>x1):
+                if(y2>y1):
+                    # F U
+                    plt.plot(x1,y1,'.k')
+                elif(y2<y1):
+                    # B D
+                    plt.plot(x1,y1,'.k') # remove later and consolidate
+                    if(wpnts_class[w+1]==1):
+                        # Bottom - Left Turn
+                        if(r_min != r_max):
+                            plt.plot([x1,x1],[y1,y2+r_min],'-k') # line to start of circle
+                        plt.plot(x1+r_min,y2+r_min,'.g') # circle centre
+                        e1 = pat.Arc([x1+r_min,y2+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0) # circle
+                        plt.plot([x1+r_min,x2],[y2,y2],'-k')# line from end of circle
+                        ax.add_patch(e1)
+                    else:
+                        # Top - Right Turn / Backtrack
+                        plt.plot([x1,x2-r_min],[y1,y1],'-k')
+                        plt.plot(x2-r_min,y1-r_min,'.g')
+                        e2 = pat.Arc([x2-r_min,y1-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0)
+                        if(r_min != r_max):
+                            plt.plot([x2,x2],[y1-r_min,y2],'-k')
+                        ax.add_patch(e2)
+                else: # y2 == y1
+                    # Line
+                    plt.plot([x1,x2],[y1,y2],'-k')
+                    plt.plot(x1,y1,'.k')
+            elif(x2<x1):
+                if(y2>y1):
+                    # B U
+                    plt.plot(x1,y1,'.k')
+                elif(y2<y1):
+                    # F D
+                    plt.plot(x1,y1,'.k')
+                else: # y2 == y1
+                    # Line
+                    plt.plot([x1,x2],[y1,y2],'-k')
+                    plt.plot(x1,y1,'.k')
+            else: # x2 == x1
+                # Line
+                plt.plot([x1,x2],[y1,y2],'-k')
+                plt.plot(x1,y1,'.k')
+
+        # px = np.zeros(len(wpnts),dtype=float)
+        # py = np.zeros(len(wpnts),dtype=float)
+        # for pi in range(len(wpnts)):
+        #     py[pi] = wpnts[pi][0]
+        #     px[pi] = wpnts[pi][1]
+        # plt.plot(px,py,'-k') # linewidth=2
+        # plt.plot(px,py,'.k')
+
+        # Plot robot initial positions
         for r in range(self.n_r):
             plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
             plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
@@ -1701,8 +1768,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 100.0 # m
-    vertical = 100.0 # m
+    horizontal = 1000.0 # m
+    vertical = 1000.0 # m
 
     # Establish Small Node size
     
