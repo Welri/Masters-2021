@@ -1449,7 +1449,23 @@ class Prim_MST_maker:
                 if(y2>y1):
                     # F U
                     plt.plot(x1,y1,'.k')
-                elif(y2<y1):
+                    if(wpnts_class[w+1]==1):
+                        # Bottom - Left
+                        plt.plot([x1,x2-r_min],[y1,y1],'-k')
+                        plt.plot(x2-r_min,y1+r_min,'.g')
+                        e2 = pat.Arc([x2-r_min,y1+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0)
+                        if(r_min != r_max):
+                            plt.plot([x2,x2],[y1+r_min,y2],'-k')
+                        ax.add_patch(e2)
+                    else:
+                        # Top - Backtrack / Right
+                        if(r_min != r_max):
+                            plt.plot([x1,x1],[y1,y2-r_min],'-k') # line to start of circle
+                        plt.plot(x1+r_min,y2-r_min,'.g') # circle centre
+                        e1 = pat.Arc([x1+r_min,y2-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0) # circle
+                        plt.plot([x1+r_min,x2],[y2,y2],'-k')# line from end of circle
+                        ax.add_patch(e1)
+                elif(y2<y1): 
                     # B D
                     plt.plot(x1,y1,'.k') # remove later and consolidate
                     if(wpnts_class[w+1]==1):
@@ -1476,9 +1492,41 @@ class Prim_MST_maker:
                 if(y2>y1):
                     # B U
                     plt.plot(x1,y1,'.k')
+                    if(wpnts_class[w+1]==1):
+                        # Top - Left Turn
+                        if(r_min != r_max):
+                            plt.plot([x1,x1],[y1,y2-r_min],'-k') # line to start of circle
+                        plt.plot(x1-r_min,y2-r_min,'.g') # circle centre
+                        e1 = pat.Arc([x1-r_min,y2-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0) # circle
+                        plt.plot([x1-r_min,x2],[y2,y2],'-k')# line from end of circle
+                        ax.add_patch(e1)
+                    else:
+                        # Bottom - Right Turn / Backtrack
+                        plt.plot([x1,x2+r_min],[y1,y1],'-k')
+                        plt.plot(x2+r_min,y1+r_min,'.g')
+                        e2 = pat.Arc([x2+r_min,y1+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0)
+                        if(r_min != r_max):
+                            plt.plot([x2,x2],[y1+r_min,y2],'-k')
+                        ax.add_patch(e2)
                 elif(y2<y1):
                     # F D
                     plt.plot(x1,y1,'.k')
+                    if(wpnts_class[w+1]==1):
+                        # Top - Left
+                        plt.plot([x1,x2+r_min],[y1,y1],'-k') # line to start of circle
+                        plt.plot(x2+r_min,y1-r_min,'.g') # circle centre
+                        e2 = pat.Arc([x2+r_min,y1-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0) # circle
+                        if(r_min != r_max):    
+                            plt.plot([x2,x2],[y1-r_min,y2],'-k')# line from end of circle
+                        ax.add_patch(e2)
+                    else:
+                        # Bottom - Right Turn / Backtrack      
+                        if(r_min != r_max):
+                            plt.plot([x1,x1],[y1,y2+r_min],'-k') # line to start of circle
+                        plt.plot(x1-r_min,y2+r_min,'.g') # circle centre
+                        e1 = pat.Arc([x1-r_min,y2+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0) # circle
+                        plt.plot([x1-r_min,x2],[y2,y2],'-k')# line from end of circle
+                        ax.add_patch(e1)
                 else: # y2 == y1
                     # Line
                     plt.plot([x1,x2],[y1,y2],'-k')
