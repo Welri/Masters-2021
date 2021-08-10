@@ -10,7 +10,15 @@ import time
 import math
 
 # constants
-MARKERSIZE=15
+TREE_COLOR = 'k'
+PATH_COLOR = 'w'
+PRINT_DARP = False
+PRINT_TREE = False
+PRINT_PATH = True
+PRINT_CIRCLE_CENTRES = False
+LINEWIDTH = 0.5
+S_MARKERIZE = LINEWIDTH*4
+MARKERSIZE=LINEWIDTH*12
 TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 
@@ -124,7 +132,7 @@ class Run_Algorithm:
                     self.AOEperc = np.abs(
                         (self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
                     self.maxDiscr = np.max(self.AOEperc)
-                    if self.show_grid == True:
+                    if (self.show_grid == True) and (PRINT_DARP==True):
                         self.print_DARP_graph() # prints a graph for each iteration
                     self.runs += 1
                     self.total_iterations = self.total_iterations + self.iterations
@@ -1428,121 +1436,119 @@ class Prim_MST_maker:
     def draw_cont_graph(self,nodes,parents,wpnts,wpnts_class,ax):
         # Draws graph on continuous space graph
         # Plot spanning tree
-        for node in nodes:
-            x = ( (node[1])*2 +1 )*FOV_H
-            y = ( (self.rows - node[0] - 1)*2 + 1 )*FOV_V
-            plt.plot(x,y,".w")
-        for i in range(1,len(parents)):
-             x0 = ( (nodes[i][1])*2 + 1 )*FOV_H
-             x1 = ( (nodes[parents[i]][1])*2 + 1 )*FOV_H
-             y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*FOV_V
-             y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*FOV_V
-             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
+        if(PRINT_TREE==True):
+            for node in nodes:
+                x = ( (node[1])*2 +1 )*FOV_H
+                y = ( (self.rows - node[0] - 1)*2 + 1 )*FOV_V
+                plt.plot(x,y,".",markersize=S_MARKERIZE,color=TREE_COLOR)
+            for i in range(1,len(parents)):
+                x0 = ( (nodes[i][1])*2 + 1 )*FOV_H
+                x1 = ( (nodes[parents[i]][1])*2 + 1 )*FOV_H
+                y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*FOV_V
+                y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*FOV_V
+                plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
 
         # Plot waypoints
-        for w in range(len(wpnts)-1):
-            x1 = wpnts[w][1]
-            x2 = wpnts[w+1][1]
-            y1 = wpnts[w][0]
-            y2 = wpnts[w+1][0]
-            if(x2>x1):
-                if(y2>y1):
-                    # F U
-                    plt.plot(x1,y1,'.k')
-                    if(wpnts_class[w+1]==1):
-                        # Bottom - Left
-                        plt.plot([x1,x2-r_min],[y1,y1],'-k')
-                        plt.plot(x2-r_min,y1+r_min,'.g')
-                        e2 = pat.Arc([x2-r_min,y1+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0)
-                        if(r_min != r_max):
-                            plt.plot([x2,x2],[y1+r_min,y2],'-k')
-                        ax.add_patch(e2)
-                    else:
-                        # Top - Backtrack / Right
-                        if(r_min != r_max):
-                            plt.plot([x1,x1],[y1,y2-r_min],'-k') # line to start of circle
-                        plt.plot(x1+r_min,y2-r_min,'.g') # circle centre
-                        e1 = pat.Arc([x1+r_min,y2-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0) # circle
-                        plt.plot([x1+r_min,x2],[y2,y2],'-k')# line from end of circle
-                        ax.add_patch(e1)
-                elif(y2<y1): 
-                    # B D
-                    plt.plot(x1,y1,'.k') # remove later and consolidate
-                    if(wpnts_class[w+1]==1):
-                        # Bottom - Left Turn
-                        if(r_min != r_max):
-                            plt.plot([x1,x1],[y1,y2+r_min],'-k') # line to start of circle
-                        plt.plot(x1+r_min,y2+r_min,'.g') # circle centre
-                        e1 = pat.Arc([x1+r_min,y2+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0) # circle
-                        plt.plot([x1+r_min,x2],[y2,y2],'-k')# line from end of circle
-                        ax.add_patch(e1)
-                    else:
-                        # Top - Right Turn / Backtrack
-                        plt.plot([x1,x2-r_min],[y1,y1],'-k')
-                        plt.plot(x2-r_min,y1-r_min,'.g')
-                        e2 = pat.Arc([x2-r_min,y1-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0)
-                        if(r_min != r_max):
-                            plt.plot([x2,x2],[y1-r_min,y2],'-k')
-                        ax.add_patch(e2)
-                else: # y2 == y1
+        if(PRINT_PATH==True):
+            for w in range(len(wpnts)-1):
+                x1 = wpnts[w][1]
+                x2 = wpnts[w+1][1]
+                y1 = wpnts[w][0]
+                y2 = wpnts[w+1][0]
+                plt.plot(x1,y1,'.k',markersize=S_MARKERIZE,color=PATH_COLOR)
+                if(x2>x1):
+                    if(y2>y1):
+                        # F U
+                        if(wpnts_class[w+1]==1):
+                            # Bottom - Left
+                            plt.plot([x1,x2-r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            # plt.plot(x2-r_min,y1,'.k',markersize=S_MARKERIZE)
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x2-r_min,y1+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                            e2 = pat.Arc([x2-r_min,y1+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR)
+                            if(r_min != r_max):
+                                # plt.plot(x2,y1+r_min,'.k',markersize=S_MARKERIZE)
+                                plt.plot([x2,x2],[y1+r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            ax.add_patch(e2)
+                        else:
+                            # Top - Backtrack / Right
+                            if(r_min != r_max):
+                                plt.plot([x1,x1],[y1,y2-r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x1+r_min,y2-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
+                            e1 = pat.Arc([x1+r_min,y2-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                            plt.plot([x1+r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
+                            ax.add_patch(e1)
+                    elif(y2<y1): 
+                        # B D
+                        if(wpnts_class[w+1]==1):
+                            # Bottom - Left Turn
+                            if(r_min != r_max):
+                                plt.plot([x1,x1],[y1,y2+r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x1+r_min,y2+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
+                            e1 = pat.Arc([x1+r_min,y2+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                            plt.plot([x1+r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
+                            ax.add_patch(e1)
+                        else:
+                            # Top - Right Turn / Backtrack
+                            plt.plot([x1,x2-r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x2-r_min,y1-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                            e2 = pat.Arc([x2-r_min,y1-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR)
+                            if(r_min != r_max):
+                                plt.plot([x2,x2],[y1-r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            ax.add_patch(e2)
+                    else: # y2 == y1
+                        # Line
+                        plt.plot([x1,x2],[y1,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                elif(x2<x1):
+                    if(y2>y1):
+                        # B U
+                        if(wpnts_class[w+1]==1):
+                            # Top - Left Turn
+                            if(r_min != r_max):
+                                plt.plot([x1,x1],[y1,y2-r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x1-r_min,y2-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
+                            e1 = pat.Arc([x1-r_min,y2-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                            plt.plot([x1-r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
+                            ax.add_patch(e1)
+                        else:
+                            # Bottom - Right Turn / Backtrack
+                            plt.plot([x1,x2+r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x2+r_min,y1+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                            e2 = pat.Arc([x2+r_min,y1+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR)
+                            if(r_min != r_max):
+                                plt.plot([x2,x2],[y1+r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            ax.add_patch(e2)
+                    elif(y2<y1):
+                        # F D
+                        if(wpnts_class[w+1]==1):
+                            # Top - Left
+                            plt.plot([x1,x2+r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x2+r_min,y1-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
+                            e2 = pat.Arc([x2+r_min,y1-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                            if(r_min != r_max):    
+                                plt.plot([x2,x2],[y1-r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
+                            ax.add_patch(e2)
+                        else:
+                            # Bottom - Right Turn / Backtrack      
+                            if(r_min != r_max):
+                                plt.plot([x1,x1],[y1,y2+r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
+                            if(PRINT_CIRCLE_CENTRES==True):
+                                plt.plot(x1-r_min,y2+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
+                            e1 = pat.Arc([x1-r_min,y2+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                            plt.plot([x1-r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
+                            ax.add_patch(e1)
+                    else: # y2 == y1
+                        # Line
+                        plt.plot([x1,x2],[y1,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                else: # x2 == x1
                     # Line
-                    plt.plot([x1,x2],[y1,y2],'-k')
-                    plt.plot(x1,y1,'.k')
-            elif(x2<x1):
-                if(y2>y1):
-                    # B U
-                    plt.plot(x1,y1,'.k')
-                    if(wpnts_class[w+1]==1):
-                        # Top - Left Turn
-                        if(r_min != r_max):
-                            plt.plot([x1,x1],[y1,y2-r_min],'-k') # line to start of circle
-                        plt.plot(x1-r_min,y2-r_min,'.g') # circle centre
-                        e1 = pat.Arc([x1-r_min,y2-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0) # circle
-                        plt.plot([x1-r_min,x2],[y2,y2],'-k')# line from end of circle
-                        ax.add_patch(e1)
-                    else:
-                        # Bottom - Right Turn / Backtrack
-                        plt.plot([x1,x2+r_min],[y1,y1],'-k')
-                        plt.plot(x2+r_min,y1+r_min,'.g')
-                        e2 = pat.Arc([x2+r_min,y1+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0)
-                        if(r_min != r_max):
-                            plt.plot([x2,x2],[y1+r_min,y2],'-k')
-                        ax.add_patch(e2)
-                elif(y2<y1):
-                    # F D
-                    plt.plot(x1,y1,'.k')
-                    if(wpnts_class[w+1]==1):
-                        # Top - Left
-                        plt.plot([x1,x2+r_min],[y1,y1],'-k') # line to start of circle
-                        plt.plot(x2+r_min,y1-r_min,'.g') # circle centre
-                        e2 = pat.Arc([x2+r_min,y1-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0) # circle
-                        if(r_min != r_max):    
-                            plt.plot([x2,x2],[y1-r_min,y2],'-k')# line from end of circle
-                        ax.add_patch(e2)
-                    else:
-                        # Bottom - Right Turn / Backtrack      
-                        if(r_min != r_max):
-                            plt.plot([x1,x1],[y1,y2+r_min],'-k') # line to start of circle
-                        plt.plot(x1-r_min,y2+r_min,'.g') # circle centre
-                        e1 = pat.Arc([x1-r_min,y2+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0) # circle
-                        plt.plot([x1-r_min,x2],[y2,y2],'-k')# line from end of circle
-                        ax.add_patch(e1)
-                else: # y2 == y1
-                    # Line
-                    plt.plot([x1,x2],[y1,y2],'-k')
-                    plt.plot(x1,y1,'.k')
-            else: # x2 == x1
-                # Line
-                plt.plot([x1,x2],[y1,y2],'-k')
-                plt.plot(x1,y1,'.k')
-
-        # px = np.zeros(len(wpnts),dtype=float)
-        # py = np.zeros(len(wpnts),dtype=float)
-        # for pi in range(len(wpnts)):
-        #     py[pi] = wpnts[pi][0]
-        #     px[pi] = wpnts[pi][1]
-        # plt.plot(px,py,'-k') # linewidth=2
-        # plt.plot(px,py,'.k')
+                    plt.plot([x1,x2],[y1,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
 
         # Plot robot initial positions
         for r in range(self.n_r):
@@ -1816,8 +1822,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 1000.0 # m
-    vertical = 1000.0 # m
+    horizontal = 5000.0 # m
+    vertical = 5000.0 # m
 
     # Establish Small Node size
     
