@@ -9,36 +9,51 @@ import random
 import time
 import math
 
-# constants
+# Constants
 TREE_COLOR = 'k'
 PATH_COLOR = 'w'
-PRINT_DARP = False
+PRINT_DARP = True
 PRINT_TREE = False
 PRINT_PATH = True
 PRINT_CIRCLE_CENTRES = False
-LINEWIDTH = 0.5
+LINEWIDTH = 0.7
 S_MARKERIZE = LINEWIDTH*4
 MARKERSIZE=LINEWIDTH*12
 TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 
 # Mavic Air 2 Camera (Imagine )
-Height = 350 # m above ground
-focal_length = 24 # mm
-V = 3 
-H = 4
+    # Height = 350 # m above ground
+    # focal_length = 24 # mm
+    # V = 3 
+    # H = 4
+    # AR = V/H # Aspect ratio (V/H)
+    # sensor_width = 6.4 # mm
+    # sensor_height = 4.8 # mm
+    # FOV_H = Height * sensor_width / focal_length # result in m
+    # FOV_V = AR*FOV_H # m
+    # px_h = 4000
+    # px_w = 3000
+    # GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
+    # GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
+
+# Wingtra with Sony RX1R II
+Height = 93 # m above ground
+focal_length = 35 # mm
+V = 2
+H = 3
 AR = V/H # Aspect ratio (V/H)
-sensor_width = 6.4 # mm
-sensor_height = 4.8 # mm
+sensor_width = 35.9 # mm
+sensor_height = 24 # mm
 FOV_H = Height * sensor_width / focal_length # result in m
 FOV_V = AR*FOV_H # m
-px_h = 4000
-px_w = 3000
+px_h = 8000
+px_w = 5320
 GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
 GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
 
 # Fixed wing values
-phi_max = 30 # max bank angle in degrees
+phi_max = 25 # max bank angle in degrees
 g_acc = 9.81 # m/s
 VEL = 12 # m/s
 r_max = FOV_V/2 # maximum allowable turning radius - m
@@ -147,6 +162,7 @@ class Run_Algorithm:
             # Calculate the obstacles seen as they aren't returned by Java algorithm
             self.obs = len(np.argwhere(self.Grid == 1))
             print("Aborting Algorithm...")
+            return()
 
         self.time_DARP_total = time.time_ns() - timestart
         
@@ -302,9 +318,8 @@ class Run_Algorithm:
         pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
 
         # Print MST on DARP plot
-        if self.show_grid == True:
-            for r in range(self.n_r):
-                pMST.draw_cont_graph(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax)
+        for r in range(self.n_r):
+            pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -344,7 +359,15 @@ class Run_Algorithm:
         if(self.rows*self.cols == 0):
             print("WARNING: One of the environment array dimensions is zero...\n")
             self.abort = True
-
+        if(r_min>r_max):
+            print("WARNING: minimum turning radius is too large.\nOPTIONS:\n1. Increase HEIGHT to increase FOV (which is directly related to r_max)\n2. Increase BANK ANGLE depending on hardware constraints.\n3. Choose a camera with a larger FOV\n4. Reduce VELOCITY.\n")
+            self.abort = True
+        if(GSD_h > 1.3):
+            print("WARNING: Ground Sampling Distance is too high for reasonable human detection.\nOPTIONS:\n1. Choose camera with higher RESOLUTION\n2. Reduce flying HEIGHT\v3. Choose a camera with a lower ratio of sensor size to focal length.\n")
+            self.abort = True
+        if(VEL>v_max):
+            print("WARNING: velocity is too high. Cannot make turning radius withing FOV.\n")
+    
     def write_input(self):
         # Writes relevant inputs for java code to file
         # print(pathlib.Path("Input.txt").absolute())
@@ -1433,6 +1456,136 @@ class Prim_MST_maker:
         for r in range(self.n_r):
             plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
     
+    def waypoint_final_generation(self,nodes,parents,wpnts,wpnts_class,ax,print_graph):
+        wpnts_final = list()
+        for w in range(len(wpnts)-1):
+            x1 = wpnts[w][1]
+            x2 = wpnts[w+1][1]
+            y1 = wpnts[w][0]
+            y2 = wpnts[w+1][0]
+            if(x2>x1):
+                if(y2>y1):
+                    # F U
+                    if(wpnts_class[w+1]==1):
+                        # Bottom - Left
+                        wpnts_final.append([x1,y1])
+                        wpnts_final.append([x2-r_min,y1])
+                        wpnts_final.append([x2-r_min,y1+r_min,2*r_min,270.0])
+                        if(r_min != r_max):
+                            wpnts_final.append([x2,y1+r_min])
+                            wpnts_final.append([x2,y2])
+                    else:
+                        # Top - Backtrack / Right
+                        if(r_min != r_max):
+                            wpnts_final.append([x1,y1])
+                            wpnts_final.append([x1,y2-r_min])
+                        wpnts_final.append([x1+r_min,y2-r_min,2*r_min,90.0])
+                        wpnts_final.append([x1+r_min,y2])
+                        wpnts_final.append([x2,y2])
+                elif(y2<y1): 
+                    # B D
+                    if(wpnts_class[w+1]==1):
+                        # Bottom - Left Turn
+                        if(r_min != r_max):
+                            wpnts_final.append([x1,y1])
+                            wpnts_final.append([x1,y2+r_min])
+                        wpnts_final.append([x1+r_min,y2+r_min,2*r_min,180.0])
+                        wpnts_final.append([x1+r_min,y2])
+                        wpnts_final.append([x2,y2])                        
+                    else:
+                        # Top - Right Turn / Backtrack
+                        wpnts_final.append([x1,y1])
+                        wpnts_final.append([x2-r_min,y1])
+                        wpnts_final.append([x2-r_min,y1-r_min,2*r_min,0.0])
+                        if(r_min != r_max):
+                            wpnts_final.append([x2,y1-r_min])
+                            wpnts_final.append([x2,y2])
+                else: # y2 == y1
+                    # Line
+                    wpnts_final.append([x1,y1])
+                    wpnts_final.append([x2,y2])
+            elif(x2<x1):
+                if(y2>y1):
+                    # B U
+                    if(wpnts_class[w+1]==1):
+                        # Top - Left Turn
+                        if(r_min != r_max):
+                            wpnts_final.append([x1,y1])
+                            wpnts_final.append([x1,y2-r_min])
+                        wpnts_final.append([x1-r_min,y2-r_min,2*r_min,0.0])
+                        wpnts_final.append([x1-r_min,y2])
+                        wpnts_final.append([x2,y2])
+                    else:
+                        # Bottom - Right Turn / Backtrack
+                        wpnts_final.append([x1,y1])
+                        wpnts_final.append([x2+r_min,y1])
+                        wpnts_final.append([x2+r_min,y1+r_min,2*r_min,180.0])
+                        if(r_min != r_max):
+                            wpnts_final.append([x2,y1+r_min])
+                            wpnts_final.append([x2,y2])
+                elif(y2<y1):
+                    # F D
+                    if(wpnts_class[w+1]==1):
+                        # Top - Left
+                        wpnts_final.append([x1,y1])
+                        wpnts_final.append([x2+r_min,y1])
+                        wpnts_final.append([x2+r_min,y1-r_min,2*r_min,90.0])
+                        if(r_min != r_max):
+                            wpnts_final.append([x2,y1-r_min])
+                            wpnts_final.append([x2,y2])
+                    else:
+                        # Bottom - Right Turn / Backtrack      
+                        if(r_min != r_max):
+                            wpnts_final.append([x1,y1])
+                            wpnts_final.append([x1,y2+r_min])
+                        wpnts_final.append([x1-r_min,y2+r_min,2*r_min,270.0])
+                        wpnts_final.append([x1-r_min,y2])
+                        wpnts_final.append([x2,y2])
+                else: # y2 == y1
+                    # Line
+                    wpnts_final.append([x1,y1])
+                    wpnts_final.append([x2,y2])
+            else: # x2 == x1
+                # Line
+                wpnts_final.append([x1,y1])
+                wpnts_final.append([x2,y2])
+        
+         # Plot spanning tree
+        
+        if(PRINT_TREE==True):
+            for node in nodes:
+                x = ( (node[1])*2 +1 )*FOV_H
+                y = ( (self.rows - node[0] - 1)*2 + 1 )*FOV_V
+                plt.plot(x,y,".",markersize=S_MARKERIZE,color=TREE_COLOR)
+            for i in range(1,len(parents)):
+                x0 = ( (nodes[i][1])*2 + 1 )*FOV_H
+                x1 = ( (nodes[parents[i]][1])*2 + 1 )*FOV_H
+                y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*FOV_V
+                y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*FOV_V
+                plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
+        
+        # Plot waypoints
+        if(PRINT_PATH==True):
+            circ_flag = 0
+            for w in range(1,len(wpnts_final)):
+                if(len(wpnts_final[w])==2): # line
+                    if(circ_flag == 0):    
+                        plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                        plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                    else:
+                        circ_flag = 0
+                else: # circle
+                    if(PRINT_CIRCLE_CENTRES == True):
+                        plt.plot(wpnts_final[w][0],wpnts_final[w][1],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                    e1 = pat.Arc([wpnts_final[w][0],wpnts_final[w][1]],wpnts_final[w][2],wpnts_final[w][2],angle=wpnts_final[w][3],theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                    ax.add_patch(e1)
+                    circ_flag = 1
+
+        # Plot robot initial positions
+        for r in range(self.n_r):
+            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
+            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
+
     def draw_cont_graph(self,nodes,parents,wpnts,wpnts_class,ax):
         # Draws graph on continuous space graph
         # Plot spanning tree
@@ -1447,6 +1600,7 @@ class Prim_MST_maker:
                 y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*FOV_V
                 y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*FOV_V
                 plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
+                
 
         # Plot waypoints
         if(PRINT_PATH==True):
@@ -1719,7 +1873,7 @@ if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
     np.set_printoptions(threshold=np.inf)
 
-## RUN MULTIPLE SIMULATIONS ##
+## RUN MULTIPLE SIMULATIONS - old ##
 
     # # FIXED PARAMETERS #
     # Imp = False
@@ -1780,50 +1934,10 @@ if __name__ == "__main__":
     #                 if print_graph == True:
     #                     plt.show()
  
-## RUN AN INDIVIDUAL CASE -> old ##
-    # FIXED PARAMETERS #
-        # Imp = False
-        # maxIter = 10000
-        # obs_perc = 20
-        # tick_spacing = 1
-
-        # rows = 20
-        # cols = 20
-        # n_r = 3
-        # dcells = int(rows*cols/10)+1
-    
-        # print_graphs = True
-
-        # # RUNNING SIMULATION #
-        # file_log = "Logging_004.txt"
-
-        # obstacles = int((rows*cols)*obs_perc/100)
-        # grid_class = generate_rand_grid(rows, cols, n_r, obstacles)
-        # grid_class.randomise_robots()
-        # grid_class.randomise_obs()
-
-        # EnvironmentGrid = grid_class.GRID
-
-        # # EnvironmentGrid = np.array([    [1,1,0,0,0],
-        # #                                 [0,0,0,0,1],
-        # #                                 [2,0,0,0,1],
-        # #                                 [0,0,0,0,1],
-        # #                                 [1,0,0,2,1]],dtype=int)
-        
-        # #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
-        # algorithm_start(recompile=True)
-        # # Call this to run DARP and MST
-
-        # RA = Run_Algorithm(EnvironmentGrid, dcells, Imp, file_log, print_graphs,tick_spacing=tick_spacing)
-        # RA.main()
-
-        # if print_graphs == True:
-        #     plt.show()
-
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 5000.0 # m
-    vertical = 5000.0 # m
+    horizontal = 2000.0 # m
+    vertical = 2000.0 # m
 
     # Establish Small Node size
     
