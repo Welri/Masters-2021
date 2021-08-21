@@ -319,7 +319,7 @@ class Run_Algorithm:
 
         # Print MST on DARP plot
         for r in range(self.n_r):
-            pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid)
+            pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
 
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -664,6 +664,12 @@ class Prim_MST_maker:
         self.grids = Ilabel
         self.rip_cont = rip_cont
         self.rip_sml = rip_sml
+
+        self.wpnts_final_list = list()
+        self.dist_final_list = list()
+        self.time_final_list = list()
+        self.time_totals = np.zeros([self.n_r])
+        self.dist_totals = np.zeros([self.n_r])
 
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
@@ -1432,7 +1438,8 @@ class Prim_MST_maker:
         self.wpnt_ind+=1
     
     def draw_graph(self,nodes,parents,wpnts):
-        # Draws graph on old DARP graph - not using anymore (needs rip_sml)
+        # NO LONGER IN USE
+        # Draws graph on old DARP graph
         # Plot spanning tree
         for node in nodes:
             x = (node[1])*2 + 0.5
@@ -1456,8 +1463,13 @@ class Prim_MST_maker:
         for r in range(self.n_r):
             plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
     
-    def waypoint_final_generation(self,nodes,parents,wpnts,wpnts_class,ax,print_graph):
+    def waypoint_final_generation(self,nodes,parents,wpnts,wpnts_class,ax,print_graph,r):
         wpnts_final = list()
+        dist_final = list()
+        dist_final.append(0)
+        dist_tot = 0
+        time_tot = 0
+        
         for w in range(len(wpnts)-1):
             x1 = wpnts[w][1]
             x2 = wpnts[w+1][1]
@@ -1474,6 +1486,13 @@ class Prim_MST_maker:
                         if(r_min != r_max):
                             wpnts_final.append([x2,y1+r_min])
                             wpnts_final.append([x2,y2])
+                        l1 = FOV_H/2 - r_min # long leg
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_V/2 - r_min # short leg
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3
                     else:
                         # Top - Backtrack / Right
                         if(r_min != r_max):
@@ -1482,6 +1501,13 @@ class Prim_MST_maker:
                         wpnts_final.append([x1+r_min,y2-r_min,2*r_min,90.0])
                         wpnts_final.append([x1+r_min,y2])
                         wpnts_final.append([x2,y2])
+                        l1 = FOV_V/2 - r_min # short leg 
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_H/2 - r_min # long leg
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3
                 elif(y2<y1): 
                     # B D
                     if(wpnts_class[w+1]==1):
@@ -1491,7 +1517,14 @@ class Prim_MST_maker:
                             wpnts_final.append([x1,y2+r_min])
                         wpnts_final.append([x1+r_min,y2+r_min,2*r_min,180.0])
                         wpnts_final.append([x1+r_min,y2])
-                        wpnts_final.append([x2,y2])                        
+                        wpnts_final.append([x2,y2])
+                        l1 = FOV_V/2 - r_min # short leg 
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_H/2 - r_min # long leg 
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3              
                     else:
                         # Top - Right Turn / Backtrack
                         wpnts_final.append([x1,y1])
@@ -1500,10 +1533,19 @@ class Prim_MST_maker:
                         if(r_min != r_max):
                             wpnts_final.append([x2,y1-r_min])
                             wpnts_final.append([x2,y2])
+                        l1 = FOV_H/2 - r_min # long leg
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_V/2 - r_min # short leg
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3
                 else: # y2 == y1
                     # Line
                     wpnts_final.append([x1,y1])
                     wpnts_final.append([x2,y2])
+                    dist_final.append(FOV_V)
+                    dist_tot = dist_tot + FOV_V
             elif(x2<x1):
                 if(y2>y1):
                     # B U
@@ -1514,7 +1556,14 @@ class Prim_MST_maker:
                             wpnts_final.append([x1,y2-r_min])
                         wpnts_final.append([x1-r_min,y2-r_min,2*r_min,0.0])
                         wpnts_final.append([x1-r_min,y2])
-                        wpnts_final.append([x2,y2])
+                        wpnts_final.append([x2,y2])                        
+                        l1 = FOV_V/2 - r_min # short leg
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_H/2 - r_min # long leg
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3
                     else:
                         # Bottom - Right Turn / Backtrack
                         wpnts_final.append([x1,y1])
@@ -1523,6 +1572,13 @@ class Prim_MST_maker:
                         if(r_min != r_max):
                             wpnts_final.append([x2,y1+r_min])
                             wpnts_final.append([x2,y2])
+                        l1 = FOV_H/2 - r_min # long leg
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_V/2 - r_min # short leg
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3
                 elif(y2<y1):
                     # F D
                     if(wpnts_class[w+1]==1):
@@ -1533,6 +1589,13 @@ class Prim_MST_maker:
                         if(r_min != r_max):
                             wpnts_final.append([x2,y1-r_min])
                             wpnts_final.append([x2,y2])
+                        l1 = FOV_H/2 - r_min # long leg
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_V/2 - r_min # short leg
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3
                     else:
                         # Bottom - Right Turn / Backtrack      
                         if(r_min != r_max):
@@ -1541,17 +1604,37 @@ class Prim_MST_maker:
                         wpnts_final.append([x1-r_min,y2+r_min,2*r_min,270.0])
                         wpnts_final.append([x1-r_min,y2])
                         wpnts_final.append([x2,y2])
+                        l1 = FOV_V/2 - r_min # short leg
+                        l2 = r*np.pi/2 # arc
+                        l3 = FOV_H/2 - r_min # long leg
+                        dist_final.append(l1)
+                        dist_final.append(l2)
+                        dist_final.append(l3)
+                        dist_tot = dist_tot + l1 + l2 + l3 
                 else: # y2 == y1
                     # Line
                     wpnts_final.append([x1,y1])
                     wpnts_final.append([x2,y2])
+                    dist_final.append(FOV_V)
+                    dist_tot = dist_tot + FOV_V
             else: # x2 == x1
                 # Line
                 wpnts_final.append([x1,y1])
                 wpnts_final.append([x2,y2])
+                dist_final.append(FOV_H)
+                dist_tot = dist_tot + FOV_H
         
-         # Plot spanning tree
-        
+        # Append to main lists
+        self.wpnts_final_list.append(wpnts_final)
+        self.dist_final_list.append(dist_final)
+        self.dist_totals[r] = dist_tot
+        time_final = np.zeros(len(dist_final))
+        for d in range(len(dist_final)):
+            time_final[d] = dist_final[d] / VEL
+            time_tot = time_tot + time_final[d]
+        self.time_final_list.append(time_final)
+        self.time_totals[r] = time_tot
+        # Plot spanning tree
         if(PRINT_TREE==True):
             for node in nodes:
                 x = ( (node[1])*2 +1 )*FOV_H
@@ -1582,11 +1665,11 @@ class Prim_MST_maker:
                     circ_flag = 1
 
         # Plot robot initial positions
-        for r in range(self.n_r):
-            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
-            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
+        plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
+        plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
 
     def draw_cont_graph(self,nodes,parents,wpnts,wpnts_class,ax):
+        # NO LONGER USING THIS
         # Draws graph on continuous space graph
         # Plot spanning tree
         if(PRINT_TREE==True):
