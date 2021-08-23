@@ -1903,8 +1903,8 @@ class generate_rand_grid:
 class generate_grid:
     def __init__(self,hor,vert):
         # Divide Environment Into Large Nodes
-        self.rows = math.ceil(vert/(FOV_V*2))
-        self.cols = math.ceil(hor/(FOV_H*2))
+        self.rows = math.ceil(vert/(MAIN.FOV_V*2))
+        self.cols = math.ceil(hor/(MAIN.FOV_H*2))
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
         self.possible_indexes = np.argwhere(self.GRID == 0)
         np.random.shuffle(self.possible_indexes)
@@ -1916,10 +1916,10 @@ class generate_grid:
         for r in range(self.n_r):
             rip = self.rip_cont[r]
             # small cell position and large cell position
-            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/FOV_V) # row
-            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/FOV_H) # col
-            self.rip[r][0] = math.floor(self.rip_cont[r][0]/(FOV_V*2)) # row
-            self.rip[r][1] = math.floor(self.rip_cont[r][1]/(FOV_H*2)) # col
+            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/MAIN.FOV_V) # row
+            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/MAIN.FOV_H) # col
+            self.rip[r][0] = math.floor(self.rip_cont[r][0]/(MAIN.FOV_V*2)) # row
+            self.rip[r][1] = math.floor(self.rip_cont[r][1]/(MAIN.FOV_H*2)) # col
             self.GRID[self.rip_lrg[r][0]][self.rip_lrg[r][1]] = 2
     def set_obs(self,obs_coords):
         for obs in obs_coords:
@@ -1931,6 +1931,7 @@ class generate_grid:
         # self.rip = np.zeros([n_r,2],dtype=int)
         if self.n_r < self.rows*self.cols:
             self.rip = self.possible_indexes[0:self.n_r]
+            self.possible_indexes = np.delete(self.possible_indexes,np.arange(0,self.n_r,1),0)
             val1 = self.rip[:, 0]
             val2 = self.rip[:, 1]
             self.GRID[val1, val2] = 2
@@ -1940,83 +1941,23 @@ class generate_grid:
         for r in range(self.n_r):
             self.rip_sml[r][0] = self.rip[r][0]*2
             self.rip_sml[r][1] = self.rip[r][1]*2
-            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*FOV_V # vertical
-            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*FOV_H # horizontal
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.FOV_V # vertical
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.FOV_H # horizontal
     def randomise_obs(self,obs_perc):
         self.obs = math.floor(self.rows*self.cols*obs_perc/100)
-        if self.obs < (self.rows*self.cols-self.n_r):
-            indices = self.possible_indexes[self.n_r:self.n_r+self.obs]
+        if self.obs < (self.rows*self.cols*0.75):
+            indices = self.possible_indexes[0:self.obs]
+            self.possible_indexes = np.delete(self.possible_indexes,np.arange(0,self.obs,1),0)
             val1 = indices[:, 0]
             val2 = indices[:, 1]
             self.GRID[val1, val2] = 1
         else:
-            print("MADNESS! Why so many obstacles?")
+            print("MADNESS! Why so many obstacles? More than 75%% seems a bit crazy.")
 
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
     np.set_printoptions(threshold=np.inf)
 
-## RUN MULTIPLE SIMULATIONS - old ##
-
-    # # FIXED PARAMETERS #
-    # Imp = False
-    # maxIter = 10000
-    # dcells = 30
-    # cc = 0.1
-    # rl = 0.0001
-    # obs_perc = 20
-
-    # # Number of simulations per case
-    # number_of_sims = 10
-
-    # # VARIABLES #
-    # # Grid size range 
-    # # OLD WAY OF DOING IT- INDENTED
-    #     # max_size = 98
-    #     # min_size = 98
-    #     # step_size = 10
-    #     # sizes = np.array(np.arange(min_size/step_size, max_size /
-    #     #                            step_size + 1), dtype=int)*step_size
-    # sizes = np.array([58])
-    # rows = sizes
-    # cols = sizes
-
-    # # Number of robots range
-    # # OLD WAY OF DOING IT - INDENTED
-    #     # min_robots = 2
-    #     # max_robots = 6
-    #     # step_robots = 1
-    #     # robots = np.array(np.arange(min_robots/step_robots,max_robots/step_robots+1),dtype=int)*step_robots
-    # robots = np.array([2, 8, 14, 20])
-    # # CALCULATING TOTAL SIMULATIONS AND PRINTING #
-    # sims = number_of_sims*len(rows)*len(cols)*len(robots)
-    # print("Number of Sims Total: ", sims)
-
-    # # RUNNING SIMULATIONS #
-    # sim_overall = 1
-    # file_log = "Logging_003.txt"
-    # FL = open(file_log, "a")
-    # FL.write("Running Zeng style test with  obstacles\n\n")
-    # FL.close()
-    # for r in rows:
-    #     for c in cols:
-    #         for robot in robots:
-    #             for sim in range(number_of_sims):
-    #                 print("SIMULATION: ", sim_overall)
-    #                 sim_overall = sim_overall + 1
-    #                 obstacles = int((r*c)*obs_perc/100)
-    #                 grid_class = generate_grid(r, c, robot, obstacles)
-    #                 grid_class.randomise_robots()
-    #                 grid_class.randomise_obs()
-
-    #                 EnvironmentGrid = grid_class.GRID
-    #                 print_graph = False
-
-    #                 dp = DARP(EnvironmentGrid, dcells, Imp, file_log, print_graph)
-    #                 dp.main_DARP()
-    #                 if print_graph == True:
-    #                     plt.show()
- 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
     horizontal = 2000.0 # m
