@@ -1903,8 +1903,8 @@ class generate_rand_grid:
 class generate_grid:
     def __init__(self,hor,vert):
         # Divide Environment Into Large Nodes
-        self.rows = math.ceil(vert/(MAIN.FOV_V*2))
-        self.cols = math.ceil(hor/(MAIN.FOV_H*2))
+        self.rows = math.ceil(vert/(FOV_V*2))
+        self.cols = math.ceil(hor/(FOV_H*2))
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
         self.possible_indexes = np.argwhere(self.GRID == 0)
         np.random.shuffle(self.possible_indexes)
@@ -1916,10 +1916,10 @@ class generate_grid:
         for r in range(self.n_r):
             rip = self.rip_cont[r]
             # small cell position and large cell position
-            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/MAIN.FOV_V) # row
-            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/MAIN.FOV_H) # col
-            self.rip[r][0] = math.floor(self.rip_cont[r][0]/(MAIN.FOV_V*2)) # row
-            self.rip[r][1] = math.floor(self.rip_cont[r][1]/(MAIN.FOV_H*2)) # col
+            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/FOV_V) # row
+            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/FOV_H) # col
+            self.rip[r][0] = math.floor(self.rip_cont[r][0]/(FOV_V*2)) # row
+            self.rip[r][1] = math.floor(self.rip_cont[r][1]/(FOV_H*2)) # col
             self.GRID[self.rip_lrg[r][0]][self.rip_lrg[r][1]] = 2
     def set_obs(self,obs_coords):
         for obs in obs_coords:
@@ -1941,8 +1941,8 @@ class generate_grid:
         for r in range(self.n_r):
             self.rip_sml[r][0] = self.rip[r][0]*2
             self.rip_sml[r][1] = self.rip[r][1]*2
-            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.FOV_V # vertical
-            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.FOV_H # horizontal
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*FOV_V # vertical
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*FOV_H # horizontal
     def randomise_obs(self,obs_perc):
         self.obs = math.floor(self.rows*self.cols*obs_perc/100)
         if self.obs < (self.rows*self.cols*0.75):

@@ -12,20 +12,19 @@ class refuelling:
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
         self.possible_indexes = np.argwhere(self.GRID == 0)
         np.random.shuffle(self.possible_indexes)
-    def set_robots(self,n_r,coords):
-        self.n_r =  n_r # number of robots
-        self.rip_cont = coords 
+    def set_robots_rip(self,n_r,coords):
+        # input large cell coordinates
+        self.n_r = n_r
+        self.rip = coords
         self.rip_sml = np.zeros([len(coords),2],dtype=int)
-        self.rip = np.zeros([len(coords),2],dtype=int)
+        self.rip_cont = np.zeros([len(coords),2],dtype=float)
         for r in range(self.n_r):
-            rip = self.rip_cont[r]
-            # small cell position and large cell position
-            self.rip_sml[r][0] = math.floor(self.rip_cont[r][0]/MAIN.FOV_V) # row
-            self.rip_sml[r][1] = math.floor(self.rip_cont[r][1]/MAIN.FOV_H) # col
-            self.rip[r][0] = math.floor(self.rip_cont[r][0]/(MAIN.FOV_V*2)) # row
-            self.rip[r][1] = math.floor(self.rip_cont[r][1]/(MAIN.FOV_H*2)) # col
+            self.rip_sml[r][0] = self.rip[r][0]*2
+            self.rip_sml[r][1] = self.rip[r][1]*2
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.FOV_V
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.FOV_H
             self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
-    def set_obs(self,obs_coords):
+    def set_obs_rip(self,obs_coords):
         for obs in obs_coords:
             self.GRID[obs[0]][obs[1]] = 1
     # def randomise_robots(self,n_r):
@@ -60,6 +59,7 @@ class refuelling:
     def possible_robots(self):
         self.possible_robots_4 = list()
         self.moves_4 = [[0,1],[1,0],[0,-1],[-1,0]]
+        self.pos_4 = [[1,0],[0,0],[0,1],[1,1]] # Small block shift
         okay_4 = False
         for r in range(self.rows):
             for c in range(self.cols):
@@ -69,23 +69,31 @@ class refuelling:
                     for move in self.moves_4:
                         r_n = r + move[0]
                         c_n = c + move[1]
-                        if(r_n<self.rows)and(c_n<self.cols):
+                        if(r_n<self.rows)and(r_n>=0)and(c_n<self.cols)and(c_n>=0):
                             if self.GRID[r_n][c_n] == 1:
                                 okay_4 = False
                 if okay_4 == True:
                     self.possible_robots_4.append([r,c])
     def refuel_randomise_start(self,n_r,refuels):
         self.possible_robots()
-        DARP_n_r = (n_r + 1) * refuels
-        coords = np.zeros([DARP_n_r,2])
-        if DARP_n_r <= 4:
+        self.n_r = n_r * (refuels+1)
+        self.rip = np.zeros([self.n_r,2],dtype=int)
+        self.rip_sml = np.zeros([self.n_r,2],dtype=int)
+        self.rip_cont = np.zeros([self.n_r,2],dtype=float)
+        if self.n_r <= 4:
             start = self.possible_robots_4[ rand.randint(0,len(self.possible_robots_4)) ]
-            for r in range(DARP_n_r):
+            for r in range(self.n_r):
                 move = self.moves_4[r]
-                coords[r][0] = move[0] + start[0]
-                coords[r][1] = move[1] + start[1]
-        self.set_robots(DARP_n_r,coords) # Think the problem might be here
-                
+                self.rip[r][0] = move[0] + start[0]
+                self.rip[r][1] = move[1] + start[1]
+                pos = self.pos_4[r]
+                self.rip_sml[r][0] = self.rip[r][0]*2 + pos[0]
+                self.rip_sml[r][1] = self.rip[r][1]*2 + pos[1]
+                self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.FOV_V
+                self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.FOV_H
+                self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
+            self.set_obs_rip([start])
+                  
 # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
 np.set_printoptions(threshold=np.inf)
 MAIN.PRINT_DARP = False
@@ -99,7 +107,7 @@ GG = refuelling(horizontal,vertical)
 
 # Coordinates from top left (vert,hor)
 n_r = 2
-obs_perc = 20
+obs_perc = 10
 
 GG.randomise_obs(obs_perc)
 # GG.randomise_robots(n_r)
