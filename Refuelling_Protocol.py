@@ -7,8 +7,8 @@ import random as rand
 class refuelling:
     def __init__(self,hor,vert):
         # Divide Environment Into Large Nodes
-        self.rows = math.ceil(vert/(MAIN.FOV_V*2))
-        self.cols = math.ceil(hor/(MAIN.FOV_H*2))
+        self.rows = math.ceil(vert/(MAIN.DISC_V*2))
+        self.cols = math.ceil(hor/(MAIN.DISC_H*2))
         self.GRID = np.zeros([self.rows, self.cols], dtype=int)
         self.possible_indexes = np.argwhere(self.GRID == 0)
         np.random.shuffle(self.possible_indexes)
@@ -21,8 +21,8 @@ class refuelling:
         for r in range(self.n_r):
             self.rip_sml[r][0] = self.rip[r][0]*2
             self.rip_sml[r][1] = self.rip[r][1]*2
-            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.FOV_V
-            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.FOV_H
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.DISC_V
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.DISC_H
             self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
     def set_obs_rip(self,obs_coords):
         for obs in obs_coords:
@@ -89,8 +89,8 @@ class refuelling:
                 pos = self.pos_4[r]
                 self.rip_sml[r][0] = self.rip[r][0]*2 + pos[0]
                 self.rip_sml[r][1] = self.rip[r][1]*2 + pos[1]
-                self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.FOV_V
-                self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.FOV_H
+                self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.DISC_V
+                self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.DISC_H
                 self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
             self.set_obs_rip([start])
                   
