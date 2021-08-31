@@ -56,10 +56,18 @@ class refuelling:
             self.GRID[val1, val2] = 1
         else:
             print("MADNESS! Why so many obstacles? More than 75%% seems a bit crazy.")
+    def determine_refuels(self,n_r):
+        cells_per_robot = ( self.rows*self.cols*4 - self.obs*4  ) / n_r
+        # calculate path lengths predicted
+        dist = max(MAIN.ARC_L,MAIN.DISC_H,MAIN.DISC_V) * cells_per_robot
+        time = dist / MAIN.VEL
+        flights_req = time / MAIN.FLIGHT_TIME
+        refuels = math.floor(flights_req / n_r)
+        return(refuels)
     def possible_robots(self):
         self.possible_robots_4 = list()
-        self.moves_4 = [[0,1],[1,0],[0,-1],[-1,0]]
-        self.pos_4 = [[1,0],[0,0],[0,1],[1,1]] # Small block shift
+        self.moves_4 = [[-1,0],[0,1],[1,0],[0,-1]]
+        self.pos_4 = [[1,1],[1,0],[0,0],[0,1]] # Small block shift
         okay_4 = False
         for r in range(self.rows):
             for c in range(self.cols):
@@ -74,7 +82,8 @@ class refuelling:
                                 okay_4 = False
                 if okay_4 == True:
                     self.possible_robots_4.append([r,c])
-    def refuel_randomise_start(self,n_r,refuels):
+    def refuel_randomise_start(self,n_r):
+        refuels = self.determine_refuels(n_r)
         self.possible_robots()
         self.n_r = n_r * (refuels+1)
         self.rip = np.zeros([self.n_r,2],dtype=int)
@@ -99,19 +108,19 @@ np.set_printoptions(threshold=np.inf)
 MAIN.PRINT_DARP = False
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-horizontal = 2000.0 # m
-vertical = 2000.0 # m
+horizontal = 2200.0 # m
+vertical = 2200.0 # m
 
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
 
 # Coordinates from top left (vert,hor)
-n_r = 2
-obs_perc = 10
+n_r = 1
+obs_perc = 0
 
 GG.randomise_obs(obs_perc)
-# GG.randomise_robots(n_r)
-GG.refuel_randomise_start(n_r,1)
+# GG.determine_refuels(n_r)
+GG.refuel_randomise_start(n_r)
 
 # Other parameters
 Imp = False

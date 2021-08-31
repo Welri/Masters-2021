@@ -71,6 +71,9 @@ GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
 GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
 Overlap = (FOV_V*FOV_H - DISC_V*DISC_H) / (DISC_V*DISC_H)
 
+ARC_L = DISC_V/2 - r_min + r_min*np.pi/2 + DISC_H/2 - r_min
+FLIGHT_TIME = 30 * 60 # seconds
+
 print("GSD of: ",GSD_h,"Overlap of: ", Overlap)
 
 class algorithm_start:
@@ -380,6 +383,7 @@ class Run_Algorithm:
             # self.abort = True
         if(VEL>v_max):
             print("WARNING: velocity is too high. Cannot make turning radius and have complete coverage.\n")
+    
     def write_input(self):
         # Writes relevant inputs for java code to file
         # print(pathlib.Path("Input.txt").absolute())
@@ -1499,7 +1503,7 @@ class Prim_MST_maker:
                             wpnts_final.append([x2,y1+r_min])
                             wpnts_final.append([x2,y2])
                         l1 = DISC_H/2 - r_min # long leg
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_V/2 - r_min # short leg
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1514,7 +1518,7 @@ class Prim_MST_maker:
                         wpnts_final.append([x1+r_min,y2])
                         wpnts_final.append([x2,y2])
                         l1 = DISC_V/2 - r_min # short leg 
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_H/2 - r_min # long leg
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1531,7 +1535,7 @@ class Prim_MST_maker:
                         wpnts_final.append([x1+r_min,y2])
                         wpnts_final.append([x2,y2])
                         l1 = DISC_V/2 - r_min # short leg 
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_H/2 - r_min # long leg 
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1546,7 +1550,7 @@ class Prim_MST_maker:
                             wpnts_final.append([x2,y1-r_min])
                             wpnts_final.append([x2,y2])
                         l1 = DISC_H/2 - r_min # long leg
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_V/2 - r_min # short leg
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1570,7 +1574,7 @@ class Prim_MST_maker:
                         wpnts_final.append([x1-r_min,y2])
                         wpnts_final.append([x2,y2])                        
                         l1 = DISC_V/2 - r_min # short leg
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_H/2 - r_min # long leg
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1585,7 +1589,7 @@ class Prim_MST_maker:
                             wpnts_final.append([x2,y1+r_min])
                             wpnts_final.append([x2,y2])
                         l1 = DISC_H/2 - r_min # long leg
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_V/2 - r_min # short leg
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1602,7 +1606,7 @@ class Prim_MST_maker:
                             wpnts_final.append([x2,y1-r_min])
                             wpnts_final.append([x2,y2])
                         l1 = DISC_H/2 - r_min # long leg
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_V/2 - r_min # short leg
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1617,7 +1621,7 @@ class Prim_MST_maker:
                         wpnts_final.append([x1-r_min,y2])
                         wpnts_final.append([x2,y2])
                         l1 = DISC_V/2 - r_min # short leg
-                        l2 = r*np.pi/2 # arc
+                        l2 = r_min*np.pi/2 # arc
                         l3 = DISC_H/2 - r_min # long leg
                         dist_final.append(l1)
                         dist_final.append(l2)
@@ -1696,7 +1700,6 @@ class Prim_MST_maker:
                 y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*DISC_V
                 plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
                 
-
         # Plot waypoints
         if(PRINT_PATH==True):
             for w in range(len(wpnts)-1):
