@@ -113,8 +113,7 @@ class Run_Algorithm:
         self.rip = np.argwhere(self.Grid == 2) # rip in correct order
         self.rip_temp = rip # rip in incorrect order - same as rip_sml and rip_cont
         self.n_r = len(self.rip)
-        self.ArrayOfElements = np.zeros(self.n_r, dtype=int)
-        
+        self.ArrayOfElements = np.zeros(self.n_r, dtype=int)  
         self.abort = False
         self.es_flag = False
         self.runs = 0
@@ -168,8 +167,9 @@ class Run_Algorithm:
                         self.print_DARP_graph() # prints a graph for each iteration
                     self.runs += 1
                     self.total_iterations = self.total_iterations + self.iterations
+                    print("rl: ", self.rl, " cl: ", self.cc, " discrepancy allowed: ", self.dcells/self.fairDiv, "discrepancy achieved: ",self.maxDiscr)
                     if self.DARP_success == True:
-                        print("rl: ", self.rl, " cl: ", self.cc, " discrepancy allowed: ", self.dcells," ",self.dcells/self.fairDiv, "discrepancy achieved: ",self.maxDiscr)
+                        print("Successfully found solution...")
                         break
                 else:
                     continue
@@ -181,7 +181,8 @@ class Run_Algorithm:
             self.obs = len(np.argwhere(self.Grid == 1))
             print("Aborting Algorithm...")
             return()
-
+        if self.DARP_success == False:
+            print("No solution was found...")
         self.time_DARP_total = time.time_ns() - timestart
         
         # Print DARP
@@ -332,13 +333,17 @@ class Run_Algorithm:
         file_log.close()
 
     def primMST(self):
-        # Run MST algorithm
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
+        try:
+            # Run MST algorithm
+            pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
 
-        # Print MST on DARP plot
-        for r in range(self.n_r):
-            pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
-
+            # Print MST on DARP plot
+            for r in range(self.n_r):
+                pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
+            print("Time allowed: ", FLIGHT_TIME )
+            print("Times achieved: ", pMST.time_totals)
+        except:
+            print("Prim algorithm failed to implement...")
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
         ES = enclosed_space_check(
@@ -1482,6 +1487,8 @@ class Prim_MST_maker:
             plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
     
     def waypoint_final_generation(self,nodes,parents,wpnts,wpnts_class,ax,print_graph,r):
+        # Waypoint, distance and time arrays created to describe the path
+        # Includes graph drawing
         wpnts_final = list()
         dist_final = list()
         dist_final.append(0)

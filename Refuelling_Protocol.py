@@ -71,7 +71,7 @@ class refuelling:
         if self.n_r <= 8:
             # TODO: add the other 4 moves and position shifts
             self.moves = [[-1,0],[0,1],[1,0],[0,-1],[-1,1],[1,1],[1,-1],[-1,-1]]
-            self.pos = [[1,1],[1,0],[0,0],[0,1],[1,0],[0,0],[0,1],[1,1]] # Small block position shift
+            self.pos = [[0,1],[1,1],[1,0],[0,0],[0,1],[1,1],[1,0],[0,0]] # Small block position shift
             for r in range(self.rows):
                 for c in range(self.cols):
                     if self.GRID[r][c] != 1:
@@ -109,7 +109,12 @@ class refuelling:
                   
 # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
 np.set_printoptions(threshold=np.inf)
-MAIN.PRINT_DARP = False
+
+# What graphs should it print
+MAIN.PRINT_DARP = True
+MAIN.PRINT_TREE = False
+MAIN.PRINT_PATH = True
+MAIN.PRINT_CIRCLE_CENTRES = False
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
 horizontal = 2500.0 # m
@@ -119,7 +124,7 @@ vertical = 2500.0 # m
 GG = refuelling(horizontal,vertical)
 
 # Coordinates from top left (vert,hor)
-n_r = 3
+n_r = 4
 obs_perc = 10
 
 GG.randomise_obs(obs_perc)
@@ -132,9 +137,9 @@ maxIter = 10000
 
 rows = GG.rows
 cols = GG.cols
-obs = GG.obs
+obs = GG.obs # NOte this is before removal of enclosed space, which can increase the number of robots
 n_r_equivalent = GG.n_r
-dcells = math.ceil( ((rows*cols-obs)/n_r_equivalent)*0.1 ) # discrepancy of 10% allowed
+dcells = math.ceil( ((rows*cols-obs)/n_r_equivalent)*0.3 ) # discrepancy of X% allowed
 
 print_graphs = True
 
@@ -146,6 +151,7 @@ EnvironmentGrid = GG.GRID
 MAIN.algorithm_start(recompile=True)
 
 # Call this to run DARP and MST
+print("Equivalent Robots: ", n_r_equivalent)
 RA = MAIN.Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs)
 RA.set_continuous(GG.rip_sml,GG.rip_cont)
 RA.main()
