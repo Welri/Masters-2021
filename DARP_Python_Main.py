@@ -63,18 +63,19 @@ px_w = 5320
 FOV_H = Height * sensor_width / focal_length # result in m
 FOV_V = AR*FOV_H # m
 # Conservatively choose
+# Note: for asymmetric cells FOV_V < FOV_H is a requirement
 DISC_H = math.sqrt(2)/(4-math.sqrt(2)) * FOV_H
 DISC_V = DISC_H
 r_max = DISC_H/2
 v_max = math.sqrt( r_max * g_acc * math.tan(phi_max*math.pi/180) ) # m/s
 GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
 GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
-Overlap = (FOV_V*FOV_H - DISC_V*DISC_H) / (DISC_V*DISC_H)
+CT_Overlap = (DISC_V*(FOV_H -DISC_H)) / (DISC_V*DISC_H) # Crosstack overlap
 
 ARC_L = DISC_V/2 - r_min + r_min*np.pi/2 + DISC_H/2 - r_min
 FLIGHT_TIME = 30 * 60 # seconds
 
-print("GSD of: ",GSD_h,"Overlap of: ", Overlap)
+print("GSD of: ",GSD_h,"Overlap of: ", CT_Overlap)
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -113,7 +114,7 @@ class Run_Algorithm:
         self.rip_temp = rip # rip in incorrect order - same as rip_sml and rip_cont
         self.n_r = len(self.rip)
         self.ArrayOfElements = np.zeros(self.n_r, dtype=int)
-        self.fairDiv = self.rows*self.cols/self.n_r
+        
         self.abort = False
         self.es_flag = False
         self.runs = 0
@@ -160,14 +161,15 @@ class Run_Algorithm:
                     self.write_input()
                     self.run_subprocess()
                     self.read_output()
-                    self.AOEperc = np.abs(
-                        (self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
+                    self.fairDiv = (self.rows*self.cols - self.obs)/self.n_r
+                    self.AOEperc = np.abs((self.ArrayOfElements+1)-self.fairDiv)/self.fairDiv
                     self.maxDiscr = np.max(self.AOEperc)
                     if (self.show_grid == True) and (PRINT_DARP==True):
                         self.print_DARP_graph() # prints a graph for each iteration
                     self.runs += 1
                     self.total_iterations = self.total_iterations + self.iterations
                     if self.DARP_success == True:
+                        print("rl: ", self.rl, " cl: ", self.cc, " discrepancy allowed: ", self.dcells," ",self.dcells/self.fairDiv, "discrepancy achieved: ",self.maxDiscr)
                         break
                 else:
                     continue

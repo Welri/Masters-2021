@@ -59,64 +59,68 @@ class refuelling:
     def determine_refuels(self,n_r):
         cells_per_robot = ( self.rows*self.cols*4 - self.obs*4  ) / n_r
         # calculate path lengths predicted
-        dist = max(MAIN.ARC_L,MAIN.DISC_H,MAIN.DISC_V) * cells_per_robot
-        time = dist / MAIN.VEL
-        flights_req = time / MAIN.FLIGHT_TIME
-        refuels = math.floor(flights_req / n_r)
+        dist = max(MAIN.ARC_L,MAIN.DISC_H,MAIN.DISC_V) * cells_per_robot # distance each robot needs should fly
+        time = dist / MAIN.VEL # time each robot needs to fly
+        flights_req = time / MAIN.FLIGHT_TIME # fights required per robot
+        refuels = math.ceil(flights_req) - 1
         return(refuels)
-    def possible_robots(self):
-        self.possible_robots_4 = list()
-        self.moves_4 = [[-1,0],[0,1],[1,0],[0,-1]]
-        self.pos_4 = [[1,1],[1,0],[0,0],[0,1]] # Small block shift
-        okay_4 = False
-        for r in range(self.rows):
-            for c in range(self.cols):
-                if self.GRID[r][c] != 1:
-                    # Check for 4 robot positions
-                    okay_4 = True
-                    for move in self.moves_4:
-                        r_n = r + move[0]
-                        c_n = c + move[1]
-                        if(r_n<self.rows)and(r_n>=0)and(c_n<self.cols)and(c_n>=0):
-                            if self.GRID[r_n][c_n] == 1:
-                                okay_4 = False
-                if okay_4 == True:
-                    self.possible_robots_4.append([r,c])
+    def possible_robots(self,n_r):
+        # Note: self.n_r needs to be determined before this function can be called
+        self.possible_robots = list()
+        okay = False
+        if self.n_r <= 8:
+            # TODO: add the other 4 moves and position shifts
+            self.moves = [[-1,0],[0,1],[1,0],[0,-1],[-1,1],[1,1],[1,-1],[-1,-1]]
+            self.pos = [[1,1],[1,0],[0,0],[0,1],[1,0],[0,0],[0,1],[1,1]] # Small block position shift
+            for r in range(self.rows):
+                for c in range(self.cols):
+                    if self.GRID[r][c] != 1:
+                        # Check relevant robot positions
+                        okay = True
+                        for n in range(self.n_r):
+                            r_n = r + self.moves[n][0]
+                            c_n = c + self.moves[n][1]
+                            if(r_n<self.rows)and(r_n>=0)and(c_n<self.cols)and(c_n>=0):
+                                if self.GRID[r_n][c_n] == 1:
+                                    okay = False
+                            else:
+                                okay = False
+                    if okay == True:
+                        self.possible_robots.append([r,c])
     def refuel_randomise_start(self,n_r):
         refuels = self.determine_refuels(n_r)
-        self.possible_robots()
-        self.n_r = n_r * (refuels+1)
+        self.n_r = n_r * (refuels+1) # equivalent number of robots given the number of refuels
+        self.possible_robots(n_r)
         self.rip = np.zeros([self.n_r,2],dtype=int)
         self.rip_sml = np.zeros([self.n_r,2],dtype=int)
         self.rip_cont = np.zeros([self.n_r,2],dtype=float)
-        if self.n_r <= 4:
-            start = self.possible_robots_4[ rand.randint(0,len(self.possible_robots_4)) ]
-            for r in range(self.n_r):
-                move = self.moves_4[r]
-                self.rip[r][0] = move[0] + start[0]
-                self.rip[r][1] = move[1] + start[1]
-                pos = self.pos_4[r]
-                self.rip_sml[r][0] = self.rip[r][0]*2 + pos[0]
-                self.rip_sml[r][1] = self.rip[r][1]*2 + pos[1]
-                self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.DISC_V
-                self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.DISC_H
-                self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
-            self.set_obs_rip([start])
+        start = self.possible_robots[ rand.randint(0,len(self.possible_robots)) ]
+        for r in range(self.n_r):
+            move = self.moves[r]
+            self.rip[r][0] = move[0] + start[0]
+            self.rip[r][1] = move[1] + start[1]
+            pos = self.pos[r]
+            self.rip_sml[r][0] = self.rip[r][0]*2 + pos[0]
+            self.rip_sml[r][1] = self.rip[r][1]*2 + pos[1]
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.DISC_V
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.DISC_H
+            self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
+        self.set_obs_rip([start])
                   
 # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
 np.set_printoptions(threshold=np.inf)
 MAIN.PRINT_DARP = False
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-horizontal = 2200.0 # m
-vertical = 2200.0 # m
+horizontal = 2500.0 # m
+vertical = 2500.0 # m
 
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
 
 # Coordinates from top left (vert,hor)
-n_r = 1
-obs_perc = 0
+n_r = 3
+obs_perc = 10
 
 GG.randomise_obs(obs_perc)
 # GG.determine_refuels(n_r)
@@ -128,8 +132,9 @@ maxIter = 10000
 
 rows = GG.rows
 cols = GG.cols
-dcells = math.ceil(rows*cols/10)
 obs = GG.obs
+n_r_equivalent = GG.n_r
+dcells = math.ceil( ((rows*cols-obs)/n_r_equivalent)*0.1 ) # discrepancy of 10% allowed
 
 print_graphs = True
 
