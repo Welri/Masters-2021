@@ -16,7 +16,7 @@ PRINT_DARP = True
 PRINT_TREE = False
 PRINT_PATH = True
 PRINT_CIRCLE_CENTRES = False
-LINEWIDTH = 0.7
+LINEWIDTH = 0.5
 S_MARKERIZE = LINEWIDTH*4
 MARKERSIZE=LINEWIDTH*12
 TICK_SPACING = 1
@@ -101,7 +101,7 @@ class algorithm_start:
 
 # Contains main DARP code, runs the DARP algorithm and runs PrimMST by calling the other class
 class Run_Algorithm:
-    def __init__(self, EnvironmentGrid, rip, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001]),rl_vals=np.array([0.01,0.001,0.0001])):
+    def __init__(self, EnvironmentGrid, rip, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001,0.0001,0.00001]),rl_vals=np.array([0.01,0.001,0.0001,0.00001])):
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
@@ -341,9 +341,17 @@ class Run_Algorithm:
             for r in range(self.n_r):
                 pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
             print("Time allowed: ", FLIGHT_TIME )
-            print("Times achieved: ", pMST.time_totals)
+            # print("Times achieved: ", pMST.time_totals)
+            for r in range(self.n_r):
+                time_ach = pMST.time_totals[r]
+                if time_ach > FLIGHT_TIME:
+                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
+                else:
+                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
+
         except:
             print("Prim algorithm failed to implement...")
+    
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
         ES = enclosed_space_check(
@@ -510,7 +518,8 @@ class Run_Algorithm:
         fig,self.ax = plt.subplots(figsize=(8, 8))
 
         # Initialize cell colours
-        colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
+        # colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9","C10"]
+        colours = ['xkcd:nice blue','xkcd:dusty orange','xkcd:kelly green','xkcd:red','xkcd:brownish','xkcd:carnation pink','xkcd:medium grey','xkcd:gold','xkcd:turquoise blue','xkcd:purple','xkcd:lightblue','xkcd:lavender','xkcd:salmon','xkcd:magenta','xkcd:olive','xkcd:silver']
         c = 0
         colour_assignments = {}
         for i in range(self.n_r):
