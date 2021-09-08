@@ -598,5 +598,15 @@ public class DARP {
         return ArrayOfElements;
     }
 
+    private double ManhattanDis(Integer[] a, Integer[] b) {
+        int vecSize = a.length;
+        double d = 0.0;
+        for (int i = 0; i < vecSize; i++) {
+            d += Math.abs(a[i] - b[i]);
+        }
+        return d;
+    }
+
+    // Should find a way to calculate Geodesic Distance (maybe use Astar)
     // USER CODE END
 }

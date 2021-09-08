@@ -206,7 +206,7 @@ public class ConnectComponent
      * foreground pixels set to 1 and background set to 0.
      */
     public float[][] NormalizedEuclideanDistanceBinary(boolean RobotR) {
-
+        // TODO: Does this work for Manhattan Distance?
         float[][] Region = new float[rows][cols];
 
         float [] f = new float[Math.max(rows, cols)];
