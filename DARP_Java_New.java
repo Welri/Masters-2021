@@ -24,6 +24,7 @@ public class DARP_Java_New {
 
     public static void main(String[] args) {
         DARP_Java_New t = new DARP_Java_New();
+        
         // Read input and run DARP
         try {
             File file_in = new File("Input.txt");

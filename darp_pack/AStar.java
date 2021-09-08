@@ -9,8 +9,8 @@ import java.util.*;
  * @version 2.1, 2017-02-23
  */
 public class AStar {
-    private static int DEFAULT_HV_COST = 10; // Horizontal - Vertical Cost
-    private static int DEFAULT_DIAGONAL_COST = 14;
+    private static int DEFAULT_HV_COST = 1; // Horizontal - Vertical Cost
+    private static int DEFAULT_DIAGONAL_COST = 2; // Not relevant anymore
     private int hvCost;
     private int diagonalCost;
     private Node[][] searchArea;
@@ -93,12 +93,12 @@ public class AStar {
         int col = currentNode.getCol();
         int lowerRow = row + 1;
         if (lowerRow < getSearchArea().length) {
-            if (col - 1 >= 0) {
-                checkNode(currentNode, col - 1, lowerRow, getDiagonalCost()); // Comment this line if diagonal movements are not allowed
-            }
-            if (col + 1 < getSearchArea()[0].length) {
-                checkNode(currentNode, col + 1, lowerRow, getDiagonalCost()); // Comment this line if diagonal movements are not allowed
-            }
+            // if (col - 1 >= 0) {
+            //     checkNode(currentNode, col - 1, lowerRow, getDiagonalCost()); // Comment this line if diagonal movements are not allowed
+            // }
+            // if (col + 1 < getSearchArea()[0].length) {
+            //     checkNode(currentNode, col + 1, lowerRow, getDiagonalCost()); // Comment this line if diagonal movements are not allowed
+            // }
             checkNode(currentNode, col, lowerRow, getHvCost());
         }
     }
@@ -120,12 +120,12 @@ public class AStar {
         int col = currentNode.getCol();
         int upperRow = row - 1;
         if (upperRow >= 0) {
-            if (col - 1 >= 0) {
-                checkNode(currentNode, col - 1, upperRow, getDiagonalCost()); // Comment this if diagonal movements are not allowed
-            }
-            if (col + 1 < getSearchArea()[0].length) {
-                checkNode(currentNode, col + 1, upperRow, getDiagonalCost()); // Comment this if diagonal movements are not allowed
-            }
+            // if (col - 1 >= 0) {
+            //     checkNode(currentNode, col - 1, upperRow, getDiagonalCost()); // Comment this if diagonal movements are not allowed
+            // }
+            // if (col + 1 < getSearchArea()[0].length) {
+            //     checkNode(currentNode, col + 1, upperRow, getDiagonalCost()); // Comment this if diagonal movements are not allowed
+            // }
             checkNode(currentNode, col, upperRow, getHvCost());
         }
     }

@@ -36,6 +36,7 @@ public class DARP {
     private int final_iterations;
     private int[][][] Ilabel_final;
     private boolean[] connected_bool;
+    private int[][] obstacle_locations;
     // USER CODE END
 
     // Constructor
@@ -99,7 +100,7 @@ public class DARP {
             for (int j = 0; j < cols; j++) {
                 double tempSum = 0.0;
                 for (int r = 0; r < nr; r++) {
-                    AllDistances.get(r)[i][j] = EuclideanDis(RobotsInit.get(r), new Integer[] { i, j });
+                    AllDistances.get(r)[i][j] = GeodesicManhattanDis(RobotsInit.get(r), new Integer[] { i, j }); // USER edit point (manhattan vs euclidean vs geodesic manhattan)
                     if (AllDistances.get(r)[i][j] > MaximumDist[r]) {
                         MaximumDist[r] = AllDistances.get(r)[i][j];
                     }
@@ -478,8 +479,21 @@ public class DARP {
                 } // Every slot that is not a RIP or a Obstacle gets assigned -1
             }
         }
-
         ConnectedRobotRegions = new boolean[nr];
+
+        // USER code start
+        int counter = 0;
+        obstacle_locations = new int[ob][2];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (GridEnv[i][j] == -2){
+                    obstacle_locations[counter][0] = i;
+                    obstacle_locations[counter][1] = j;
+                    counter++;
+                }
+            }
+        }
+        // USER code end
     }
 
     private void printMatrix(int[][] M) {
@@ -606,6 +620,24 @@ public class DARP {
         }
         return d;
     }
+
+    private double GeodesicManhattanDis(Integer[] start, Integer[] end){
+        // Only works with one start and endpoint
+        int d = 0;
+        Node initialNode = new Node(start[0],start[1]);
+        Node finalNode = new Node(end[0],end[1]);
+        int rows = this.rows;
+        int cols = this.cols;
+        AStar aStar = new AStar(rows,cols,initialNode,finalNode);
+        aStar.setBlocks(this.obstacle_locations); // would be better if not necessary to declare this every time
+        java.util.List<Node> path = aStar.findPath();
+        for (Node node : path) {
+            // System.out.println(node);
+            d++;
+        }
+        return(d);
+    }
+
 
     // Should find a way to calculate Geodesic Distance (maybe use Astar)
     // USER CODE END

@@ -156,8 +156,8 @@ MAIN.PRINT_PATH = True
 MAIN.PRINT_CIRCLE_CENTRES = False
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-horizontal = 4500.0 # m
-vertical = 4500.0 # m
+horizontal = 3000.0 # m
+vertical = 3000.0 # m
 
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
