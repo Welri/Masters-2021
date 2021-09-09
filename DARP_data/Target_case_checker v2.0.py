@@ -51,13 +51,13 @@ class target_case_checker:
         self.rip_cont = self.string_to_grid(ripcont_string,self.n_r,2,data_type="float")
 
         FILE.close()
-    def rerun_DARP(self, file_log = "MAIN_LOGGING", show_grid=False,distance_measure = 0):
+    def rerun_DARP(self, file_log = "MAIN_LOGGING.txt", show_grid=False,distance_measure = 0,recompile=True):
         DPM.PRINT_DARP = True
         DPM.PRINT_PATH = True
         DPM.PRINT_TREE = True
         DPM.PATH_COLOR = 'w'
         
-        DPM.algorithm_start(recompile=True)
+        DPM.algorithm_start(recompile=recompile)
         
         RA = DPM.Run_Algorithm(self.Grid, self.rip, self.dcells, self.Imp, show_grid, dist_meas=distance_measure,log_active=True,log_filename=file_log,target_active=False)
         RA.set_continuous(self.rip_sml,self.rip_cont)
@@ -91,7 +91,7 @@ class target_case_checker:
             Grid = np.zeros(rows*cols,dtype=float)
         e = 0
         c = 0
-        while(c<len(string)):
+        while( (c<len(string)) and (e<len(Grid))):
             if (string[c] == ' ') or (string[c] == '\n') or (string[c] == '\t'):
                 c+=1
                 continue
@@ -100,6 +100,8 @@ class target_case_checker:
                 while((string[c] != " ") and (string[c] != "\n") and (string[c] != "\t")):
                     st = st + string[c]
                     c+=1
+                    if (c>=len(string)):
+                        break
                 if (data_type == "int"):
                     Grid[e] = int(st)
                 elif (data_type == "float"):
@@ -112,7 +114,7 @@ if __name__ == "__main__":
     show_grid = True
 
     TCC = target_case_checker()
-    TCC.get_data("TARGET_CASES_v2.0/Case01.txt")
-    TCC.rerun_DARP(show_grid=show_grid,distance_measure=0)
+    TCC.get_data("TARGET_CASES_v2.0/Case05.txt")
+    TCC.rerun_DARP(show_grid=show_grid,distance_measure=2,recompile=False)
     if (show_grid == True):
         plt.show()

@@ -130,6 +130,7 @@ class Run_Algorithm:
         self.horizontal = 2*DISC_H*self.cols
         self.vertical = 2*DISC_V*self.rows
         self.rip_cont = rip_cont
+        self.rip_cont_temp = np.zeros([len(self.rip_cont),2])
         self.rip_sml = rip_sml
         ind = np.zeros([self.n_r],dtype=int)
         rip_sml_temp = np.zeros([self.n_r,2],dtype=int)
@@ -147,6 +148,8 @@ class Run_Algorithm:
         for r in range(self.n_r):
             self.rip_sml[r][0] = rip_sml_temp[r][0]
             self.rip_sml[r][1] = rip_sml_temp[r][1]
+            self.rip_cont_temp[r][0] = rip_cnt_temp[r][0]
+            self.rip_cont_temp[r][1] = rip_cnt_temp[r][1]
             self.rip_cont[r][0] = self.vertical - rip_cnt_temp[r][0]
             self.rip_cont[r][1] = rip_cnt_temp[r][1]
          
@@ -339,6 +342,7 @@ class Run_Algorithm:
 
         if(self.target_active == True):
             file_log = open(self.target_filename, "a")
+            file_log.write("\n")
             file_log.write(str(self.rows))
             file_log.write("\n")
             file_log.write(str(self.cols))
@@ -371,7 +375,7 @@ class Run_Algorithm:
             ripsmlstring = ripsmlstring.replace(']', '')
             file_log.write(ripsmlstring)
             file_log.write("\n")
-            ripcontstring = str(self.rip_cont.reshape(1,self.n_r*2))
+            ripcontstring = str(self.rip_cont_temp.reshape(1,self.n_r*2))
             ripcontstring = ripcontstring.replace('\n', '')
             ripcontstring = ripcontstring.replace('[', '')
             ripcontstring = ripcontstring.replace(']', '')
@@ -380,24 +384,24 @@ class Run_Algorithm:
             file_log.close()
             
     def primMST(self):
-        # try:
-        # Run MST algorithm
-        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
+        try:
+            # Run MST algorithm
+            pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
 
-        # Print MST on DARP plot
-        for r in range(self.n_r):
-            pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
-        print("Time allowed: ", FLIGHT_TIME )
-        # print("Times achieved: ", pMST.time_totals)
-        for r in range(self.n_r):
-            time_ach = pMST.time_totals[r]
-            if time_ach > FLIGHT_TIME:
-                print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
-            else:
-                print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
+            # Print MST on DARP plot
+            for r in range(self.n_r):
+                pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
+            print("Time allowed: ", FLIGHT_TIME )
+            # print("Times achieved: ", pMST.time_totals)
+            for r in range(self.n_r):
+                time_ach = pMST.time_totals[r]
+                if time_ach > FLIGHT_TIME:
+                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
+                else:
+                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
 
-        # except:
-        #     print("Prim algorithm failed to implement...")
+        except:
+            print("Prim algorithm failed to implement...")
     
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -955,6 +959,8 @@ class Prim_MST_maker:
         end_node = nodes[node_ind]
         direction = direction[ind]
         arrow = mst_arrow(start_node,end_node,direction)
+
+        # Waypoint Generation
         if(new_dir=='L'):
             self.left_turn_wpnts(arrow)
         elif(new_dir=='F'):
@@ -2038,15 +2044,15 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 1500.0 # m
-    vertical = 1500.0 # m
+    horizontal = 3000.0 # m
+    vertical = 3000.0 # m
 
     # Generate environment grid
     GG = generate_grid(horizontal,vertical)
     
     # Coordinates from top left (vert,hor)
-    n_r = 3
-    obs_perc = 10
+    n_r = 10
+    obs_perc = 30
     GG.randomise_robots(n_r) 
     GG.randomise_obs(obs_perc)
     # robot_cont = np.array([[50,160],[180,40]])
@@ -2071,7 +2077,7 @@ if __name__ == "__main__":
     EnvironmentGrid = GG.GRID
 
     #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
-    algorithm_start(recompile=True)
+    algorithm_start(recompile=False)
     
     # Call this to run DARP and MST
     RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, print_graphs,dist_meas=distance_measure,log_active=False,log_filename=file_log,target_filename=target_log,target_active=True)
