@@ -101,7 +101,7 @@ class algorithm_start:
 
 # Contains main DARP code, runs the DARP algorithm and runs PrimMST by calling the other class
 class Run_Algorithm:
-    def __init__(self, EnvironmentGrid, rip, dcells, Imp, log_filename, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001,0.0001,0.00001]),rl_vals=np.array([0.01,0.001,0.0001,0.00001])):
+    def __init__(self, EnvironmentGrid, rip, dcells, Imp, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001,0.0001,0.00001]),rl_vals=np.array([0.01,0.001,0.0001,0.00001]),dist_meas=0, log_filename="MAIN_LOGGING.txt", log_active = False, target_filename = "TARGET_LOG.txt", target_active = False):
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
@@ -120,7 +120,11 @@ class Run_Algorithm:
         self.show_grid = show_grid
         self.DARP_success = False
         self.log_filename = log_filename
+        self.log_active = log_active
+        self.target_filename = target_filename
+        self.target_active = target_active
         self.total_iterations = 0
+        self.distance_measure = dist_meas
 
     def set_continuous(self,rip_sml,rip_cont):
         self.horizontal = 2*DISC_H*self.cols
@@ -195,162 +199,205 @@ class Run_Algorithm:
         self.time_prim = time.time_ns() - timestart
 
         # Logging
-        file_log = open(self.log_filename, "a")
-        if(self.abort == False):
-            file_log.write(str(self.abort))
-            file_log.write(",")
-            file_log.write(str(self.dcells))
-            file_log.write(",")
-            file_log.write(str(self.Imp))
-            file_log.write(",")
-            file_log.write(str(self.rows))
-            file_log.write(",")
-            file_log.write(str(self.cols))
-            file_log.write(",")
-            file_log.write(str(self.n_r))
-            file_log.write(",")
-            file_log.write(str(self.es_flag))
-            file_log.write(",")
-            file_log.write(str(self.cc))
-            file_log.write(",")
-            file_log.write(str(self.rl))
-            file_log.write(",")
-            file_log.write(str(self.maxIter))
-            file_log.write(",")
-            file_log.write(str(self.obs))
-            file_log.write(",")
-            file_log.write(str(self.DARP_success))
-            file_log.write(",")
-            file_log.write(str(self.discr_achieved))
-            file_log.write(",")
-            file_log.write(str(self.iterations))
-            file_log.write(",")
-            file_log.write(str(self.time_DARP_total))
-            file_log.write(",")
-            file_log.write(str(self.time_prim))
-            file_log.write(",")
-            file_log.write(str(self.show_grid))
-            file_log.write(",")
-            AOEstring = str(self.ArrayOfElements)
-            AOEstring = AOEstring.replace("\n", '')
-            AOEstring = AOEstring.replace("[", '')
-            AOEstring = AOEstring.replace("]", '')
-            file_log.write(AOEstring)
-            file_log.write(",")
-            AOEperc_string = str(self.AOEperc)
-            AOEperc_string = AOEperc_string.replace("[", '')
-            AOEperc_string = AOEperc_string.replace("]", '')
-            AOEperc_string = AOEperc_string.replace("\n", '')
-            file_log.write(AOEperc_string)
-            file_log.write(",")
-            file_log.write(str(self.maxDiscr))
-            file_log.write(",")
-            conBoolstring = str(self.connected_bool)
-            conBoolstring = conBoolstring.replace('\n', '')
-            conBoolstring = conBoolstring.replace('[', '')
-            conBoolstring = conBoolstring.replace(']', '')
-            file_log.write(conBoolstring)
-            file_log.write(",")
-            # ilabelstring = str(self.Ilabel_final)
-            # ilabelstring = ilabelstring.replace('\n', '')
-            # ilabelstring = ilabelstring.replace('[', '')
-            # ilabelstring = ilabelstring.replace(']', '')
-            # file_log.write(ilabelstring)
-            # file_log.write(",")
-            gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
-            gridstring = gridstring.replace('\n', '')
-            gridstring = gridstring.replace('[', '')
-            gridstring = gridstring.replace(']', '')
-            file_log.write(gridstring)
-            file_log.write(",")
-            Astring = str(self.A.reshape(1, self.rows*self.cols))
-            Astring = Astring.replace('\n', '')
-            Astring = Astring.replace('[', '')
-            Astring = Astring.replace(']', '')
-            file_log.write(Astring)
-            file_log.write(',')
-            file_log.write(str(self.runs))
-            file_log.write(',')
-            file_log.write(str(self.total_iterations))
-            file_log.write('\n')
-        else:
-            file_log.write(str(self.abort))
-            file_log.write(",")
-            file_log.write(str(self.dcells))
-            file_log.write(",")
-            file_log.write(str(self.Imp))
-            file_log.write(",")
-            file_log.write(str(self.rows))
-            file_log.write(",")
-            file_log.write(str(self.cols))
-            file_log.write(",")
-            file_log.write(str(self.n_r))
-            file_log.write(",")
-            file_log.write(str(self.es_flag))
-            file_log.write(",")
-            file_log.write(str(self.cc))
-            file_log.write(",")
-            file_log.write(str(self.rl))
-            file_log.write(",")
-            file_log.write(str(self.maxIter))
-            file_log.write(",")
-            file_log.write(str(self.obs))
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
-            file_log.write(str(self.time_DARP_total))
-            file_log.write(",")
-            file_log.write(str(self.time_prim))
-            file_log.write(",")
-            file_log.write(str(self.show_grid))
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(",")
-            # file_log.write("None")
-            # file_log.write(",")
-            gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
-            gridstring = gridstring.replace('\n', '')
-            gridstring = gridstring.replace('[', '')
-            gridstring = gridstring.replace(']', '')
-            file_log.write(gridstring)
-            file_log.write(",")
-            file_log.write("None")
-            file_log.write(',')
-            file_log.write(str(self.runs))
-            file_log.write(',')
-            file_log.write(str(self.total_iterations))
-            file_log.write('\n')
-        file_log.close()
+        if(self.log_active == True):
+            file_log = open(self.log_filename, "a")
+            if(self.abort == False):
+                file_log.write(str(self.abort))
+                file_log.write(",")
+                file_log.write(str(self.dcells))
+                file_log.write(",")
+                file_log.write(str(self.Imp))
+                file_log.write(",")
+                file_log.write(str(self.rows))
+                file_log.write(",")
+                file_log.write(str(self.cols))
+                file_log.write(",")
+                file_log.write(str(self.n_r))
+                file_log.write(",")
+                file_log.write(str(self.es_flag))
+                file_log.write(",")
+                file_log.write(str(self.cc))
+                file_log.write(",")
+                file_log.write(str(self.rl))
+                file_log.write(",")
+                file_log.write(str(self.maxIter))
+                file_log.write(",")
+                file_log.write(str(self.obs))
+                file_log.write(",")
+                file_log.write(str(self.DARP_success))
+                file_log.write(",")
+                file_log.write(str(self.discr_achieved))
+                file_log.write(",")
+                file_log.write(str(self.iterations))
+                file_log.write(",")
+                file_log.write(str(self.time_DARP_total))
+                file_log.write(",")
+                file_log.write(str(self.time_prim))
+                file_log.write(",")
+                file_log.write(str(self.show_grid))
+                file_log.write(",")
+                AOEstring = str(self.ArrayOfElements)
+                AOEstring = AOEstring.replace("\n", '')
+                AOEstring = AOEstring.replace("[", '')
+                AOEstring = AOEstring.replace("]", '')
+                file_log.write(AOEstring)
+                file_log.write(",")
+                AOEperc_string = str(self.AOEperc)
+                AOEperc_string = AOEperc_string.replace("[", '')
+                AOEperc_string = AOEperc_string.replace("]", '')
+                AOEperc_string = AOEperc_string.replace("\n", '')
+                file_log.write(AOEperc_string)
+                file_log.write(",")
+                file_log.write(str(self.maxDiscr))
+                file_log.write(",")
+                conBoolstring = str(self.connected_bool)
+                conBoolstring = conBoolstring.replace('\n', '')
+                conBoolstring = conBoolstring.replace('[', '')
+                conBoolstring = conBoolstring.replace(']', '')
+                file_log.write(conBoolstring)
+                file_log.write(",")
+                # ilabelstring = str(self.Ilabel_final)
+                # ilabelstring = ilabelstring.replace('\n', '')
+                # ilabelstring = ilabelstring.replace('[', '')
+                # ilabelstring = ilabelstring.replace(']', '')
+                # file_log.write(ilabelstring)
+                # file_log.write(",")
+                gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
+                gridstring = gridstring.replace('\n', '')
+                gridstring = gridstring.replace('[', '')
+                gridstring = gridstring.replace(']', '')
+                file_log.write(gridstring)
+                file_log.write(",")
+                Astring = str(self.A.reshape(1, self.rows*self.cols))
+                Astring = Astring.replace('\n', '')
+                Astring = Astring.replace('[', '')
+                Astring = Astring.replace(']', '')
+                file_log.write(Astring)
+                file_log.write(',')
+                file_log.write(str(self.runs))
+                file_log.write(',')
+                file_log.write(str(self.total_iterations))
+                file_log.write('\n')
+            else:
+                file_log.write(str(self.abort))
+                file_log.write(",")
+                file_log.write(str(self.dcells))
+                file_log.write(",")
+                file_log.write(str(self.Imp))
+                file_log.write(",")
+                file_log.write(str(self.rows))
+                file_log.write(",")
+                file_log.write(str(self.cols))
+                file_log.write(",")
+                file_log.write(str(self.n_r))
+                file_log.write(",")
+                file_log.write(str(self.es_flag))
+                file_log.write(",")
+                file_log.write(str(self.cc))
+                file_log.write(",")
+                file_log.write(str(self.rl))
+                file_log.write(",")
+                file_log.write(str(self.maxIter))
+                file_log.write(",")
+                file_log.write(str(self.obs))
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(",")
+                file_log.write(str(self.time_DARP_total))
+                file_log.write(",")
+                file_log.write(str(self.time_prim))
+                file_log.write(",")
+                file_log.write(str(self.show_grid))
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(",")
+                # file_log.write("None")
+                # file_log.write(",")
+                gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
+                gridstring = gridstring.replace('\n', '')
+                gridstring = gridstring.replace('[', '')
+                gridstring = gridstring.replace(']', '')
+                file_log.write(gridstring)
+                file_log.write(",")
+                file_log.write("None")
+                file_log.write(',')
+                file_log.write(str(self.runs))
+                file_log.write(',')
+                file_log.write(str(self.total_iterations))
+                file_log.write('\n')
+            file_log.close()
 
+        if(self.target_active == True):
+            file_log = open(self.target_filename, "a")
+            file_log.write(str(self.rows))
+            file_log.write("\n")
+            file_log.write(str(self.cols))
+            file_log.write("\n")
+            file_log.write(str(self.n_r))
+            file_log.write("\n")
+            file_log.write(str(self.cc))
+            file_log.write("\n")
+            file_log.write(str(self.rl))
+            file_log.write("\n")
+            file_log.write(str(self.dcells))
+            file_log.write("\n")
+            file_log.write(str(self.Imp))
+            file_log.write("\n")
+            gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
+            gridstring = gridstring.replace('\n', '')
+            gridstring = gridstring.replace('[', '')
+            gridstring = gridstring.replace(']', '')
+            file_log.write(gridstring)
+            file_log.write("\n")
+            ripstring = str(self.rip.reshape(1,self.n_r*2))
+            ripstring = ripstring.replace('\n', '')
+            ripstring = ripstring.replace('[', '')
+            ripstring = ripstring.replace(']', '')
+            file_log.write(ripstring)
+            file_log.write("\n")
+            ripsmlstring = str(self.rip_sml.reshape(1,self.n_r*2))
+            ripsmlstring = ripsmlstring.replace('\n', '')
+            ripsmlstring = ripsmlstring.replace('[', '')
+            ripsmlstring = ripsmlstring.replace(']', '')
+            file_log.write(ripsmlstring)
+            file_log.write("\n")
+            ripcontstring = str(self.rip_cont.reshape(1,self.n_r*2))
+            ripcontstring = ripcontstring.replace('\n', '')
+            ripcontstring = ripcontstring.replace('[', '')
+            ripcontstring = ripcontstring.replace(']', '')
+            file_log.write(ripcontstring)
+            file_log.write("\n")
+            file_log.close()
+            
     def primMST(self):
-        try:
-            # Run MST algorithm
-            pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
+        # try:
+        # Run MST algorithm
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml)
 
-            # Print MST on DARP plot
-            for r in range(self.n_r):
-                pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
-            print("Time allowed: ", FLIGHT_TIME )
-            # print("Times achieved: ", pMST.time_totals)
-            for r in range(self.n_r):
-                time_ach = pMST.time_totals[r]
-                if time_ach > FLIGHT_TIME:
-                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
-                else:
-                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
+        # Print MST on DARP plot
+        for r in range(self.n_r):
+            pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
+        print("Time allowed: ", FLIGHT_TIME )
+        # print("Times achieved: ", pMST.time_totals)
+        for r in range(self.n_r):
+            time_ach = pMST.time_totals[r]
+            if time_ach > FLIGHT_TIME:
+                print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
+            else:
+                print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
 
-        except:
-            print("Prim algorithm failed to implement...")
+        # except:
+        #     print("Prim algorithm failed to implement...")
     
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -418,7 +465,8 @@ class Run_Algorithm:
         file_in.write('\n')
         file_in.write(str(self.rl))
         file_in.write('\n')
-
+        file_in.write(str(self.distance_measure))
+        file_in.write('\n')
         for i in range(self.rows):
             for j in range(self.cols):
                 file_in.write(str(self.Grid[i][j]))
@@ -715,6 +763,7 @@ class Prim_MST_maker:
         self.wpnts_class_list = list()
         self.p = np.ones([self.n_r],dtype=int)*-1
         
+        # Generating Paths
         for r in range(self.n_r):
             self.current_r = r
             free_nodes = np.argwhere(self.grids[r]==1) # vertice coordinates
@@ -796,10 +845,6 @@ class Prim_MST_maker:
 
         # Shifting waypoints to start at robot position and making it closed loop
         self.update_wpnts()
-        
-        # if print_graph == True:
-        #     for r in range(self.n_r):
-        #         self.draw_cont_graph(self.free_nodes_list[r],self.parents_list[r],self.wpnts_cont_list[r])
    
     def update_wpnts(self):
         for r in range(self.n_r):
@@ -1996,14 +2041,13 @@ if __name__ == "__main__":
     horizontal = 1500.0 # m
     vertical = 1500.0 # m
 
-    # Establish Small Node size
-    
+    # Generate environment grid
     GG = generate_grid(horizontal,vertical)
     
     # Coordinates from top left (vert,hor)
     n_r = 3
     obs_perc = 10
-    GG.randomise_robots(n_r)
+    GG.randomise_robots(n_r) 
     GG.randomise_obs(obs_perc)
     # robot_cont = np.array([[50,160],[180,40]])
     # GG.set_robots(n_r,robot_cont)
@@ -2013,6 +2057,7 @@ if __name__ == "__main__":
     # Other parameters
     Imp = False
     maxIter = 10000
+    distance_measure = 0 # 0,1,2 - Euclidean, Manhattan, GeodisicManhattan
     
     rows = GG.rows
     cols = GG.cols
@@ -2021,14 +2066,15 @@ if __name__ == "__main__":
     print_graphs = True
 
     # RUNNING SIMULATION #
-    file_log = "Logging_005.txt"
+    file_log = "MAIN_LOGGING.txt"
+    target_log = "TARGET_LOG.txt"
     EnvironmentGrid = GG.GRID
 
     #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
     algorithm_start(recompile=True)
-
+    
     # Call this to run DARP and MST
-    RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs)
+    RA = Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, print_graphs,dist_meas=distance_measure,log_active=False,log_filename=file_log,target_filename=target_log,target_active=True)
     RA.set_continuous(GG.rip_sml,GG.rip_cont)
     RA.main()
 

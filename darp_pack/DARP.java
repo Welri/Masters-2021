@@ -37,10 +37,11 @@ public class DARP {
     private int[][][] Ilabel_final;
     private boolean[] connected_bool;
     private int[][] obstacle_locations;
+    private int distance_measure;
     // USER CODE END
 
     // Constructor
-    public DARP(int r, int c, int[][] src, int iters, double vWeight, double rLevel, int discr, boolean imp) {
+    public DARP(int r, int c, int[][] src, int iters, double vWeight, double rLevel, int discr, boolean imp, int dm) { // USER edit point - added String dm
         this.rows = r; // input - rows
         this.cols = c; // input - cols
         this.GridEnv = deepCopyMatrix(src);
@@ -55,6 +56,9 @@ public class DARP {
         this.discr = discr; // input
         this.canceled = false;
         this.UseImportance = imp; // input
+        // USER code start
+        this.distance_measure = dm;
+        // USER code end
         defineRobotsObstacles(); // function call - defineRobotObstacle
     }
 
@@ -100,7 +104,15 @@ public class DARP {
             for (int j = 0; j < cols; j++) {
                 double tempSum = 0.0;
                 for (int r = 0; r < nr; r++) {
-                    AllDistances.get(r)[i][j] = GeodesicManhattanDis(RobotsInit.get(r), new Integer[] { i, j }); // USER edit point (manhattan vs euclidean vs geodesic manhattan)
+                    // USER edit start - used to just be Euclidean
+                    if (this.distance_measure == 0){
+                        AllDistances.get(r)[i][j] = EuclideanDis(RobotsInit.get(r), new Integer[] { i, j });
+                    } else if (this.distance_measure == 1){
+                        AllDistances.get(r)[i][j] = ManhattanDis(RobotsInit.get(r), new Integer[] { i, j });
+                    } else if (this.distance_measure == 2){
+                        AllDistances.get(r)[i][j] = GeodesicManhattanDis(RobotsInit.get(r), new Integer[] { i, j });
+                    }
+                    // USER edit end
                     if (AllDistances.get(r)[i][j] > MaximumDist[r]) {
                         MaximumDist[r] = AllDistances.get(r)[i][j];
                     }

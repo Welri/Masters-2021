@@ -27,25 +27,6 @@ class refuelling:
     def set_obs_rip(self,obs_coords):
         for obs in obs_coords:
             self.GRID[obs[0]][obs[1]] = 1
-    # def randomise_robots(self,n_r):
-        #     self.n_r = n_r
-        #     self.rip_sml = np.zeros([n_r,2],dtype=int)
-        #     self.rip_cont = np.zeros([n_r,2],dtype=float)
-        #     # self.rip = np.zeros([n_r,2],dtype=int)
-        #     if self.n_r < self.rows*self.cols:
-        #         self.rip = self.possible_indexes[0:self.n_r]
-        #         self.possible_indexes = np.delete(self.possible_indexes,np.arange(0,self.n_r,1),0)
-        #         val1 = self.rip[:, 0]
-        #         val2 = self.rip[:, 1]
-        #         self.GRID[val1, val2] = 2
-        #     else:
-        #         print("MADNESS! Why do you have so many robots?")
-
-        #     for r in range(self.n_r):
-        #         self.rip_sml[r][0] = self.rip[r][0]*2
-        #         self.rip_sml[r][1] = self.rip[r][1]*2
-        #         self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.FOV_V # vertical
-        #         self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.FOV_H # horizontal
     def randomise_obs(self,obs_perc):
         self.obs = math.floor(self.rows*self.cols*obs_perc/100)
         if self.obs < (self.rows*self.cols*0.75):
@@ -116,7 +97,7 @@ class refuelling:
             refuels = self.determine_refuels(n_r)
             self.n_r = n_r * (refuels+1) # equivalent number of robots given the number of refuels
             # Print equivalent robots and exit if more than 16 (possible robots can only do up to 16 for now)
-            print("Equivalent Robots: ", self.n_r)
+            print("Robots: ", n_r," Refuels: ", refuels," Equivalent Robots: ", self.n_r)
             if self.n_r > 16:
                 print("Number of equivalent robots are beyond algorithm capability")
                 return(False)
@@ -171,6 +152,7 @@ GG_Success = GG.refuel_randomise_start(n_r)
 
 if GG_Success == True:
     # Other parameters
+    distance_measure = 0 # 0, 1, 2 - Euclidean, Manhattan, GeodisicManhattan
     Imp = False
     maxIter = 10000
 
@@ -183,14 +165,15 @@ if GG_Success == True:
     print_graphs = True
 
     # RUNNING SIMULATION #
-    file_log = "Logging_005.txt"
+    file_log = "MAIN_LOGGING.txt"
+    target_log = "TARGET_LOG.txt"
     EnvironmentGrid = GG.GRID
 
     #  Call this to do directory management and recompile Java files - better to keep separate for when running multiple sims
     MAIN.algorithm_start(recompile=True)
 
     # Call this to run DARP and MST
-    RA = MAIN.Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, file_log, print_graphs)
+    RA = MAIN.Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, print_graphs,dist_meas=distance_measure,log_active=False,log_filename=file_log,target_filename=target_log,target_active=True)
     RA.set_continuous(GG.rip_sml,GG.rip_cont)
     RA.main()
 

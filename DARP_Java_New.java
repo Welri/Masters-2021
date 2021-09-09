@@ -21,6 +21,7 @@ public class DARP_Java_New {
     public ArrayList<boolean[][]> robotBinaryRegions;
     public double CCvariation;
     public double randomLevel;
+    public int distanceMeasure;
 
     public static void main(String[] args) {
         DARP_Java_New t = new DARP_Java_New();
@@ -53,7 +54,9 @@ public class DARP_Java_New {
             if ((st = br.readLine()) != null) {
                 t.randomLevel = Double.parseDouble(st);
             }
-
+            if ((st = br.readLine()) != null) {
+                t.distanceMeasure = Integer.parseInt(st);
+            }
             t.EnvironmentGrid = new int[t.rows][t.cols];
             for (t.i = 0; t.i < t.rows; t.i++) {
                 for (t.j = 0; t.j < t.cols; t.j++) {
@@ -68,7 +71,7 @@ public class DARP_Java_New {
             }
 
             DARP problem = new DARP(t.rows, t.cols, t.EnvironmentGrid, t.MaxIter, t.CCvariation, t.randomLevel,
-                    t.dcells, t.imp);
+                    t.dcells, t.imp, t.distanceMeasure);
             problem.constructAssignmentM();
             // Collecting outputs
             t.A = problem.getAssignmentMatrix();
