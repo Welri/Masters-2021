@@ -234,6 +234,7 @@ public class DARP {
             // USER CODE END
 
             // USER CODE DELETION (changed from >= to >)
+            // Can't remember why this was a problem, but it was (think it increased iterations or made it not exit or something - like it reaches roughly 0 maxIter but just keeps going)
             if (iter > maxIter) {
                 maxIter = maxIter / 2;
                 success = false;
@@ -284,8 +285,14 @@ public class DARP {
                 // USER CODE END
 
                 // The above was to figure out if random matrix is important - it is very important
-                
-                RandomMa[i][j] = 2.0 * randomLevel * randomno.nextDouble() + 1.0 - randomLevel;
+
+                // USER Edit start
+                if (randomLevel == 0){
+                    RandomMa[i][j] = 1.0; // So that if the user doesn't want a random element they can just set the randomLevel to 0 
+                }else{
+                    RandomMa[i][j] = 2.0 * randomLevel * randomno.nextDouble() + 1.0 - randomLevel; // Only this line is theirs
+                }
+                // USER Edit end
                 
             }
         }
@@ -325,10 +332,8 @@ public class DARP {
             if (minCellsAss > ArrayOfElements[r]) {
                 minCellsAss = ArrayOfElements[r];
             }
-        // USER CODE START
         }
         for (int r = 0; r < nr; r++) {
-        // USER CODE END
             if (!ConnectedRobotRegions[r]) {
                 return false;
             }
@@ -372,7 +377,8 @@ public class DARP {
     }
 
     private void assign(ArrayList<double[][]> Q) {
-
+        // Construct BWList - Similar to Assignment matrix except it is multiple matrices with 1 where assigned to that robot
+        // Construct A - Assignment matrix - Different number depending on which cell is assigned to that robot
         BWlist = new ArrayList<>();
         for (int r = 0; r < nr; r++) {
             BWlist.add(new int[rows][cols]);
