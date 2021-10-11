@@ -59,13 +59,14 @@ sensor_height = 24 # mm
 px_h = 8000
 px_w = 5320
 
-# Calculating actual values
+# Calculating actual FOV values
 FOV_H = Height * sensor_width / focal_length # result in m
 FOV_V = AR*FOV_H # m
-# Conservatively choose
+# Conservatively choose square cell values
 # Note: for asymmetric cells FOV_V < FOV_H is a requirement
 DISC_H = math.sqrt(2)/(4-math.sqrt(2)) * FOV_H
 DISC_V = DISC_H
+print("\nDISCRETIZATION SIZE: ", round(DISC_V,2), "X", round(DISC_H,2))
 r_max = DISC_H/2
 v_max = math.sqrt( r_max * g_acc * math.tan(phi_max*math.pi/180) ) # m/s
 GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
@@ -75,7 +76,7 @@ CT_Overlap = (DISC_V*(FOV_H -DISC_H)) / (DISC_V*DISC_H) # Crosstack overlap
 ARC_L = DISC_V/2 - r_min + r_min*np.pi/2 + DISC_H/2 - r_min
 FLIGHT_TIME = 30 * 60 # seconds
 
-print("GSD of: ",GSD_h,"Overlap of: ", CT_Overlap)
+print("GSD: ",round(GSD_h,2),"Overlap of: ", round(CT_Overlap,2),"\n")
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -174,7 +175,7 @@ class Run_Algorithm:
                         self.print_DARP_graph() # prints a graph for each iteration
                     self.runs += 1
                     self.total_iterations = self.total_iterations + self.iterations
-                    print("rl: ", self.rl, " cl: ", self.cc, " discrepancy allowed: ", self.dcells/self.fairDiv, "discrepancy achieved: ",self.maxDiscr)
+                    print("RUN -","rl: ", self.rl, " cl: ", self.cc, " discrepancy allowed: ", self.dcells/self.fairDiv, "discrepancy achieved: ",self.maxDiscr)
                     if self.DARP_success == True:
                         print("Successfully found solution...")
                         break
@@ -391,14 +392,15 @@ class Run_Algorithm:
             # Print MST on DARP plot
             for r in range(self.n_r):
                 pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
-            print("Time allowed: ", FLIGHT_TIME )
+            print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
+            
             # print("Times achieved: ", pMST.time_totals)
             for r in range(self.n_r):
                 time_ach = pMST.time_totals[r]
                 if time_ach > FLIGHT_TIME:
-                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
+                    print("Robot ",r," - ","Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
                 else:
-                    print("Robot: ",r," Time Goal: ",FLIGHT_TIME," Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
+                    print("Robot ",r," - ","Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
 
         except:
             print("Prim algorithm failed to implement...")
@@ -444,7 +446,7 @@ class Run_Algorithm:
         if(r_min>r_max):
             print("WARNING: minimum turning radius is too large.\nOPTIONS:\n1. Increase HEIGHT to increase FOV (which is directly related to r_max)\n3. Choose a camera with a larger FOV\n4. Reduce VELOCITY.\n")
             self.abort = True
-        if(GSD_h > 1.3):
+        if(GSD_h > 4.0):
             print("WARNING: Ground Sampling Distance is too high for reasonable human detection.\nOPTIONS:\n1. Choose camera with higher RESOLUTION\n2. Reduce flying HEIGHT\n3. Choose a camera with a lower ratio of sensor size to focal length.\n")
             # self.abort = True
         if(VEL>v_max):
@@ -2044,15 +2046,15 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = 3000.0 # m
-    vertical = 3000.0 # m
+    horizontal = DISC_H*50 # m
+    vertical = DISC_V*50 # m
 
     # Generate environment grid
     GG = generate_grid(horizontal,vertical)
     
     # Coordinates from top left (vert,hor)
     n_r = 10
-    obs_perc = 30
+    obs_perc = 0
     GG.randomise_robots(n_r) 
     GG.randomise_obs(obs_perc)
     # robot_cont = np.array([[50,160],[180,40]])
