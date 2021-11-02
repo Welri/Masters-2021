@@ -10,13 +10,13 @@ import time
 import math
 
 # Constants
-TREE_COLOR = 'k'
-PATH_COLOR = 'w'
+TREE_COLOR = 'w'
+PATH_COLOR = 'k'
 PRINT_DARP = True
 PRINT_TREE = False
 PRINT_PATH = True
 PRINT_CIRCLE_CENTRES = False
-LINEWIDTH = 0.5
+LINEWIDTH = 0.7
 S_MARKERIZE = LINEWIDTH*4
 MARKERSIZE=LINEWIDTH*12
 TICK_SPACING = 1
@@ -541,13 +541,25 @@ class Run_Algorithm:
             ripx = self.rip_sml[r][1]
             plt.plot(ripx,ripy,'.k', markersize=MARKERSIZE)
 
-        ax.set_xticks(np.arange(0, self.cols*2, step=TICK_SPACING),minor=False)
-        ax.set_yticks(np.arange(0, self.rows*2, step=TICK_SPACING),minor=False)
-        ax.set_xticks(np.arange(-0.5, self.cols*2+0.5, step=2),minor=True)
-        ax.set_yticks(np.arange(-0.5, self.rows*2+0.5, step=2),minor=True)
-        plt.xticks(rotation=90)
+        # REMOVE AXES ENTIRELY
+        # ax.axes.xaxis.set_visible(False)
+        # ax.axes.yaxis.set_visible(False)
 
-        plt.grid(which='minor',axis='both', color='k')
+        # USED THIS ONCE TO GET TICKS AT THE SMALL CELL SENTRES
+        # ax.set_xticks(np.arange(0, self.cols*2, step=TICK_SPACING),minor=True)
+        # ax.set_yticks(np.arange(0, self.rows*2, step=TICK_SPACING),minor=True)
+        
+        ax.set_xticks(np.arange(-0.5, self.cols*2+0.5, step=2),minor=False)
+        ax.set_yticks(np.arange(-0.5, self.rows*2+0.5, step=2),minor=False)
+        
+        plt.xticks(rotation=90)
+    
+        xticks = list(map(str,np.arange(0, self.cols+1, step=1)))
+        yticks = list(map(str,np.arange(0, self.rows+1, step=1)))
+        ax.set_xticklabels(xticks)
+        ax.set_yticklabels(yticks)
+
+        plt.grid(which='major',axis='both', color='k')
 
         # Print Assgnments
         for j in range(self.rows):
@@ -557,11 +569,9 @@ class Run_Algorithm:
                 y1 = (self.rows - (j-0.5) - 1)*2 + 0.5
                 y2 = (self.rows - (j+0.5) - 1)*2 + 0.5
                 if self.A[j][i] == self.n_r:
-                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
+                    plt.fill( [x1, x1, x2, x2], [y1, y2, y2, y1], "k", alpha=0.75 )
                 else:
-                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
-                             colour_assignments[self.A[j][i]])
-
+                    plt.fill( [x1, x1, x2, x2], [y1, y2, y2, y1], colour_assignments[self.A[j][i]], alpha=0.75)
         plt.title("DARP Results")
     
     def cont_DARP_graph(self):
@@ -573,13 +583,17 @@ class Run_Algorithm:
 
         # Initialize cell colours
         # colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9","C10"]
-        colours = ['xkcd:nice blue','xkcd:dusty orange','xkcd:kelly green','xkcd:red','xkcd:brownish','xkcd:carnation pink','xkcd:medium grey','xkcd:gold','xkcd:turquoise blue','xkcd:purple','xkcd:lightblue','xkcd:lavender','xkcd:salmon','xkcd:magenta','xkcd:olive','xkcd:silver']
+        # colours = ['xkcd:nice blue','xkcd:dusty orange','xkcd:kelly green','xkcd:red','xkcd:brownish','xkcd:carnation pink','xkcd:medium grey','xkcd:gold','xkcd:turquoise blue','xkcd:purple','xkcd:lightblue','xkcd:lavender','xkcd:salmon','xkcd:magenta','xkcd:olive','xkcd:silver']
+        # 'dimgray','gray','darkgray','silver','lightgray','gainsboro','whitesmoke','lightslategray','slategray','teal','cadetblue','skyblue','steelblue','slategray','cornflowerblue','forestgreen','mediumseagreen','mediumaquamarine','lightseagreen'
+        # colours = ['salmon','firebrick','goldenrod','olivedrab']
+        # colours = ['xkcd:purple','xkcd:green','xkcd:magenta','xkcd:blue','xkcd:pink','xkcd:pistachio','xkcd:maroon','xkcd:light blue','xkcd:light pink','xkcd:lavender','xkcd:red','xkcd:orange','xkcd:sand yellow','xkcd:warm brown','xkcd:grey','xkcd:teal']
+        colours = ["C0", "C1", "C2", "C3", "C4", "C5", "C6", "C7", 'xkcd:maize', "C9",'xkcd:eggshell','xkcd:light blue','xkcd:light orange','xkcd:light green','xkcd:light lilac','xkcd:light pink']
         c = 0
         colour_assignments = {}
         for i in range(self.n_r):
             colour_assignments[i] = colours[c]
             c = c + 1
-            if c == len(colours)-1:
+            if c == len(colours):
                 c = 0
             colour_assignments[self.n_r] = "k"
 
@@ -589,8 +603,8 @@ class Run_Algorithm:
         self.ax.set_xticks(np.arange(DISC_H, (self.cols*2-0.5)*DISC_H, step=2*DISC_H),minor=True) # Small cell grid_lines
         self.ax.set_yticks(np.arange(DISC_V, (self.rows*2-0.5)*DISC_V, step=2*DISC_V),minor=True)
         plt.xticks(rotation=90)
-        plt.grid(which='major',axis='both', color='k',linewidth=1)
-        plt.grid(which='minor',axis='both',color='k',linewidth=0.3)
+        plt.grid(which='major',axis='both', color='k',linewidth=0.3)
+        plt.grid(which='minor',axis='both',color='k',linewidth=0.3,linestyle=':')
 
         # Note: Robot initial position are printing in the prim algorithm
 
@@ -602,10 +616,9 @@ class Run_Algorithm:
                 y1 = ( (self.rows - (j-0.5) - 1)*2 + 0.5 + 0.5 )*DISC_V
                 y2 = ( (self.rows - (j+0.5) - 1)*2 + 0.5 + 0.5 )*DISC_V
                 if self.A[j][i] == self.n_r:
-                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k")
+                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], "k", alpha=0.75)
                 else:
-                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1],
-                             colour_assignments[self.A[j][i]])
+                    plt.fill([x1, x1, x2, x2], [y1, y2, y2, y1], colour_assignments[self.A[j][i]],alpha=0.75)
 
         plt.title(FIGURE_TITLE)
 
@@ -1550,7 +1563,7 @@ class Prim_MST_maker:
     
     def waypoint_final_generation(self,nodes,parents,wpnts,wpnts_class,ax,print_graph,r):
         # Waypoint, distance and time arrays created to describe the path
-        # Includes graph drawing
+        # Includes graph drawing for tree and paths
         wpnts_final = list()
         dist_final = list()
         dist_final.append(0)
@@ -2053,7 +2066,7 @@ if __name__ == "__main__":
     GG = generate_grid(horizontal,vertical)
     
     # Coordinates from top left (vert,hor)
-    n_r = 10
+    n_r = 16
     obs_perc = 0
     GG.randomise_robots(n_r) 
     GG.randomise_obs(obs_perc)
