@@ -2064,8 +2064,7 @@ if __name__ == "__main__":
 
     # Generate environment grid
     GG = generate_grid(horizontal,vertical)
-    
-    # Coordinates from top left (vert,hor)
+
     n_r = 16
     obs_perc = 0
     GG.randomise_robots(n_r) 
