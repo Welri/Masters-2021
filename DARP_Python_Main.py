@@ -8,6 +8,7 @@ import os
 import random
 import time
 import math
+from tabulate import tabulate
 
 # Constants
 TREE_COLOR = 'w'
@@ -395,13 +396,17 @@ class Run_Algorithm:
             print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
             
             # print("Times achieved: ", pMST.time_totals)
+            data = [["Robot","Time Achieved","Time Limit","Time Difference","Distance","Rotations"]]
             for r in range(self.n_r):
                 time_ach = pMST.time_totals[r]
-                if time_ach > FLIGHT_TIME:
-                    print("Robot ",r," - ","Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds")
-                else:
-                    print("Robot ",r," - ","Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds")
-
+                rot_ach = pMST.rotations[r]
+                dist_ach = pMST.dist_totals[r]
+                data.append([r,round(time_ach,1),round(FLIGHT_TIME,1),round(FLIGHT_TIME - time_ach,1),round(dist_ach,1),round(rot_ach,0)])
+                # if time_ach > FLIGHT_TIME:
+                #     print("Robot ",r," - ","Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds "," Rotations: ", rot_ach)
+                # else:
+                #     print("Robot ",r," - ","Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds ","Rotations: ",rot_ach)
+            print(tabulate(data))
         except:
             print("Prim algorithm failed to implement...")
     
@@ -769,6 +774,7 @@ class Prim_MST_maker:
         self.time_final_list = list()
         self.time_totals = np.zeros([self.n_r])
         self.dist_totals = np.zeros([self.n_r])
+        self.rotations = np.zeros([self.n_r])
 
         # Grids: 0 is obstacle, 1 is free space
         # Graphs represent each individual node and which nodes it is connected to
@@ -1564,6 +1570,7 @@ class Prim_MST_maker:
     def waypoint_final_generation(self,nodes,parents,wpnts,wpnts_class,ax,print_graph,r):
         # Waypoint, distance and time arrays created to describe the path
         # Includes graph drawing for tree and paths
+        rotations = 0
         wpnts_final = list()
         dist_final = list()
         dist_final.append(0)
@@ -1578,14 +1585,15 @@ class Prim_MST_maker:
             if(x2>x1):
                 if(y2>y1):
                     # F U
+                    rotations += 1 
                     if(wpnts_class[w+1]==1):
-                        # Bottom - Left
-                        wpnts_final.append([x1,y1])
-                        wpnts_final.append([x2-r_min,y1])
-                        wpnts_final.append([x2-r_min,y1+r_min,2*r_min,270.0])
-                        if(r_min != r_max):
-                            wpnts_final.append([x2,y1+r_min])
-                            wpnts_final.append([x2,y2])
+                        # Bottom - Left (Note: Logic table says that only left turns are different, therefore they are detected)
+                        wpnts_final.append([x1,y1]) # Start of long line
+                        wpnts_final.append([x2-r_min,y1]) # End of long line
+                        wpnts_final.append([x2-r_min,y1+r_min,2*r_min,270.0]) # Circular waypoint
+                        if(r_min != r_max): # Radius is smaller than size of square
+                            wpnts_final.append([x2,y1+r_min]) # Start of short line
+                            wpnts_final.append([x2,y2]) # End of short line
                         l1 = DISC_H/2 - r_min # long leg
                         l2 = r_min*np.pi/2 # arc
                         l3 = DISC_V/2 - r_min # short leg
@@ -1608,8 +1616,9 @@ class Prim_MST_maker:
                         dist_final.append(l2)
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3
-                elif(y2<y1): 
+                elif(y2<y1):
                     # B D
+                    rotations += 1 
                     if(wpnts_class[w+1]==1):
                         # Bottom - Left Turn
                         if(r_min != r_max):
@@ -1649,6 +1658,7 @@ class Prim_MST_maker:
             elif(x2<x1):
                 if(y2>y1):
                     # B U
+                    rotations += 1 
                     if(wpnts_class[w+1]==1):
                         # Top - Left Turn
                         if(r_min != r_max):
@@ -1681,6 +1691,7 @@ class Prim_MST_maker:
                         dist_tot = dist_tot + l1 + l2 + l3
                 elif(y2<y1):
                     # F D
+                    rotations += 1 
                     if(wpnts_class[w+1]==1):
                         # Top - Left
                         wpnts_final.append([x1,y1])
@@ -1725,48 +1736,54 @@ class Prim_MST_maker:
                 dist_tot = dist_tot + DISC_H
         
         # Append to main lists
-        self.wpnts_final_list.append(wpnts_final)
-        self.dist_final_list.append(dist_final)
-        self.dist_totals[r] = dist_tot
+            # Distance
+        self.wpnts_final_list.append(wpnts_final) # Waypoints array
+        self.dist_final_list.append(dist_final) # Distance array
+        self.dist_totals[r] = dist_tot # Total Distance for robot r
+            # Time
         time_final = np.zeros(len(dist_final))
         for d in range(len(dist_final)):
             time_final[d] = dist_final[d] / VEL
             time_tot = time_tot + time_final[d]
         self.time_final_list.append(time_final)
-        self.time_totals[r] = time_tot
-        # Plot spanning tree
-        if(PRINT_TREE==True):
-            for node in nodes:
-                x = ( (node[1])*2 +1 )*DISC_H
-                y = ( (self.rows - node[0] - 1)*2 + 1 )*DISC_V
-                plt.plot(x,y,".",markersize=S_MARKERIZE,color=TREE_COLOR)
-            for i in range(1,len(parents)):
-                x0 = ( (nodes[i][1])*2 + 1 )*DISC_H
-                x1 = ( (nodes[parents[i]][1])*2 + 1 )*DISC_H
-                y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*DISC_V
-                y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*DISC_V
-                plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
-        
-        # Plot waypoints
-        if(PRINT_PATH==True):
-            circ_flag = 0
-            for w in range(1,len(wpnts_final)):
-                if(len(wpnts_final[w])==2): # line
-                    if(circ_flag == 0):    
-                        plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                        plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                    else:
-                        circ_flag = 0
-                else: # circle
-                    if(PRINT_CIRCLE_CENTRES == True):
-                        plt.plot(wpnts_final[w][0],wpnts_final[w][1],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                    e1 = pat.Arc([wpnts_final[w][0],wpnts_final[w][1]],wpnts_final[w][2],wpnts_final[w][2],angle=wpnts_final[w][3],theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                    ax.add_patch(e1)
-                    circ_flag = 1
+        self.time_totals[r] = time_tot # Total Time for robot r
+            # Rotations
+        self.rotations[r] = rotations
+        # Graph printing
+        if print_graph == True:
+            # Plot spanning tree
+            if(PRINT_TREE==True):
+                for node in nodes:
+                    x = ( (node[1])*2 +1 )*DISC_H
+                    y = ( (self.rows - node[0] - 1)*2 + 1 )*DISC_V
+                    plt.plot(x,y,".",markersize=S_MARKERIZE,color=TREE_COLOR)
+                for i in range(1,len(parents)):
+                    x0 = ( (nodes[i][1])*2 + 1 )*DISC_H
+                    x1 = ( (nodes[parents[i]][1])*2 + 1 )*DISC_H
+                    y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*DISC_V
+                    y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*DISC_V
+                    plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
+            
+            # Plot waypoints
+            if(PRINT_PATH==True):
+                circ_flag = 0
+                for w in range(1,len(wpnts_final)):
+                    if(len(wpnts_final[w])==2): # line
+                        if(circ_flag == 0):    
+                            plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                        else:
+                            circ_flag = 0
+                    else: # circle
+                        if(PRINT_CIRCLE_CENTRES == True):
+                            plt.plot(wpnts_final[w][0],wpnts_final[w][1],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                        e1 = pat.Arc([wpnts_final[w][0],wpnts_final[w][1]],wpnts_final[w][2],wpnts_final[w][2],angle=wpnts_final[w][3],theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                        ax.add_patch(e1)
+                        circ_flag = 1
 
-        # Plot robot initial positions
-        plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
-        plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
+            # Plot robot initial positions
+            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
+            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
 
     def draw_cont_graph(self,nodes,parents,wpnts,wpnts_class,ax):
         # NO LONGER USING THIS
@@ -2066,7 +2083,7 @@ if __name__ == "__main__":
     GG = generate_grid(horizontal,vertical)
     
     # Coordinates from top left (vert,hor)
-    n_r = 16
+    n_r = 10
     obs_perc = 0
     GG.randomise_robots(n_r) 
     GG.randomise_obs(obs_perc)
