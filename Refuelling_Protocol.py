@@ -96,15 +96,18 @@ class refuelling:
             # Conservatively calculate the number of refuels needed
             refuels = self.determine_refuels(n_r)
             self.n_r = n_r * (refuels+1) # equivalent number of robots given the number of refuels
+            
             # Print equivalent robots and exit if more than 16 (possible robots can only do up to 16 for now)
             print("Robots: ", n_r," Refuels: ", refuels," Equivalent Robots: ", self.n_r)
             if self.n_r > 16:
                 print("Number of equivalent robots are beyond algorithm capability")
                 return(False)
+            
             # Calculate possible starting positions
             self.possible_robots(n_r)
             if len(self.possible_robots_list) == 0:
                 print("WARING: No valid starting location found...")
+            
             # Randomly choose a valid starting position and set rip
             self.rip = np.zeros([self.n_r,2],dtype=int)
             self.rip_sml = np.zeros([self.n_r,2],dtype=int)
@@ -143,7 +146,6 @@ vertical = 3000.0 # m
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
 
-# Coordinates from top left (vert,hor)
 n_r = 2
 obs_perc = 0
 
