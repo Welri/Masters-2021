@@ -25,6 +25,7 @@ class refuelling:
             self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.DISC_H
             self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
     def set_obs_rip(self,obs_coords):
+        # large cell coordinates
         for obs in obs_coords:
             self.GRID[obs[0]][obs[1]] = 1
     def randomise_obs(self,obs_perc):
