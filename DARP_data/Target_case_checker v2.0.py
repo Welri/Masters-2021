@@ -33,10 +33,16 @@ class target_case_checker:
         self.rl = float(FILE.readline())
         self.dcells = int(FILE.readline())
         self.Imp = self.import_bool(FILE.readline())
+        self.TARGET_FINDING = self.import_bool(FILE.readline())
+        target_string = FILE.readline()
         Grid_string = FILE.readline()
         rip_string = FILE.readline()
         ripsml_string = FILE.readline()
         ripcont_string = FILE.readline()
+
+        # Target values
+        self.tp_cont = self.string_to_grid(target_string,1,2,data_type="float")
+        self.tp_cont = self.tp_cont[0]
 
         # Environment Grid
         self.Grid = self.string_to_grid(Grid_string,self.rows,self.cols,data_type="int")
@@ -56,11 +62,12 @@ class target_case_checker:
         DPM.PRINT_PATH = True
         DPM.PRINT_TREE = False
         DPM.PATH_COLOR = 'k'
+        DPM.TARGET_FINDING = self.TARGET_FINDING
         
         DPM.algorithm_start(recompile=recompile)
         
         RA = DPM.Run_Algorithm(self.Grid, self.rip, self.dcells, self.Imp, show_grid, dist_meas=distance_measure,log_active=True,log_filename=file_log,target_active=False)
-        RA.set_continuous(self.rip_sml,self.rip_cont,np.array([500,500]))
+        RA.set_continuous(self.rip_sml,self.rip_cont,self.tp_cont)
         RA.main()
 
         # self.A = RA.A
@@ -114,7 +121,7 @@ if __name__ == "__main__":
     show_grid = True
 
     TCC = target_case_checker()
-    TCC.get_data("TARGET_CASES_v2.0/Case06.txt")
+    TCC.get_data("TARGET_CASES_v2.0/Case07.txt")
     TCC.rerun_DARP(show_grid=show_grid,distance_measure=2,recompile=False)
     if (show_grid == True):
         plt.show()

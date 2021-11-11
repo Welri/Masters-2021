@@ -129,7 +129,7 @@ class Run_Algorithm:
         self.total_iterations = 0
         self.distance_measure = dist_meas
 
-    def set_continuous(self,rip_sml,rip_cont,tp_cont):
+    def set_continuous(self,rip_sml,rip_cont,tp_cont=[0,0]):
         self.horizontal = 2*DISC_H*self.cols 
         self.vertical = 2*DISC_V*self.rows
         self.tp_cont = tp_cont # Target initial position
@@ -363,6 +363,15 @@ class Run_Algorithm:
             file_log.write(str(self.dcells))
             file_log.write("\n")
             file_log.write(str(self.Imp))
+            file_log.write("\n")
+            file_log.write(str(TARGET_FINDING))
+            file_log.write("\n")
+            self.tp_cont[0] = self.vertical - self.tp_cont[0]
+            targetstring=str(self.tp_cont)
+            targetstring = targetstring.replace('\n', '')
+            targetstring = targetstring.replace('[', '')
+            targetstring = targetstring.replace(']', '')
+            file_log.write(targetstring)
             file_log.write("\n")
             gridstring = str(self.Grid.reshape(1, self.rows*self.cols))
             gridstring = gridstring.replace('\n', '')
@@ -882,7 +891,8 @@ class Prim_MST_maker:
             self.rip_cont[r] = self.wpnts_cont_list[r][self.p[r]]
 
         # Shifting waypoints to start at robot position and making it closed loop
-        print("Robot:",self.TARGET_CELL[0],"Ind: ",self.TARGET_CELL[1],"Waypoint: ",self.wpnts_cont_list[self.TARGET_CELL[0]][self.TARGET_CELL[1]],"Target Location: ",self.t_y,self.t_x)
+        if(TARGET_FINDING):
+            print("Robot:",self.TARGET_CELL[0],"Ind: ",self.TARGET_CELL[1],"Waypoint: ",self.wpnts_cont_list[self.TARGET_CELL[0]][self.TARGET_CELL[1]],"Target Location: ",self.t_y,self.t_x)
         self.update_wpnts()
    
     def update_wpnts(self):
@@ -1812,6 +1822,12 @@ class Prim_MST_maker:
             if(TARGET_FINDING):
                 if(FROBOT==True):
                     if(w==wpnt_f):
+                        self.DISTANCE_BREAK = dist_tot
+                        break
+                else:
+                    # If it's any of the other robots
+                    if (dist_tot >= self.DISTANCE_BREAK):
+                        # Break as soon as the total distance exceeds the distance achieved by robot that finds target
                         break
         # Append to main lists
             # Distance
@@ -2153,15 +2169,7 @@ class generate_grid:
         else:
             print("MADNESS! Why so many obstacles? More than 75%% seems a bit crazy.")
     def set_target(self,targ_coord):
-        self.tp_cont = np.array(targ_coord)
-        # self.tp_sml = np.zeros([2],dtype=int)
-        # self.tp = np.zeros([2],dtype=int)
-        
-        # small cell position and large cell position
-        # self.tp_sml[0] = math.floor(self.tp_cont[0]/DISC_V) # row
-        # self.tp_sml[1] = math.floor(self.tp_cont[1]/DISC_H) # col
-        # self.tp[0] = math.floor(self.tp_cont[0]/(DISC_V*2)) # row
-        # self.tp[1] = math.floor(self.tp_cont[1]/(DISC_H*2)) # col
+        self.tp_cont = np.array(targ_coord,dtype=float)
 
 if __name__ == "__main__":
     # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
@@ -2179,7 +2187,7 @@ if __name__ == "__main__":
     obs_perc = 0
     GG.randomise_robots(n_r) 
     GG.randomise_obs(obs_perc)
-    GG.set_target([500,500]) # (vert,hor) from top left 
+    GG.set_target([2000,2000]) # (vert,hor) from top left 
 
     # robot_cont = np.array([[50,160],[180,40]])
     # GG.set_robots(n_r,robot_cont)
