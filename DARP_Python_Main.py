@@ -391,12 +391,16 @@ class Run_Algorithm:
             file_log.close()
             
     def primMST(self):
-        try:
+        # try:
             # Run MST algorithm
             pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont)
 
+            robot_f = pMST.TARGET_CELL[0]
+            n_reord = np.concatenate((np.arange(robot_f,self.n_r),np.arange(0,robot_f)),axis=None) # ensures the robot that finds the target runs first
+
             # Print MST on DARP plot
-            for r in range(self.n_r):
+            for r in n_reord:
+            # for r in range(self.n_r):
                 pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
             print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
             
@@ -412,8 +416,8 @@ class Run_Algorithm:
                 # else:
                 #     print("Robot ",r," - ","Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds ","Rotations: ",rot_ach)
             print(tabulate(data))
-        except:
-            print("Prim algorithm failed to implement...")
+        # except:
+        #     print("Prim algorithm failed to implement...")
     
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -1655,7 +1659,7 @@ class Prim_MST_maker:
                         dist_final.append(l2)
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3
-                        if self.STOP_FLAG == True:
+                        # if self.STOP_FLAG == True:
                             
                     else:
                         # Top - Backtrack / Right
