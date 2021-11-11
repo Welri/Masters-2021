@@ -54,13 +54,13 @@ class target_case_checker:
     def rerun_DARP(self, file_log = "MAIN_LOGGING.txt", show_grid=False,distance_measure = 0,recompile=True):
         DPM.PRINT_DARP = True
         DPM.PRINT_PATH = True
-        DPM.PRINT_TREE = True
-        DPM.PATH_COLOR = 'w'
+        DPM.PRINT_TREE = False
+        DPM.PATH_COLOR = 'k'
         
         DPM.algorithm_start(recompile=recompile)
         
         RA = DPM.Run_Algorithm(self.Grid, self.rip, self.dcells, self.Imp, show_grid, dist_meas=distance_measure,log_active=True,log_filename=file_log,target_active=False)
-        RA.set_continuous(self.rip_sml,self.rip_cont)
+        RA.set_continuous(self.rip_sml,self.rip_cont,np.array([500,500]))
         RA.main()
 
         # self.A = RA.A
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     show_grid = True
 
     TCC = target_case_checker()
-    TCC.get_data("TARGET_CASES_v2.0/Case05.txt")
+    TCC.get_data("TARGET_CASES_v2.0/Case06.txt")
     TCC.rerun_DARP(show_grid=show_grid,distance_measure=2,recompile=False)
     if (show_grid == True):
         plt.show()

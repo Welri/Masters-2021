@@ -133,7 +133,7 @@ class Run_Algorithm:
         self.horizontal = 2*DISC_H*self.cols 
         self.vertical = 2*DISC_V*self.rows
         self.tp_cont = tp_cont # Target initial position
-        self.tp_cont[0] = vertical - tp_cont[0] # Make it from bottom left corner instead (done like this because environment dimension with grid overlay can be a bit different)
+        self.tp_cont[0] = self.vertical - tp_cont[0] # Make it from bottom left corner instead (done like this because environment dimension with grid overlay can be a bit different)
         self.tp_cont[1] = tp_cont[1]
         self.rip_cont = rip_cont # Robot Initial position - continuous
         self.rip_cont_temp = np.zeros([len(self.rip_cont),2])
@@ -395,12 +395,13 @@ class Run_Algorithm:
             # Run MST algorithm
             pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont)
 
-            robot_f = pMST.TARGET_CELL[0]
-            n_reord = np.concatenate((np.arange(robot_f,self.n_r),np.arange(0,robot_f)),axis=None) # ensures the robot that finds the target runs first
-
+            if(TARGET_FINDING==True):
+                robot_f = pMST.TARGET_CELL[0]
+                n_reord = np.concatenate((np.arange(robot_f,self.n_r),np.arange(0,robot_f)),axis=None) # ensures the robot that finds the target runs first
+            else:
+                n_reord = np.arange(0,self.n_r)
             # Print MST on DARP plot
             for r in n_reord:
-            # for r in range(self.n_r):
                 pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
             print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
             
@@ -872,15 +873,16 @@ class Prim_MST_maker:
                 arrows[arw_ind] = arrow
                 arw_ind += 1
 
-            # Final waypoints for last arrow
+            # Append waypoints to larger list
             self.wpnts_cont_list.append(self.waypoints_cont)
             self.wpnts_class_list.append(self.waypoint_class)
         
-        # Shifting robot positions by half cell - p is found during waypoint generation
+        # Shifting robot initial positions by half cell - p is found during waypoint generation
         for r in range(self.n_r):
             self.rip_cont[r] = self.wpnts_cont_list[r][self.p[r]]
 
         # Shifting waypoints to start at robot position and making it closed loop
+        print("Robot:",self.TARGET_CELL[0],"Ind: ",self.TARGET_CELL[1],"Waypoint: ",self.wpnts_cont_list[self.TARGET_CELL[0]][self.TARGET_CELL[1]],"Target Location: ",self.t_y,self.t_x)
         self.update_wpnts()
    
     def update_wpnts(self):
@@ -892,17 +894,26 @@ class Prim_MST_maker:
             p = self.p[r]
             ind = 0
             ind_p = p
+            KEEP_SEARCHING = True
             while(ind_p!=len(wpnts)):
                 wpnts_updated[ind] = wpnts[ind_p]
                 wpnts_class_updated[ind] = wpnts_class[ind_p]
+                if(TARGET_FINDING==True)and(KEEP_SEARCHING):
+                    if(self.TARGET_CELL[1]==ind_p)and(self.TARGET_CELL[0]==r):
+                        self.TARGET_CELL[1]=ind
+                        KEEP_SEARCHING = False
                 ind_p+=1
                 ind+=1
             ind_p=0
             while(ind_p!=p):
                 wpnts_updated[ind] = wpnts[ind_p]
                 wpnts_class_updated[ind] = wpnts_class[ind_p]
+                if(TARGET_FINDING==True)and(KEEP_SEARCHING):
+                    if(self.TARGET_CELL[1]==ind_p)and(self.TARGET_CELL[0]==r):
+                        self.TARGET_CELL[1]=ind
+                        KEEP_SEARCHING = False
                 ind_p+=1
-                ind+=1
+                ind+=1  
             wpnts_updated[ind] = wpnts[p]
             wpnts_class_updated[ind] = wpnts_class[p]
             self.wpnts_cont_list[r] = wpnts_updated
@@ -1058,11 +1069,12 @@ class Prim_MST_maker:
         self.waypoints_cont[self.wpnt_ind][1] = x
         self.waypoint_class[self.wpnt_ind] = 1
         self.wpnt_ind+=1
-        if(self.TARGET_FOUND == False):
-            if(self.t_x<=x_c+DISC_H/2)and(self.t_x>=x_c-DISC_H/2)and(self.t_y<=y_c+DISC_V/2)and(self.t_y>=y_c-DISC_V/2):
-                # Target is within this cell
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1]) # stores robot and index at which target is
-                self.TARGET_FOUND = True
+        if(TARGET_FINDING==True):
+            if(self.TARGET_FOUND == False):
+                if(self.t_x<=x_c+DISC_H/2)and(self.t_x>=x_c-DISC_H/2)and(self.t_y<=y_c+DISC_V/2)and(self.t_y>=y_c-DISC_V/2):
+                    # Target is within this cell
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-1]) # stores robot and index at which target is
+                    self.TARGET_FOUND = True
     
     def fw_turn_wpnts(self,arrow):
         # Add two waypoints
@@ -1159,14 +1171,15 @@ class Prim_MST_maker:
         self.waypoints_cont[self.wpnt_ind][0] = y2
         self.waypoints_cont[self.wpnt_ind][1] = x2
         self.wpnt_ind+=1
-        if(self.TARGET_FOUND == False):
-            if(self.t_x<=x1_c+DISC_H/2)and(self.t_x>=x1_c-DISC_H/2)and(self.t_y<=y1_c+DISC_V/2)and(self.t_y>=y1_c-DISC_V/2):
-                # Target is within this cell
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1]) # stores robot and index at which target is
-                self.TARGET_FOUND = True
-            elif(self.t_x<=x2_c+DISC_H/2)and(self.t_x>=x2_c-DISC_H/2)and(self.t_y<=y2_c+DISC_V/2)and(self.t_y>=y2_c-DISC_V/2):
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1])
-                self.TARGET_FOUND = True
+        if(TARGET_FINDING==True):
+            if(self.TARGET_FOUND == False):
+                if(self.t_x<=x1_c+DISC_H/2)and(self.t_x>=x1_c-DISC_H/2)and(self.t_y<=y1_c+DISC_V/2)and(self.t_y>=y1_c-DISC_V/2):
+                    # Target is within this cell
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-2]) # stores robot and index at which target is
+                    self.TARGET_FOUND = True
+                elif(self.t_x<=x2_c+DISC_H/2)and(self.t_x>=x2_c-DISC_H/2)and(self.t_y<=y2_c+DISC_V/2)and(self.t_y>=y2_c-DISC_V/2):
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-1])
+                    self.TARGET_FOUND = True
     
     def right_turn_wpnts(self,arrow):
         # Add three waypoints
@@ -1303,17 +1316,18 @@ class Prim_MST_maker:
         self.waypoints_cont[self.wpnt_ind][0] = y3
         self.waypoints_cont[self.wpnt_ind][1] = x3
         self.wpnt_ind+=1
-        if(self.TARGET_FOUND == False):
-            if(self.t_x<=x1_c+DISC_H/2)and(self.t_x>=x1_c-DISC_H/2)and(self.t_y<=y1_c+DISC_V/2)and(self.t_y>=y1_c-DISC_V/2):
-                # Target is within this cell
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1]) # stores robot and index at which target is
-                self.TARGET_FOUND = True
-            elif(self.t_x<=x2_c+DISC_H/2)and(self.t_x>=x2_c-DISC_H/2)and(self.t_y<=y2_c+DISC_V/2)and(self.t_y>=y2_c-DISC_V/2):
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1])
-                self.TARGET_FOUND = True
-            elif(self.t_x<=x3_c+DISC_H/2)and(self.t_x>=x3_c-DISC_H/2)and(self.t_y<=y3_c+DISC_V/2)and(self.t_y>=y3_c-DISC_V/2):
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1])
-                self.TARGET_FOUND = True
+        if(TARGET_FINDING==True):
+            if(self.TARGET_FOUND == False):
+                if(self.t_x<=x1_c+DISC_H/2)and(self.t_x>=x1_c-DISC_H/2)and(self.t_y<=y1_c+DISC_V/2)and(self.t_y>=y1_c-DISC_V/2):
+                    # Target is within this cell
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-3]) # stores robot and index at which target is
+                    self.TARGET_FOUND = True
+                elif(self.t_x<=x2_c+DISC_H/2)and(self.t_x>=x2_c-DISC_H/2)and(self.t_y<=y2_c+DISC_V/2)and(self.t_y>=y2_c-DISC_V/2):
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-2])
+                    self.TARGET_FOUND = True
+                elif(self.t_x<=x3_c+DISC_H/2)and(self.t_x>=x3_c-DISC_H/2)and(self.t_y<=y3_c+DISC_V/2)and(self.t_y>=y3_c-DISC_V/2):
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-1])
+                    self.TARGET_FOUND = True
     
     def back_turn_wpnts(self,arrow):
         # Add four waypoints
@@ -1578,20 +1592,21 @@ class Prim_MST_maker:
         self.waypoints_cont[self.wpnt_ind][0] = y4
         self.waypoints_cont[self.wpnt_ind][1] = x4
         self.wpnt_ind+=1
-        if(self.TARGET_FOUND == False):
-            if(self.t_x<=x1_c+DISC_H/2)and(self.t_x>=x1_c-DISC_H/2)and(self.t_y<=y1_c+DISC_V/2)and(self.t_y>=y1_c-DISC_V/2):
-                # Target is within this cell
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1]) # stores robot and index at which target is
-                self.TARGET_FOUND = True
-            elif(self.t_x<=x2_c+DISC_H/2)and(self.t_x>=x2_c-DISC_H/2)and(self.t_y<=y2_c+DISC_V/2)and(self.t_y>=y2_c-DISC_V/2):
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1])
-                self.TARGET_FOUND = True
-            elif(self.t_x<=x3_c+DISC_H/2)and(self.t_x>=x3_c-DISC_H/2)and(self.t_y<=y3_c+DISC_V/2)and(self.t_y>=y3_c-DISC_V/2):
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1])
-                self.TARGET_FOUND = True
-            elif(self.t_x<=x4_c+DISC_H/2)and(self.t_x>=x4_c-DISC_H/2)and(self.t_y<=y4_c+DISC_V/2)and(self.t_y>=y4_c-DISC_V/2):
-                self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind+1])
-                self.TARGET_FOUND = True
+        if(TARGET_FINDING==True):
+            if(self.TARGET_FOUND == False):
+                if(self.t_x<=x1_c+DISC_H/2)and(self.t_x>=x1_c-DISC_H/2)and(self.t_y<=y1_c+DISC_V/2)and(self.t_y>=y1_c-DISC_V/2):
+                    # Target is within this cell
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-4]) # stores robot and index at which target is
+                    self.TARGET_FOUND = True
+                elif(self.t_x<=x2_c+DISC_H/2)and(self.t_x>=x2_c-DISC_H/2)and(self.t_y<=y2_c+DISC_V/2)and(self.t_y>=y2_c-DISC_V/2):
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-3])
+                    self.TARGET_FOUND = True
+                elif(self.t_x<=x3_c+DISC_H/2)and(self.t_x>=x3_c-DISC_H/2)and(self.t_y<=y3_c+DISC_V/2)and(self.t_y>=y3_c-DISC_V/2):
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-2])
+                    self.TARGET_FOUND = True
+                elif(self.t_x<=x4_c+DISC_H/2)and(self.t_x>=x4_c-DISC_H/2)and(self.t_y<=y4_c+DISC_V/2)and(self.t_y>=y4_c-DISC_V/2):
+                    self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-1])
+                    self.TARGET_FOUND = True
     
     def draw_graph(self,nodes,parents,wpnts):
         # NO LONGER IN USE
@@ -1628,18 +1643,20 @@ class Prim_MST_maker:
         dist_final.append(0)
         dist_tot = 0
         time_tot = 0
-        
-        self.STOP_FLAG == False
+        FROBOT = False
+        if(TARGET_FINDING):
+            robot_f = self.TARGET_CELL[0]
+            if(r==robot_f):
+                FROBOT = True
+                wpnt_f = self.TARGET_CELL[1]
 
         for w in range(len(wpnts)-1):
             x1 = wpnts[w][1]
             x2 = wpnts[w+1][1]
             y1 = wpnts[w][0]
             y2 = wpnts[w+1][0]
-            if(TARGET_FINDING == True):
-                if((r==self.TARGET_FOUND[0])and(w==self.TARGET_FOUND[1])):
-                    # This is the time stamp where it should stop (will never get set to true if Target Finding is not activated)
-                    self.STOP_FLAG = True 
+            
+            # Generate the appropriate waypoints
             if(x2>x1):
                 if(y2>y1):
                     # F U
@@ -1658,9 +1675,7 @@ class Prim_MST_maker:
                         dist_final.append(l1)
                         dist_final.append(l2)
                         dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3
-                        # if self.STOP_FLAG == True:
-                            
+                        dist_tot = dist_tot + l1 + l2 + l3                           
                     else:
                         # Top - Backtrack / Right
                         if(r_min != r_max):
@@ -1794,7 +1809,10 @@ class Prim_MST_maker:
                 wpnts_final.append([x2,y2])
                 dist_final.append(DISC_H)
                 dist_tot = dist_tot + DISC_H
-        
+            if(TARGET_FINDING):
+                if(FROBOT==True):
+                    if(w==wpnt_f):
+                        break
         # Append to main lists
             # Distance
         self.wpnts_final_list.append(wpnts_final) # Waypoints array
@@ -1848,10 +1866,7 @@ class Prim_MST_maker:
             # Plot target position
             if(TARGET_FINDING == True):
                 plt.plot(self.t_x,self.t_y,'xk',markersize=int(MARKERSIZE))
-
-    # def waypoint_truncation(self):
-        
-
+  
     def draw_cont_graph(self,nodes,parents,wpnts,wpnts_class,ax):
         # NO LONGER USING THIS - graphs are drawn in final wpnt generation
         # Draws graph on continuous space graph
