@@ -1,3 +1,4 @@
+from os import name
 import matplotlib.pyplot as plt
 import numpy as np
 import math
@@ -39,17 +40,9 @@ class path_planner:
         HdRR = (math.atan2(HcentresRR[1],HcentresRR[0]))%(2*math.pi)
         PathLenRR = self.R*((self.Head_start - HdRR)%(2*math.pi) + (HdRR - self.Head_end)%(2*math.pi)) + m2RR
 
-        # Store
+        # Store path
         self.paths = np.empty(4,dtype=np.object)
         self.paths[0] = path_obj(SCcR,ECcR,PdRR,PaRR,HcentresRR,m2RR,self.HE,PathLenRR)
-        # self.Ccd = SCcR
-        # self.Cca = ECcR
-        # self.Pd = PdRR
-        # self.Pa = PaRR
-        # self.Hsl = HcentresRR
-        # self.Lsl = m2RR
-        # self.Hf = self.HE
-        # self.shortestPathLen = PathLenRR
 
         # RL - Initial Right Turn, then Left Hand Circuit
         ECcL = self.PE + np.dot(self.CW90,self.HE)*self.R                    # Centre of final left circle
@@ -67,17 +60,8 @@ class path_planner:
             # Calculate path length
             HdRL = (math.atan2(HdiagRL[1],HdiagRL[0]))%(2*math.pi)
             PathLenRL = self.R*((self.Head_start - HdRL)%(2*math.pi) + (self.Head_end - HdRL)%(2*math.pi)) + 2*sRL
-            # Store
+            # Store path
             self.paths[1] = path_obj(SCcR,ECcL,PdRL,PaRL,HdiagRL,2*sRL,self.HE,PathLenRL)
-            # if (PathLenRL < self.shortestPathLen):
-            #     self.Ccd = SCcR
-            #     self.Cca = ECcL
-            #     self.Pd = PdRL
-            #     self.Pa = PaRL
-            #     self.Hsl = HdiagRL
-            #     self.Lsl = 2*sRL
-            #     self.Hf = self.HE
-            #     self.shortestPathLen = PathLenRL
         else:
             PathLenRL = np.inf
         
@@ -93,17 +77,8 @@ class path_planner:
         # Calculate path length
         HdLL = (math.atan2(HcentresLL[1],HcentresLL[0]))%(2*math.pi)
         PathLenLL = self.R*((HdLL - self.Head_start)%(2*math.pi) + (self.Head_end - HdLL)%(2*math.pi)) + m2LL
-        # Store
+        # Store path
         self.paths[2] = path_obj(SCcL,ECcL,PdLL,PaLL,HcentresLL,m2LL,self.HE,PathLenLL)
-        # if (PathLenLL < self.shortestPathLen):
-        #     self.Ccd = SCcL
-        #     self.Cca = ECcL
-        #     self.Pd = PdLL
-        #     self.Pa = PaLL
-        #     self.Hsl = HcentresLL
-        #     self.Lsl = m2LL
-        #     self.Hf = self.HE
-        #     self.shortestPathLen = PathLenLL
 
         # LR - Initial Left Turn, then Right Hand Circuit
         ECcR = self.PE + np.dot(self.ACW90,self.HE)*self.R         		    # Centre of right circle
@@ -121,17 +96,8 @@ class path_planner:
             # Calculate path length
             HdLR = (math.atan2(HdiagLR[1],HdiagLR[0]))%(2*math.pi)
             PathLenLR = self.R*((HdLR - self.Head_start)%(2*math.pi) + (HdLR - self.Head_end)%(2*math.pi)) + 2*sLR
-            # Store
+            # Store path
             self.paths[3] = path_obj(SCcL,ECcR,PdLR,PaLR,HdiagLR,2*sLR,self.HE,PathLenLR)
-            # if (PathLenLR < self.shortestPathLen):
-            #     self.Ccd = SCcL
-            #     self.Cca = ECcR
-            #     self.Pd = PdLR
-            #     self.Pa = PaLR
-            #     self.Hsl = HdiagLR
-            #     self.Lsl = 2*sLR
-            #     self.Hf = self.HE
-            #     self.shortestPathLen = PathLenLR
         else:
             PathLenLR = np.inf
 
@@ -200,24 +166,23 @@ class path_planner:
             plt.plot(xcirc+self.paths[i].Cca[0],ycirc+self.paths[i].Cca[1],'C2')                            # Arrival circle
             plt.plot([self.paths[i].Pa[0], self.paths[i].Pd[0]],[self.paths[i].Pa[1],self.paths[i].Pd[1]],'C0') 
 
+if __name__ == "__main__":
+    V = 30
+    Phi_max = 26 # max bank angle
+    r_min = V*V/9.81*np.tan(Phi_max) 
+    r_min = 100
 
+    # Start and End coordinates
+    PS = np.array([0,0])
+    PE = np.array([500,500])
+    # Start and End headings
+    Head_start = 120*math.pi/180
+    Head_end = 320*math.pi/180
+    start = [PS,Head_start]
+    end = [PE,Head_end]
 
-V = 30
-Phi_max = 26 # max bank angle
-r_min = V*V/9.81*np.tan(Phi_max) 
-r_min = 100
-
-# Start and End coordinates
-PS = np.array([0,0])
-PE = np.array([500,500])
-# Start and End headings
-Head_start = 120*math.pi/180
-Head_end = 320*math.pi/180
-start = [PS,Head_start]
-end = [PE,Head_end]
-
-PP = path_planner(start,end,r_min)
-PP.shortest_path()
-PP.plot_shortest_path()
-# PP.plot_paths(separate_plots=True)
-plt.show()
+    PP = path_planner(start,end,r_min)
+    PP.shortest_path()
+    PP.plot_shortest_path()
+    # PP.plot_paths(separate_plots=True)
+    plt.show()
