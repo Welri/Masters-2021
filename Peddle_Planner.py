@@ -107,14 +107,14 @@ class path_planner:
             path = self.paths[i]
             if(path.PathLen < self.shortest_path.PathLen):
                 self.shortest_path=path
-    def plot_shortest_path(self):
+    def plot_shortest_path(self,title):
         AR = 1/1 # (y/x)
         xaxis = 700
         yaxis = AR*xaxis
         plt.figure(figsize=[xaxis/100,yaxis/100])
         plt.xlabel('East')
         plt.ylabel('North')
-        plt.title('Shortest Path')
+        plt.title(title)
         plt.grid()
         plt.axis([-xaxis/2,xaxis,-yaxis/2,yaxis])
         xcirc=self.R*np.cos(np.linspace(0,2*math.pi,100)) 
@@ -126,7 +126,7 @@ class path_planner:
         plt.text(PS[0]-2.3*self.R*HS[0],PS[1]-2.3*self.R*HS[1],'Start')          # Text on graph
         plt.text(PE[0]+2.3*self.R*HE[0],PE[1]+2.3*self.R*HE[1],'End')            # Text on graph
         plt.plot(xcirc+self.shortest_path.Ccd[0],ycirc+self.shortest_path.Ccd[1],'C2')                            # Departure circle
-        plt.plot(xcirc+self.shortest_path.Cca[0],ycirc+self.shortest_path.Cca[1],'C2')                            # Arrival circle
+        plt.plot(xcirc+self.shortest_path.Cca[0],ycirc+self.shortest_path.Cca[1],'C3')                            # Arrival circle
         plt.plot([self.shortest_path.Pa[0], self.shortest_path.Pd[0]],[self.shortest_path.Pa[1],self.shortest_path.Pd[1]],'C0')                          # Straight path
     def plot_paths(self,separate_plots=False):
         AR = 1/1 # (y/x)
@@ -163,7 +163,7 @@ class path_planner:
                 plt.text(PS[0]-1.6*self.R*HS[0],PS[1]-1.4*self.R*HS[1],'Start')          # Text on graph
                 plt.text(PE[0]+2.3*self.R*HE[0],PE[1]+2.3*self.R*HE[1],'End')            # Text on graph
             plt.plot(xcirc+self.paths[i].Ccd[0],ycirc+self.paths[i].Ccd[1],'C2')                            # Departure circle
-            plt.plot(xcirc+self.paths[i].Cca[0],ycirc+self.paths[i].Cca[1],'C2')                            # Arrival circle
+            plt.plot(xcirc+self.paths[i].Cca[0],ycirc+self.paths[i].Cca[1],'C3')                            # Arrival circle
             plt.plot([self.paths[i].Pa[0], self.paths[i].Pd[0]],[self.paths[i].Pa[1],self.paths[i].Pd[1]],'C0') 
 
 if __name__ == "__main__":
@@ -176,13 +176,29 @@ if __name__ == "__main__":
     PS = np.array([0,0])
     PE = np.array([500,500])
     # Start and End headings
-    Head_start = 120*math.pi/180
-    Head_end = 320*math.pi/180
+    Head_start = 90*math.pi/180
+    Head_end = 0*math.pi/180
     start = [PS,Head_start]
     end = [PE,Head_end]
 
     PP = path_planner(start,end,r_min)
     PP.shortest_path()
-    PP.plot_shortest_path()
-    # PP.plot_paths(separate_plots=True)
+    PP.plot_shortest_path('Shortest Path Take-off')
+    PP.plot_paths(separate_plots=True)
+    # plt.show()
+
+    # Start and End coordinates
+    PS = np.array([500,500])
+    PE = np.array([0,0])
+    # Start and End headings
+    Head_start = 0*math.pi/180
+    Head_end = 270*math.pi/180
+    start = [PS,Head_start]
+    end = [PE,Head_end]
+
+    PP = path_planner(start,end,r_min)
+    PP.shortest_path()
+    PP.plot_shortest_path('Shortest Path Landing')
+    PP.plot_paths(separate_plots=True)
+
     plt.show()
