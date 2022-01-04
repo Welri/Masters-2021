@@ -41,8 +41,8 @@ class refuelling:
     def determine_refuels(self,n_r):
         cells_per_robot = ( self.rows*self.cols*4 - self.obs*4  ) / n_r
         # calculate path lengths predicted
-        dist = max(MAIN.ARC_L,MAIN.DISC_H,MAIN.DISC_V) * cells_per_robot # distance each robot needs should fly
-        time = dist / MAIN.VEL # time each robot needs to fly
+        dist = max(MAIN.ARC_L,MAIN.DISC_H,MAIN.DISC_V) * cells_per_robot # max distance each robot should fly
+        time = dist / MAIN.VEL # time each robot should fly
         flights_req = time / MAIN.FLIGHT_TIME # fights required per robot
         refuels = math.ceil(flights_req) - 1
         return(refuels)
@@ -126,6 +126,10 @@ class refuelling:
                 self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
             # Make centre of robot formation (the landing and take off zone) an obstacle
             self.set_obs_rip([start])
+            if (self.n_r>4):
+                set_obs_1 = np.array([[1,1],[1,0],[0,1],[-1,-1],[-1,0],[0,-1],[-1,1],[1,-1]])
+                for coord in set_obs_1:
+                    self.set_obs_rip([start[0]+coord[0],start[1]+coord[1]])
             return(True)
         except:
             print("An error occurred in the refuelling protocol...")

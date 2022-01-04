@@ -184,7 +184,7 @@ if __name__ == "__main__":
     PP = path_planner(start,end,r_min)
     PP.shortest_path()
     PP.plot_shortest_path('Shortest Path Take-off')
-    PP.plot_paths(separate_plots=True)
+    PP.plot_paths(separate_plots=False)
     # plt.show()
 
     # Start and End coordinates
@@ -199,6 +199,6 @@ if __name__ == "__main__":
     PP = path_planner(start,end,r_min)
     PP.shortest_path()
     PP.plot_shortest_path('Shortest Path Landing')
-    PP.plot_paths(separate_plots=True)
+    PP.plot_paths(separate_plots=False)
 
     plt.show()
