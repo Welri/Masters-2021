@@ -93,47 +93,47 @@ class refuelling:
                 if okay == True:
                     self.possible_robots_list.append([r,c])
     def refuel_randomise_start(self,n_r):
-        try:
-            # Conservatively calculate the number of refuels needed
-            refuels = self.determine_refuels(n_r)
-            self.n_r = n_r * (refuels+1) # equivalent number of robots given the number of refuels
-            
-            # Print equivalent robots and exit if more than 16 (possible robots can only do up to 16 for now)
-            print("Robots: ", n_r," Refuels: ", refuels," Equivalent Robots: ", self.n_r)
-            if self.n_r > 16:
-                print("Number of equivalent robots are beyond algorithm capability")
-                return(False)
-            
-            # Calculate possible starting positions
-            self.possible_robots(n_r)
-            if len(self.possible_robots_list) == 0:
-                print("WARING: No valid starting location found...")
-            
-            # Randomly choose a valid starting position and set rip
-            self.rip = np.zeros([self.n_r,2],dtype=int)
-            self.rip_sml = np.zeros([self.n_r,2],dtype=int)
-            self.rip_cont = np.zeros([self.n_r,2],dtype=float)
-            start = self.possible_robots_list[ rand.randint(0,len(self.possible_robots_list)) ]
-            for r in range(self.n_r):
-                move = self.moves[r]
-                self.rip[r][0] = move[0] + start[0]
-                self.rip[r][1] = move[1] + start[1]
-                pos = self.pos[r]
-                self.rip_sml[r][0] = self.rip[r][0]*2 + pos[0]
-                self.rip_sml[r][1] = self.rip[r][1]*2 + pos[1]
-                self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.DISC_V
-                self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.DISC_H
-                self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
-            # Make centre of robot formation (the landing and take off zone) an obstacle
-            self.set_obs_rip([start])
-            if (self.n_r>4):
-                set_obs_1 = np.array([[1,1],[1,0],[0,1],[-1,-1],[-1,0],[0,-1],[-1,1],[1,-1]])
-                for coord in set_obs_1:
-                    self.set_obs_rip([start[0]+coord[0],start[1]+coord[1]])
-            return(True)
-        except:
-            print("An error occurred in the refuelling protocol...")
+        # try:
+        # Conservatively calculate the number of refuels needed
+        refuels = self.determine_refuels(n_r)
+        self.n_r = n_r * (refuels+1) # equivalent number of robots given the number of refuels
+        
+        # Print equivalent robots and exit if more than 16 (possible robots can only do up to 16 for now)
+        print("Robots: ", n_r," Refuels: ", refuels," Equivalent Robots: ", self.n_r)
+        if self.n_r > 16:
+            print("Number of equivalent robots are beyond algorithm capability")
             return(False)
+        
+        # Calculate possible starting positions
+        self.possible_robots(n_r)
+        if len(self.possible_robots_list) == 0:
+            print("WARING: No valid starting location found...")
+        
+        # Randomly choose a valid starting position and set rip
+        self.rip = np.zeros([self.n_r,2],dtype=int)
+        self.rip_sml = np.zeros([self.n_r,2],dtype=int)
+        self.rip_cont = np.zeros([self.n_r,2],dtype=float)
+        start = self.possible_robots_list[ rand.randint(0,len(self.possible_robots_list)) ]
+        for r in range(self.n_r):
+            move = self.moves[r]
+            self.rip[r][0] = move[0] + start[0]
+            self.rip[r][1] = move[1] + start[1]
+            pos = self.pos[r]
+            self.rip_sml[r][0] = self.rip[r][0]*2 + pos[0]
+            self.rip_sml[r][1] = self.rip[r][1]*2 + pos[1]
+            self.rip_cont[r][0] = (self.rip_sml[r][0]+0.5)*MAIN.DISC_V
+            self.rip_cont[r][1] = (self.rip_sml[r][1]+0.5)*MAIN.DISC_H
+            self.GRID[self.rip[r][0]][self.rip[r][1]] = 2
+        # Make centre of robot formation (the landing and take off zone) an obstacle
+        self.set_obs_rip([start])
+        if (self.n_r>4):
+            set_obs_1 = np.array([[1,1],[1,0],[0,1],[-1,-1],[-1,0],[0,-1],[-1,1],[1,-1]])
+            for coord in set_obs_1:
+                self.set_obs_rip([[start[0]+coord[0],start[1]+coord[1]]])
+        return(True)
+        # except:
+        #     print("An error occurred in the refuelling protocol...")
+        #     return(False)
                   
 # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
 np.set_printoptions(threshold=np.inf)
