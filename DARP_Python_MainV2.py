@@ -10,10 +10,6 @@ import time
 import math
 from tabulate import tabulate
 
-# This version of the code does not accommmodate well for target finding with the refuelling protocol (mostly the printing of the time snapshot at target finding time)
-# Also does not accommodate well for scheduling for take-off, landing, wait and refuel times
-# DARP_Python_MainV2.py is the adapted version. Code that is no longer used is also removed there to make it more succinct
-
 # Constants
 TREE_COLOR = 'w'
 PATH_COLOR = 'k'
@@ -29,7 +25,7 @@ FIGURE_TITLE = "DARP Continuous Results"
 TARGET_FINDING = True # Does path truncation and target printing
 JOIN_REGIONS_FOR_REFUEL = False
 
-# Mavic Air 2 Camera (Imagine )
+''' Mavic Air 2 Camera (Imagine )
     # Height = 350 # m above ground
     # focal_length = 24 # mm
     # V = 3 
@@ -42,7 +38,7 @@ JOIN_REGIONS_FOR_REFUEL = False
     # px_h = 4000
     # px_w = 3000
     # GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
-    # GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
+    # GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px'''
 
 # GENERAL PARAMETERS
 phi_max = 25 # max bank angle in degrees
@@ -74,7 +70,7 @@ FOV_V = AR*FOV_H # m
 DISC_H = math.sqrt(2)/(4-math.sqrt(2)) * FOV_H
 DISC_V = DISC_H
 print("\nDISCRETIZATION SIZE: ", round(DISC_V,2), "X", round(DISC_H,2))
-r_max = DISC_H/2
+r_max = DISC_V/2
 v_max = math.sqrt( r_max * g_acc * math.tan(phi_max*math.pi/180) ) # m/s
 GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
 GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
@@ -425,28 +421,24 @@ class Run_Algorithm:
         # try:
             # Run MST algorithm
             pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont,self.n_link,self.n_runs,self.refuels,self.nr_og)
-
-            if(TARGET_FINDING==True):
-                robot_f = pMST.TARGET_CELL[0]
-                n_reord = np.concatenate((np.arange(robot_f,self.n_r),np.arange(0,robot_f)),axis=None) # ensures the robot that finds the target runs first
-            else:
-                n_reord = np.arange(0,self.n_r)
-            # Print MST on DARP plot
-            for r in n_reord:
-                pMST.waypoint_final_generation(pMST.free_nodes_list[r],pMST.parents_list[r],pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],self.ax,self.show_grid,r)
+            
+            # Generate final waypoints for plotting robot paths
+            for r in range(self.n_r):
+                pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r)
             print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
             
-            # print("Times achieved: ", pMST.time_totals)
+            # Print STC paths on DARP plot
+            if (self.show_grid == True):
+                for r in range(self.n_r):
+                    pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r,time_end=pMST.TIME_BREAK)
+
             data = [["Robot","Time Achieved","Time Limit","Time Difference","Distance","Rotations"]]
             for r in range(self.n_r):
                 time_ach = pMST.time_totals[r]
                 rot_ach = pMST.rotations[r]
                 dist_ach = pMST.dist_totals[r]
                 data.append([r,round(time_ach,1),round(FLIGHT_TIME,1),round(FLIGHT_TIME - time_ach,1),round(dist_ach,1),round(rot_ach,0)])
-                # if time_ach > FLIGHT_TIME:
-                #     print("Robot ",r," - ","Time Achieved: ",time_ach," Exceeds Limit By ",time_ach - FLIGHT_TIME," seconds "," Rotations: ", rot_ach)
-                # else:
-                #     print("Robot ",r," - ","Time Achieved: ",time_ach," Within Limit By ",FLIGHT_TIME - time_ach," seconds ","Rotations: ",rot_ach)
+            
             print(tabulate(data))
         # except:
         #     print("Prim algorithm failed to implement...")
@@ -827,8 +819,9 @@ class Prim_MST_maker:
         self.wpnts_final_list = list()
         self.dist_final_list = list()
         self.time_final_list = list()
-        self.time_totals = np.zeros([self.n_r])
-        self.time_totals_refuels = np.zeros([self.nr_og,self.refuels+1])
+        self.time_cumulative_list = list() # Represents cumulative time, including previous runs, take-off, landing and wait times
+        self.time_totals = np.zeros([self.n_r]) # Represents flying time per run
+        # self.time_totals_refuels = np.zeros([self.nr_og,self.refuels+1])
         self.dist_totals = np.zeros([self.n_r])
         self.rotations = np.zeros([self.n_r])
 
@@ -1417,26 +1410,7 @@ class Prim_MST_maker:
             x4 = (x4 + 0.5)*DISC_H
             x4_c = x4
             y4 = (self.rows*2 - y4 - 0.5)*DISC_V
-            y4_c = (self.rows*2 - y4_c - 0.5)*DISC_V
-            # # parameters for arc
-            # if(self.wpnt_ind==0):
-            #     # if it is the first arrow - start position must be found manually
-            #     start_x = 2*X + 1
-            #     start_y = 2*Y + 2
-            #     start_x = (start_x + 0.5)*FOV_H
-            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-            #     start = np.array([start_y,start_x])
-            # else:
-            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            # end = np.array([y3,x3])
-            # a = -FOV_V # to make it the lower half the ellipse (a>b convention is not applied here)
-            # b = FOV_H/2
-            # y_offset = start[0]
-            # x_offset = end[1] + ( (start[1]-end[1])/2 ) # start_x > end_x
-            # # arc x values
-            # x_arc = np.linspace(start[1],end[1],ARC_PNTS*2)
-            # # arc y values
-            # y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
+            y4_c = (self.rows*2 - y4_c - 0.5)*DISC_V      
         elif(direction==1):
             # This means it went from W-E
             x1_c = 2*X - 2
@@ -1474,26 +1448,7 @@ class Prim_MST_maker:
             x4 = (x4 + 0.5)*DISC_H
             x4_c = (x4_c + 0.5)*DISC_H
             y4 = (self.rows*2 - y4 - 0.5)*DISC_V
-            y4_c = y4
-            # # arc making
-            # if(self.wpnt_ind==0):
-            #     # if it is the first arrow - start position must be found manually
-            #     start_x = 2*X - 1 
-            #     start_y = 2*Y + 1
-            #     start_x = (start_x + 0.5)*FOV_H
-            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-            #     start = np.array([start_y,start_x])
-            # else:
-            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            # end = np.array([y3,x3])
-            # a = -FOV_H
-            # b = FOV_V/2
-            # x_offset = start[1]
-            # y_offset = start[0] + (end[0]-start[0])/2
-            # # arc y values
-            # y_arc = np.linspace(start[0],end[0],ARC_PNTS*2)
-            # # arc y values
-            # x_arc = x_offset + a * np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) )
+            y4_c = y4           
         elif(direction==2):
             # This means it went from N-S
             x1 = 2*X
@@ -1531,26 +1486,7 @@ class Prim_MST_maker:
             x4 = (x4 + 0.5)*DISC_H
             x4_c = x4
             y4 = (self.rows*2 - y4 - 0.5)*DISC_V
-            y4_c = (self.rows*2 - y4_c - 0.5)*DISC_V
-            # # arc making
-            # if(self.wpnt_ind==0):
-            #     # if it is the first arrow - start position must be found manually
-            #     start_x = 2*X + 0
-            #     start_y = 2*Y - 1
-            #     start_x = (start_x + 0.5)*FOV_H
-            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-            #     start = np.array([start_y,start_x])
-            # else:
-            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            # end = np.array([y3,x3])
-            # a = FOV_V
-            # b = FOV_H/2
-            # y_offset = start[0]
-            # x_offset = start[1] + ( (end[1]-start[1])/2 ) # end_x > start_x
-            # # arc x values
-            # x_arc = np.linspace(start[1],end[1],ARC_PNTS*2)
-            # # arc y values
-            # y_arc = y_offset + a * np.sqrt( np.abs( 1-((x_arc-x_offset)**2/b**2) ) )
+            y4_c = (self.rows*2 - y4_c - 0.5)*DISC_V         
         elif(direction==3):        
             # This means it went from E-W
             x1_c = 2*X + 3
@@ -1588,35 +1524,7 @@ class Prim_MST_maker:
             x4 = (x4 + 0.5)*DISC_H
             x4_c = (x4_c + 0.5)*DISC_H
             y4 = (self.rows*2 - y4 - 0.5)*DISC_V
-            y4_c = y4
-            # # arc making
-            # if(self.wpnt_ind==0):
-            #     # if it is the first arrow - start position must be found manually
-            #     start_x = 2*X + 2
-            #     start_y = 2*Y
-            #     start_x = (start_x + 0.5)*FOV_H
-            #     start_y = (self.rows*2 - start_y - 0.5)*FOV_V
-            #     start = np.array([start_y,start_x])
-            # else:
-            #     start = self.waypoints_cont[self.wpnt_ind-1] # previous wpnt is start position
-            # end = np.array([y3,x3])
-            # a = FOV_H
-            # b = FOV_V/2
-            # x_offset = start[1]
-            # y_offset = end[0] + (start[0]-end[0])/2
-            #  # arc y values
-            # y_arc = np.linspace(start[0],end[0],ARC_PNTS*2)
-            # # arc y values
-            # x_arc = x_offset + a * np.sqrt( np.abs( 1-((y_arc-y_offset)**2/b**2) ) )
-        # # Add three points normally
-        # for pnt in range(1,4):
-        #     self.waypoints_cont[self.wpnt_ind] = np.array([y_arc[pnt],x_arc[pnt]])
-        #     self.wpnt_ind+=1
-        # # Insert other points - array only has space for four points
-        # for pnt in range(4,ARC_PNTS*2):
-        #     self.waypoints_cont = np.insert(self.waypoints_cont,self.wpnt_ind,np.array([y_arc[pnt],x_arc[pnt]]),axis=0)
-        #     self.wpnt_ind+=1
-        # Add final point normally
+            y4_c = y4           
         if(math.isclose(self.rip_cont[self.current_r][0],y1_c))and(math.isclose(self.rip_cont[self.current_r][1],x1_c)):
             self.p[self.current_r] = self.wpnt_ind
         self.waypoints_cont[self.wpnt_ind][0] = y1
@@ -1652,132 +1560,119 @@ class Prim_MST_maker:
                 elif(self.t_x<=x4_c+DISC_H/2)and(self.t_x>=x4_c-DISC_H/2)and(self.t_y<=y4_c+DISC_V/2)and(self.t_y>=y4_c-DISC_V/2):
                     self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-1])
                     self.TARGET_FOUND = True
-    
-    def draw_graph(self,nodes,parents,wpnts):
-        # NO LONGER IN USE
-        # Draws graph on old DARP graph
-        # Plot spanning tree
-        for node in nodes:
-            x = (node[1])*2 + 0.5
-            y = (self.rows - node[0] - 1)*2 + 0.5
-            plt.plot(x,y,".w")
-        for i in range(1,len(parents)):
-             x0 = (nodes[i][1])*2 + 0.5
-             x1 = (nodes[parents[i]][1])*2 + 0.5
-             y0 = (self.rows - nodes[i][0] - 1)*2 + 0.5
-             y1 = (self.rows - nodes[parents[i]][0] - 1)*2 + 0.5
-             plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-w")
 
-        # Plot waypoints
-        px = np.zeros(len(wpnts),dtype=int)
-        py = np.zeros(len(wpnts),dtype=int)
-        for pi in range(len(wpnts)):
-            py[pi] = self.rows*2 - wpnts[pi][0] - 1
-            px[pi] = wpnts[pi][1]
-        plt.plot(px,py,'-k') # linewidth=2
-        plt.plot(px,py,'.k')
-        for r in range(self.n_r):
-            plt.plot(self.rip_sml[r][1],self.rows*2 - self.rip_sml[r][0] - 1,'.w',markersize=int(MARKERSIZE/3))
-    
-    def waypoint_final_generation(self,nodes,parents,wpnts,wpnts_class,ax,print_graph,r):
+    def waypoint_final_generation(self,wpnts,wpnts_class,r):
         # Waypoint, distance and time arrays created to describe the path
         # Includes graph drawing for tree and paths
         rotations = 0
         wpnts_final = list()
-        dist_final = list()
-        dist_final.append(0)
+        dist_final = list() # NON-Cumulative
+        # Append first waypoint
+        wpnts_final.append([wpnts[0][1],wpnts[0][0]])
+        dist_final.append(0) # Distance linked to first waypoint is 0
+        # Initialise totals to 0
+        time_break = False
         dist_tot = 0
         time_tot = 0
-        r_og = self.n_link[r] # Original robot
-        refuel_run = self.n_runs[r] # Which refuel the the robot is on
-        FROBOT = False
-        
-        if(TARGET_FINDING):
-            robot_f = self.TARGET_CELL[0] # Equivalent robot that finds the target
-            robotf_og = r_og # Original robot that finds the target
-            robotf_run = refuel_run # Which refuel the original robot is on when it finds the target
-            if(r==robot_f):
-                FROBOT = True
-                wpnt_f = self.TARGET_CELL[1]
+        # r_og = self.n_link[r] # Original robot
+        refuel_run = self.n_runs[r] # Which refuel run the robot is on
 
+        # Initialise time_tot to last time on the previous run - further offsets can only be added after the path lengths are known
+        if(refuel_run == 0):
+            start_timestamp = 0
+        elif(refuel_run > 0):
+            # The last element of the previous equivalent robot's time array would represent the total time taken by the same robot in the previous run
+            start_timestamp = self.time_cumulative_list[r-1][-1] 
         for w in range(len(wpnts)-1):
             x1 = wpnts[w][1]
             x2 = wpnts[w+1][1]
             y1 = wpnts[w][0]
             y2 = wpnts[w+1][0]
             
-            # Generate the appropriate waypoints
+            # Generate the appropriate waypoints 
             if(x2>x1):
                 if(y2>y1):
                     # F U
                     rotations += 1 
                     if(wpnts_class[w+1]==1):
-                        # Bottom - Left (Note: Logic table says that only left turns are different, therefore they are detected)
-                        wpnts_final.append([x1,y1]) # Start of long line
+                    # Bottom - Left Turn (Note: Logic table says that only left turns are different, therefore they are detected using wpnts_class)
+                        ## Long leg (Line waypoint)
                         wpnts_final.append([x2-r_min,y1]) # End of long line
-                        wpnts_final.append([x2-r_min,y1+r_min,2*r_min,270.0]) # Circular waypoint
-                        if(r_min != r_max): # Radius is smaller than size of square
-                            wpnts_final.append([x2,y1+r_min]) # Start of short line
-                            wpnts_final.append([x2,y2]) # End of short line
-                        l1 = DISC_H/2 - r_min # long leg
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_V/2 - r_min # short leg
+                        l1 = DISC_H/2 - r_min # length of long leg
                         dist_final.append(l1)
+                        ## Circular waypoint
+                        wpnts_final.append([x2-r_min,y1+r_min,2*r_min,270.0]) # Arc
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Short leg (Line waypoint)
+                        if(r_min != r_max): # Radius is smaller than size of square
+                            # This point is equivalent to [x2,y2], which marks the end of an arc, when r_min == r_max
+                            wpnts_final.append([x2,y1+r_min]) # Start of short line
+                            dist_final.append(0) # Distance hasn't increased since end of arc  
+                        wpnts_final.append([x2,y2]) # End of short line
+                        l3 = DISC_V/2 - r_min # length of short leg (same as long leg for square discretisation)
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3                           
                     else:
-                        # Top - Backtrack / Right
+                    # Top - Backtrack / Right
+                        ## Short line
                         if(r_min != r_max):
-                            wpnts_final.append([x1,y1])
-                            wpnts_final.append([x1,y2-r_min])
-                        wpnts_final.append([x1+r_min,y2-r_min,2*r_min,90.0])
-                        wpnts_final.append([x1+r_min,y2])
-                        wpnts_final.append([x2,y2])
-                        l1 = DISC_V/2 - r_min # short leg 
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_H/2 - r_min # long leg
-                        dist_final.append(l1)
+                            wpnts_final.append([x1,y2-r_min]) # End of short line (arc start)
+                            l1 = DISC_V/2 - r_min # short leg length
+                            dist_final.append(l1)
+                        ## Circular Waypoint
+                        wpnts_final.append([x1+r_min,y2-r_min,2*r_min,90.0]) # Arc
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Long line
+                        wpnts_final.append([x1+r_min,y2]) # Start of long line (arc end)
+                        dist_final.append(0)
+                        wpnts_final.append([x2,y2]) # End of long line
+                        l3 = DISC_H/2 - r_min # long leg   length                      
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3
                 elif(y2<y1):
                     # B D
                     rotations += 1 
                     if(wpnts_class[w+1]==1):
-                        # Bottom - Left Turn
+                    # Bottom - Left Turn
+                        ## Short line
                         if(r_min != r_max):
-                            wpnts_final.append([x1,y1])
                             wpnts_final.append([x1,y2+r_min])
+                            l1 = DISC_V/2 - r_min # short line length
+                            dist_final.append(l1)
+                        ## Circular waypoint
                         wpnts_final.append([x1+r_min,y2+r_min,2*r_min,180.0])
-                        wpnts_final.append([x1+r_min,y2])
-                        wpnts_final.append([x2,y2])
-                        l1 = DISC_V/2 - r_min # short leg 
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_H/2 - r_min # long leg 
-                        dist_final.append(l1)
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Long line
+                        wpnts_final.append([x1+r_min,y2]) # Start of long line
+                        dist_final.append(0)
+                        wpnts_final.append([x2,y2]) # End of long line
+                        l3 = DISC_H/2 - r_min # long line length
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3              
                     else:
-                        # Top - Right Turn / Backtrack
-                        wpnts_final.append([x1,y1])
-                        wpnts_final.append([x2-r_min,y1])
-                        wpnts_final.append([x2-r_min,y1-r_min,2*r_min,0.0])
-                        if(r_min != r_max):
-                            wpnts_final.append([x2,y1-r_min])
-                            wpnts_final.append([x2,y2])
-                        l1 = DISC_H/2 - r_min # long leg
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_V/2 - r_min # short leg
+                    # Top - Right Turn / Backtrack
+                        ## Long line
+                        wpnts_final.append([x2-r_min,y1]) # End of long line
+                        l1 = DISC_H/2 - r_min # long line length
                         dist_final.append(l1)
+                        ## Circular waypoint
+                        wpnts_final.append([x2-r_min,y1-r_min,2*r_min,0.0]) # arc
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Short line
+                        if(r_min != r_max):
+                            wpnts_final.append([x2,y1-r_min]) # Start of short line
+                            dist_final.append(0)
+                        wpnts_final.append([x2,y2]) # End of short line
+                        l3 = DISC_V/2 - r_min # short line length
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3
                 else: # y2 == y1
-                    # Line
-                    wpnts_final.append([x1,y1])
-                    wpnts_final.append([x2,y2])
+                # Vertical line
+                    wpnts_final.append([x2,y2]) # End of vertical line
                     dist_final.append(DISC_V)
                     dist_tot = dist_tot + DISC_V
             elif(x2<x1):
@@ -1785,150 +1680,121 @@ class Prim_MST_maker:
                     # B U
                     rotations += 1 
                     if(wpnts_class[w+1]==1):
-                        # Top - Left Turn
+                    # Top - Left Turn
+                        ## Short line
                         if(r_min != r_max):
-                            wpnts_final.append([x1,y1])
-                            wpnts_final.append([x1,y2-r_min])
+                            wpnts_final.append([x1,y2-r_min]) # End of short line
+                            l1 = DISC_V/2 - r_min # Short line length
+                            dist_final.append(l1)
+                        ## Circular waypoint
                         wpnts_final.append([x1-r_min,y2-r_min,2*r_min,0.0])
-                        wpnts_final.append([x1-r_min,y2])
-                        wpnts_final.append([x2,y2])                        
-                        l1 = DISC_V/2 - r_min # short leg
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_H/2 - r_min # long leg
-                        dist_final.append(l1)
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Long length
+                        wpnts_final.append([x1-r_min,y2]) # Start of long line
+                        dist_final.append(0)
+                        wpnts_final.append([x2,y2]) # End of long line                       
+                        l3 = DISC_H/2 - r_min # long line length
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3
                     else:
-                        # Bottom - Right Turn / Backtrack
-                        wpnts_final.append([x1,y1])
-                        wpnts_final.append([x2+r_min,y1])
-                        wpnts_final.append([x2+r_min,y1+r_min,2*r_min,180.0])
-                        if(r_min != r_max):
-                            wpnts_final.append([x2,y1+r_min])
-                            wpnts_final.append([x2,y2])
-                        l1 = DISC_H/2 - r_min # long leg
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_V/2 - r_min # short leg
+                    # Bottom - Right Turn / Backtrack
+                        ## Long line
+                        wpnts_final.append([x2+r_min,y1]) # End of long line
+                        l1 = DISC_H/2 - r_min # long line length
                         dist_final.append(l1)
+                        ## Circular waypoint
+                        wpnts_final.append([x2+r_min,y1+r_min,2*r_min,180.0]) # arc
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Short line
+                        if(r_min != r_max):
+                            wpnts_final.append([x2,y1+r_min]) # Start of short line
+                            dist_final.append(0)
+                        wpnts_final.append([x2,y2]) # End of short line                    
+                        l3 = DISC_V/2 - r_min # short line length
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3
                 elif(y2<y1):
                     # F D
                     rotations += 1 
                     if(wpnts_class[w+1]==1):
-                        # Top - Left
-                        wpnts_final.append([x1,y1])
-                        wpnts_final.append([x2+r_min,y1])
-                        wpnts_final.append([x2+r_min,y1-r_min,2*r_min,90.0])
-                        if(r_min != r_max):
-                            wpnts_final.append([x2,y1-r_min])
-                            wpnts_final.append([x2,y2])
-                        l1 = DISC_H/2 - r_min # long leg
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_V/2 - r_min # short leg
+                    # Top - Left
+                        ## Long line
+                        wpnts_final.append([x2+r_min,y1]) # End of long line
+                        l1 = DISC_H/2 - r_min # long line length
                         dist_final.append(l1)
+                        ## Circular waypoint
+                        wpnts_final.append([x2+r_min,y1-r_min,2*r_min,90.0]) # Arc
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Short line
+                        if(r_min != r_max):
+                            wpnts_final.append([x2,y1-r_min]) # Start of short line
+                            dist_final.append(0)
+                        wpnts_final.append([x2,y2]) # End of short line
+                        l3 = DISC_V/2 - r_min # short line length
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3
                     else:
-                        # Bottom - Right Turn / Backtrack      
+                    # Bottom - Right Turn / Backtrack      
+                        ## Short line
                         if(r_min != r_max):
-                            wpnts_final.append([x1,y1])
-                            wpnts_final.append([x1,y2+r_min])
-                        wpnts_final.append([x1-r_min,y2+r_min,2*r_min,270.0])
-                        wpnts_final.append([x1-r_min,y2])
-                        wpnts_final.append([x2,y2])
-                        l1 = DISC_V/2 - r_min # short leg
-                        l2 = r_min*np.pi/2 # arc
-                        l3 = DISC_H/2 - r_min # long leg
-                        dist_final.append(l1)
+                            wpnts_final.append([x1,y2+r_min]) # short line end
+                            l1 = DISC_V/2 - r_min # short line length
+                            dist_final.append(l1)
+                        ## Circular waypoint
+                        wpnts_final.append([x1-r_min,y2+r_min,2*r_min,270.0]) # arc
+                        l2 = r_min*np.pi/2 # arc length
                         dist_final.append(l2)
+                        ## Long line
+                        wpnts_final.append([x1-r_min,y2]) # long line start
+                        dist_final.append(0)
+                        wpnts_final.append([x2,y2]) # long line end
+                        l3 = DISC_H/2 - r_min # long line length
                         dist_final.append(l3)
                         dist_tot = dist_tot + l1 + l2 + l3 
                 else: # y2 == y1
-                    # Line
-                    wpnts_final.append([x1,y1])
-                    wpnts_final.append([x2,y2])
+                # Vertical line
+                    wpnts_final.append([x2,y2]) # End of line
                     dist_final.append(DISC_V)
                     dist_tot = dist_tot + DISC_V
             else: # x2 == x1
-                # Line
-                wpnts_final.append([x1,y1])
-                wpnts_final.append([x2,y2])
+            # Horizontal line
+                wpnts_final.append([x2,y2]) # End of horizontal line
                 dist_final.append(DISC_H)
                 dist_tot = dist_tot + DISC_H
             if(TARGET_FINDING):
-                if(FROBOT==True):
+                if(r==self.TARGET_CELL[0]):
                     # If it's the robot that finds the goal
-                    if(w==wpnt_f):
+                    if(w==self.TARGET_CELL[1]):
                         self.DISTANCE_BREAK = dist_tot
-                        break
-                else:
-                    # If it's any of the other robots
-                    if (dist_tot >= self.DISTANCE_BREAK):
-                        # Break as soon as the total distance exceeds the distance achieved by robot that finds target
-                        break
-       
-        # Append to main lists
-            # Distance
+
+        # Distance
         self.wpnts_final_list.append(wpnts_final) # Waypoints array
         self.dist_final_list.append(dist_final) # Distance array
         self.dist_totals[r] = dist_tot # Total Distance for robot r
-            # Time
+        dist_tot = 0
+        # Time
         time_final = np.zeros(len(dist_final))
+        time_cumulative = np.zeros(len(dist_final))
         for d in range(len(dist_final)):
             time_final[d] = dist_final[d] / VEL
-            time_tot = time_tot + time_final[d]
+            time_tot = time_tot + time_final[d] # start_timestamp represents offset as a result of refuelling
+            time_cumulative[d] = start_timestamp + time_tot
+            if((TARGET_FINDING)and(r==self.TARGET_CELL[0])and(time_break==False)):
+                dist_tot = dist_tot + dist_final[d]
+                if(dist_tot>=self.DISTANCE_BREAK):
+                    self.TIME_BREAK = time_cumulative[d]
+                    time_break = True
         self.time_final_list.append(time_final)
-        self.time_totals[r] = time_tot # Total Time for robot r
-            # Rotations
+        self.time_cumulative_list.append(time_cumulative)
+        self.time_totals[r] = time_tot # Total Time for equivalent robot r to complete path
+        # Rotations
         self.rotations[r] = rotations
-        
+
+    def print_graph(self,nodes,parents,ax,r,time_start=0,time_end=np.Inf):
         # Graph printing
-        if print_graph == True:
-            # Plot spanning tree
-            if(PRINT_TREE==True):
-                for node in nodes:
-                    x = ( (node[1])*2 +1 )*DISC_H
-                    y = ( (self.rows - node[0] - 1)*2 + 1 )*DISC_V
-                    plt.plot(x,y,".",markersize=S_MARKERIZE,color=TREE_COLOR)
-                for i in range(1,len(parents)):
-                    x0 = ( (nodes[i][1])*2 + 1 )*DISC_H
-                    x1 = ( (nodes[parents[i]][1])*2 + 1 )*DISC_H
-                    y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*DISC_V
-                    y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*DISC_V
-                    plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
-            
-            # Plot waypoints
-            if(PRINT_PATH==True):
-                circ_flag = 0
-                for w in range(1,len(wpnts_final)):
-                    if(len(wpnts_final[w])==2): # line
-                        if(circ_flag == 0):    
-                            plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            plt.plot([wpnts_final[w-1][0],wpnts_final[w][0]],[wpnts_final[w-1][1],wpnts_final[w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                        else:
-                            circ_flag = 0
-                    else: # circle
-                        if(PRINT_CIRCLE_CENTRES == True):
-                            plt.plot(wpnts_final[w][0],wpnts_final[w][1],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                        e1 = pat.Arc([wpnts_final[w][0],wpnts_final[w][1]],wpnts_final[w][2],wpnts_final[w][2],angle=wpnts_final[w][3],theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                        ax.add_patch(e1)
-                        circ_flag = 1
-
-            # Plot robot initial positions
-            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
-            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
-
-            # Plot target position
-            if(TARGET_FINDING == True):
-                plt.plot(self.t_x,self.t_y,'xk',markersize=int(MARKERSIZE))
-  
-    def draw_cont_graph(self,nodes,parents,wpnts,wpnts_class,ax):
-        # NO LONGER USING THIS - graphs are drawn in final wpnt generation
-        # Draws graph on continuous space graph
         # Plot spanning tree
         if(PRINT_TREE==True):
             for node in nodes:
@@ -1941,113 +1807,33 @@ class Prim_MST_maker:
                 y0 = ( (self.rows - nodes[i][0] - 1)*2 + 1 )*DISC_V
                 y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*DISC_V
                 plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
-                
-        # Plot waypoints
+        # Plot connected waypoints
         if(PRINT_PATH==True):
-            for w in range(len(wpnts)-1):
-                x1 = wpnts[w][1]
-                x2 = wpnts[w+1][1]
-                y1 = wpnts[w][0]
-                y2 = wpnts[w+1][0]
-                plt.plot(x1,y1,'.k',markersize=S_MARKERIZE,color=PATH_COLOR)
-                if(x2>x1):
-                    if(y2>y1):
-                        # F U
-                        if(wpnts_class[w+1]==1):
-                            # Bottom - Left
-                            plt.plot([x1,x2-r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            # plt.plot(x2-r_min,y1,'.k',markersize=S_MARKERIZE)
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x2-r_min,y1+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                            e2 = pat.Arc([x2-r_min,y1+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR)
-                            if(r_min != r_max):
-                                # plt.plot(x2,y1+r_min,'.k',markersize=S_MARKERIZE)
-                                plt.plot([x2,x2],[y1+r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            ax.add_patch(e2)
+            # The distance and time arrays are the same length as the waypoints array
+            circ_flag = 0
+            for w in range(1,len(self.wpnts_final_list[r])):
+                # dist = self.dist_final_list[r][w]
+                time = self.time_cumulative_list[r][w]
+                if(time >= time_start)and(time <= time_end):
+                    if(len(self.wpnts_final_list[r][w])==2): # line
+                        if(circ_flag == 0):    
+                            plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
                         else:
-                            # Top - Backtrack / Right
-                            if(r_min != r_max):
-                                plt.plot([x1,x1],[y1,y2-r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x1+r_min,y2-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
-                            e1 = pat.Arc([x1+r_min,y2-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                            plt.plot([x1+r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
-                            ax.add_patch(e1)
-                    elif(y2<y1): 
-                        # B D
-                        if(wpnts_class[w+1]==1):
-                            # Bottom - Left Turn
-                            if(r_min != r_max):
-                                plt.plot([x1,x1],[y1,y2+r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x1+r_min,y2+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
-                            e1 = pat.Arc([x1+r_min,y2+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                            plt.plot([x1+r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
-                            ax.add_patch(e1)
-                        else:
-                            # Top - Right Turn / Backtrack
-                            plt.plot([x1,x2-r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x2-r_min,y1-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                            e2 = pat.Arc([x2-r_min,y1-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR)
-                            if(r_min != r_max):
-                                plt.plot([x2,x2],[y1-r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            ax.add_patch(e2)
-                    else: # y2 == y1
-                        # Line
-                        plt.plot([x1,x2],[y1,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                elif(x2<x1):
-                    if(y2>y1):
-                        # B U
-                        if(wpnts_class[w+1]==1):
-                            # Top - Left Turn
-                            if(r_min != r_max):
-                                plt.plot([x1,x1],[y1,y2-r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x1-r_min,y2-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
-                            e1 = pat.Arc([x1-r_min,y2-r_min],2*r_min,2*r_min,angle=0.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                            plt.plot([x1-r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
-                            ax.add_patch(e1)
-                        else:
-                            # Bottom - Right Turn / Backtrack
-                            plt.plot([x1,x2+r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x2+r_min,y1+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                            e2 = pat.Arc([x2+r_min,y1+r_min],2*r_min,2*r_min,angle=180.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR)
-                            if(r_min != r_max):
-                                plt.plot([x2,x2],[y1+r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            ax.add_patch(e2)
-                    elif(y2<y1):
-                        # F D
-                        if(wpnts_class[w+1]==1):
-                            # Top - Left
-                            plt.plot([x1,x2+r_min],[y1,y1],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x2+r_min,y1-r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
-                            e2 = pat.Arc([x2+r_min,y1-r_min],2*r_min,2*r_min,angle=90.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                            if(r_min != r_max):    
-                                plt.plot([x2,x2],[y1-r_min,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
-                            ax.add_patch(e2)
-                        else:
-                            # Bottom - Right Turn / Backtrack      
-                            if(r_min != r_max):
-                                plt.plot([x1,x1],[y1,y2+r_min],'-',linewidth=LINEWIDTH,color=PATH_COLOR) # line to start of circle
-                            if(PRINT_CIRCLE_CENTRES==True):
-                                plt.plot(x1-r_min,y2+r_min,'.',markersize=S_MARKERIZE,color=PATH_COLOR) # circle centre
-                            e1 = pat.Arc([x1-r_min,y2+r_min],2*r_min,2*r_min,angle=270.0,theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                            plt.plot([x1-r_min,x2],[y2,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)# line from end of circle
-                            ax.add_patch(e1)
-                    else: # y2 == y1
-                        # Line
-                        plt.plot([x1,x2],[y1,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                else: # x2 == x1
-                    # Line
-                    plt.plot([x1,x2],[y1,y2],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                            circ_flag = 0
+                    else: # circle
+                        if(PRINT_CIRCLE_CENTRES == True):
+                            plt.plot(self.wpnts_final_list[r][w][0],self.wpnts_final_list[r][w][1],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                        e1 = pat.Arc([self.wpnts_final_list[r][w][0],self.wpnts_final_list[r][w][1]],self.wpnts_final_list[r][w][2],self.wpnts_final_list[r][w][2],angle=self.wpnts_final_list[r][w][3],theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                        ax.add_patch(e1)
+                        circ_flag = 1
 
         # Plot robot initial positions
-        for r in range(self.n_r):
-            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
-            plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
+        plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
+        plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
+
+        # Plot target position
+        plt.plot(self.t_x,self.t_y,'xk',markersize=int(MARKERSIZE))
 
     def prim_algorithm(self,graph,vertices):
         selected = np.zeros([vertices],dtype=bool)
@@ -2231,11 +2017,6 @@ if __name__ == "__main__":
     GG.randomise_robots(n_r) 
     GG.randomise_obs(obs_perc)
     GG.set_target([2000,2000]) # (vert,hor) from top left 
-
-    # robot_cont = np.array([[50,160],[180,40]])
-    # GG.set_robots(n_r,robot_cont)
-    # obs = np.array([[0,1],[0,2],[1,1],[1,2],[2,2],[2,3],[2,4],[2,5],[3,4],[3,5],[7,4],[7,5],[8,4],[8,5],[9,5]])
-    # GG.set_obs(obs)
 
     # Other parameters
     Imp = False

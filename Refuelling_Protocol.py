@@ -1,4 +1,4 @@
-import DARP_Python_Main as MAIN
+import DARP_Python_MainV2 as MAIN
 import matplotlib.pyplot as plt
 import numpy as np
 import math
@@ -96,11 +96,11 @@ class refuelling:
     def refuel_randomise_start(self,n_r):
         # try:
             # Conservatively calculate the number of refuels needed
-            refuels = self.determine_refuels(n_r)
-            self.n_r = n_r * (refuels+1) # equivalent number of robots given the number of refuels
+            self.refuels = self.determine_refuels(n_r)
+            self.n_r = n_r * (self.refuels+1) # equivalent number of robots given the number of refuels
             self.exclude_for_target = list()
             # Print equivalent robots and exit if more than 16 (possible robots can only do up to 16 for now)
-            print("Robots: ", n_r," Refuels: ", refuels," Equivalent Robots: ", self.n_r)
+            print("Robots: ", n_r," Refuels: ", self.refuels," Equivalent Robots: ", self.n_r)
             if self.n_r > 16:
                 print("Number of equivalent robots are beyond algorithm capability")
                 return(False)
@@ -160,10 +160,7 @@ class refuelling:
         self.targ_cont = np.zeros(2)
         self.targ_cont[0] = (self.targ_discrete[0]+0.5)*MAIN.DISC_V*2
         self.targ_cont[1] = (self.targ_discrete[1]+0.5)*MAIN.DISC_H*2
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",self.targ_discrete,self.targ_cont)
             
-                    
-
 # Ensures it prints entire arrays when logging instead of going [1 1 1 ... 2 2 2]
 np.set_printoptions(threshold=np.inf)
 
@@ -172,10 +169,11 @@ MAIN.PRINT_DARP = True
 MAIN.PRINT_TREE = False
 MAIN.PRINT_PATH = True
 MAIN.PRINT_CIRCLE_CENTRES = False
+MAIN.JOIN_REGIONS_FOR_REFUEL = True
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-horizontal = 4000.0 # m
-vertical = 4000.0 # m
+horizontal = 2000.0 # m
+vertical = 2000.0 # m
 
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
@@ -211,7 +209,7 @@ if GG_Success == True:
     MAIN.algorithm_start(recompile=True)
 
     # Call this to run DARP and MST
-    RA = MAIN.Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, print_graphs,dist_meas=distance_measure,log_active=False,log_filename=file_log,target_filename=target_log,target_active=True)
+    RA = MAIN.Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, print_graphs,dist_meas=distance_measure,log_active=False,log_filename=file_log,target_filename=target_log,target_active=True,refuels = GG.refuels)
     RA.set_continuous(GG.rip_sml,GG.rip_cont,GG.targ_cont)
     RA.main()
 

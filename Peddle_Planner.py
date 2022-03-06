@@ -41,7 +41,7 @@ class path_planner:
         PathLenRR = self.R*((self.Head_start - HdRR)%(2*math.pi) + (HdRR - self.Head_end)%(2*math.pi)) + m2RR
 
         # Store path
-        self.paths = np.empty(4,dtype=np.object)
+        self.paths = np.empty(4,dtype=object)
         self.paths[0] = path_obj(SCcR,ECcR,PdRR,PaRR,HcentresRR,m2RR,self.HE,PathLenRR)
 
         # RL - Initial Right Turn, then Left Hand Circuit
@@ -184,6 +184,7 @@ if __name__ == "__main__":
     PP = path_planner(start,end,r_min)
     PP.shortest_path()
     PP.plot_shortest_path('Shortest Path Take-off')
+    print((PP.shortest_path).PathLen)
     PP.plot_paths(separate_plots=False)
     # plt.show()
 
@@ -198,6 +199,7 @@ if __name__ == "__main__":
 
     PP = path_planner(start,end,r_min)
     PP.shortest_path()
+    print((PP.shortest_path).PathLen)
     PP.plot_shortest_path('Shortest Path Landing')
     PP.plot_paths(separate_plots=False)
 
