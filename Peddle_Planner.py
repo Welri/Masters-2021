@@ -107,9 +107,9 @@ class path_planner:
             path = self.paths[i]
             if(path.PathLen < self.shortest_path.PathLen):
                 self.shortest_path=path
-    def plot_shortest_path(self,title):
+    def plot_shortest_path(self,title,xaxis=700):
         AR = 1/1 # (y/x)
-        xaxis = 700
+        # xaxis = 700
         yaxis = AR*xaxis
         plt.figure(figsize=[xaxis/100,yaxis/100])
         plt.xlabel('East')
@@ -123,14 +123,14 @@ class path_planner:
         HE = np.array([math.cos(self.Head_end), math.sin(self.Head_end)])
         plt.plot(self.PS[0]+np.array([0, -1])*HS[0]*2*self.R, self.PS[1]+np.array([0, -1])*HS[1]*2*self.R,'C0')   # Starting direction vector
         plt.plot(self.PE[0]+np.array([0, 1])*HE[0]*2*self.R, self.PE[1]+np.array([0, 1])*HE[1]*2*self.R,'C0')     # Ending direction vector
-        plt.text(PS[0]-2.3*self.R*HS[0],PS[1]-2.3*self.R*HS[1],'Start')          # Text on graph
-        plt.text(PE[0]+2.3*self.R*HE[0],PE[1]+2.3*self.R*HE[1],'End')            # Text on graph
+        plt.text(self.PS[0]-2.3*self.R*HS[0],self.PS[1]-2.3*self.R*HS[1],'Start')          # Text on graph
+        plt.text(self.PE[0]+2.3*self.R*HE[0],self.PE[1]+2.3*self.R*HE[1],'End')            # Text on graph
         plt.plot(xcirc+self.shortest_path.Ccd[0],ycirc+self.shortest_path.Ccd[1],'C2')                            # Departure circle
         plt.plot(xcirc+self.shortest_path.Cca[0],ycirc+self.shortest_path.Cca[1],'C3')                            # Arrival circle
         plt.plot([self.shortest_path.Pa[0], self.shortest_path.Pd[0]],[self.shortest_path.Pa[1],self.shortest_path.Pd[1]],'C0')                          # Straight path
-    def plot_paths(self,separate_plots=False):
+    def plot_paths(self,separate_plots=False,xaxis=700):
         AR = 1/1 # (y/x)
-        xaxis = 700
+        # xaxis = 700
         yaxis = AR*xaxis
         if(separate_plots==False):
             plt.figure(figsize=[xaxis/100,yaxis/100])
@@ -146,8 +146,8 @@ class path_planner:
         if(separate_plots==False):
             plt.plot(self.PS[0]+np.array([0, -1])*HS[0]*2*self.R, self.PS[1]+np.array([0, -1])*HS[1]*2*self.R,'C0')   # Starting direction vector
             plt.plot(self.PE[0]+np.array([0, 1])*HE[0]*2*self.R, self.PE[1]+np.array([0, 1])*HE[1]*2*self.R,'C0')     # Ending direction vector
-            plt.text(PS[0]-1.6*self.R*HS[0],PS[1]-1.4*self.R*HS[1],'Start')          # Text on graph
-            plt.text(PE[0]+2.3*self.R*HE[0],PE[1]+2.3*self.R*HE[1],'End')            # Text on graph
+            plt.text(self.PS[0]-1.6*self.R*HS[0],self.PS[1]-1.4*self.R*HS[1],'Start')          # Text on graph
+            plt.text(self.PE[0]+2.3*self.R*HE[0],self.PE[1]+2.3*self.R*HE[1],'End')            # Text on graph
         if(separate_plots==True):
             titles = ['RR Plot','RL Plot','LL Plot','LR Plot']
         for i in range(4):

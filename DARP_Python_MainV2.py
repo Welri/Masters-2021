@@ -9,6 +9,7 @@ import random
 import time
 import math
 from tabulate import tabulate
+import Peddle_Planner as pp
 
 # Constants
 TREE_COLOR = 'w'
@@ -105,7 +106,7 @@ class algorithm_start:
 
 # Contains main DARP code, runs the DARP algorithm and runs PrimMST by calling the other class
 class Run_Algorithm:
-    def __init__(self, EnvironmentGrid, rip, dcells, Imp, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001,0.0001,0.00001]),rl_vals=np.array([0.01,0.001,0.0001,0.00001]),dist_meas=0, log_filename="MAIN_LOGGING.txt", log_active = False, target_filename = "TARGET_LOG.txt", target_active = False,refuels=0):
+    def __init__(self, EnvironmentGrid, rip, dcells, Imp, show_grid=False,maxIter=10000,cc_vals=np.array([0.1,0.01,0.001,0.0001,0.00001]),rl_vals=np.array([0.01,0.001,0.0001,0.00001]),dist_meas=0, log_filename="MAIN_LOGGING.txt", log_active = False, target_filename = "TARGET_LOG.txt", target_active = False, refuels=0):
         self.Grid = EnvironmentGrid
         self.maxIter = maxIter
         self.dcells = dcells
@@ -147,7 +148,7 @@ class Run_Algorithm:
         print("n runs = ",self.n_runs)
         print("n link = " , self.n_link)
     
-    def set_continuous(self,rip_sml,rip_cont,tp_cont=[0,0]):
+    def set_continuous(self,rip_sml,rip_cont,tp_cont=[0,0],start_cont = None):
         self.horizontal = 2*DISC_H*self.cols 
         self.vertical = 2*DISC_V*self.rows
         self.tp_cont = tp_cont # Target initial position
@@ -156,6 +157,7 @@ class Run_Algorithm:
         self.rip_cont = rip_cont # Robot Initial position - continuous
         self.rip_cont_temp = np.zeros([len(self.rip_cont),2])
         self.rip_sml = rip_sml # Robot Initial position - small cells
+        self.start_cont = start_cont
 
         ind = np.zeros([self.n_r],dtype=int)
         rip_sml_temp = np.zeros([self.n_r,2],dtype=int)
@@ -420,7 +422,7 @@ class Run_Algorithm:
     def primMST(self):
         # try:
             # Run MST algorithm
-            pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont,self.n_link,self.n_runs,self.refuels,self.nr_og)
+            pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont,self.n_link,self.n_runs,self.refuels,self.nr_og,self.start_cont)
             
             # Generate final waypoints for plotting robot paths
             for r in range(self.n_r):
@@ -799,12 +801,13 @@ class enclosed_space_check:
 
 # Contains main PrimMST code - run from "Run_Algorithm"
 class Prim_MST_maker:
-    def __init__(self,A,n_r,rows,cols,rip,Ilabel,rip_cont,rip_sml,tp_cont,n_link,n_runs,refuels,nr_og):
+    def __init__(self,A,n_r,rows,cols,rip,Ilabel,rip_cont,rip_sml,tp_cont,n_link,n_runs,refuels,nr_og,start_cont):
         self.A = A
         self.n_r = n_r
         self.rows = rows
         self.cols = cols
         self.rip = rip
+        self.rip_heading = np.zeros(len(rip))
         self.grids = Ilabel
         self.rip_cont = rip_cont
         self.rip_sml = rip_sml
@@ -815,6 +818,7 @@ class Prim_MST_maker:
         self.n_runs = n_runs
         self.nr_og = nr_og
         self.refuels = refuels
+        self.start_cont = start_cont
 
         self.wpnts_final_list = list()
         self.dist_final_list = list()
@@ -914,8 +918,44 @@ class Prim_MST_maker:
             self.wpnts_class_list.append(self.waypoint_class)
         
         # Shifting robot initial positions by half cell - p is found during waypoint generation
+        if(self.refuels > 0):
+            self.head = np.zeros(len(self.rip_cont))
+            self.TO_path_lengths = np.zeros(len(self.rip_cont))
         for r in range(self.n_r):
+            if(self.refuels > 0):
+                dx = self.wpnts_cont_list[r][self.p[r]][1] - self.rip[r][1] # x_shift - x_old
+                dy = self.wpnts_cont_list[r][self.p[r]][0] - self.rip[r][0] # y_shift - y_old
+                if(dy>0):
+                    # Heading South
+                    head = 270
+                elif(dy<0):
+                    # Heading North
+                    head = 90
+                elif(dx>0):
+                    # Heading West
+                    head = 180
+                elif(dx<0):
+                    # Heading East
+                    head = 0
+                self.head[r] = head
+                ## Peddle planner
+                PS = self.start_cont
+                PE = self.wpnts_cont_list[r][self.p[r]]
+                Head_start = 90*math.pi/180 # Start going North from landing strip
+                Head_end = head*math.pi/180 # Heading at the end (rip)
+                start = [PS,Head_start]
+                end = [PE,Head_end]
+                PP = pp.path_planner(start,end,r_min)
+                PP.shortest_path()
+                self.TO_path_lengths[r] = (PP.shortest_path).PathLen
+                # TODO: calculate take off times
+                # TODO: calculate landing distances and times
+                # TODO: Create schedules
+                # print((PP.shortest_path).PathLen)
+                # PP.plot_shortest_path('Shortest Path Landing',xaxis=2500)
+                # PP.plot_paths(separate_plots=False)
             self.rip_cont[r] = self.wpnts_cont_list[r][self.p[r]]
+            
 
         # Shifting waypoints to start at robot position and making it closed loop
         if(TARGET_FINDING):

@@ -115,6 +115,9 @@ class refuelling:
             self.rip_sml = np.zeros([self.n_r,2],dtype=int)
             self.rip_cont = np.zeros([self.n_r,2],dtype=float)
             start = self.possible_robots_list[ rand.randint(0,len(self.possible_robots_list)-1) ]
+            self.start_cont = np.zeros(2)
+            self.start_cont[0] = (start[0]+0.5)*MAIN.DISC_V*2
+            self.start_cont[1] = (start[1]+0.5)*MAIN.DISC_H*2
             for r in range(self.n_r):
                 move = self.moves[r]
                 self.rip[r][0] = move[0] + start[0]
@@ -210,7 +213,7 @@ if GG_Success == True:
 
     # Call this to run DARP and MST
     RA = MAIN.Run_Algorithm(EnvironmentGrid, GG.rip, dcells, Imp, print_graphs,dist_meas=distance_measure,log_active=False,log_filename=file_log,target_filename=target_log,target_active=True,refuels = GG.refuels)
-    RA.set_continuous(GG.rip_sml,GG.rip_cont,GG.targ_cont)
+    RA.set_continuous(GG.rip_sml,GG.rip_cont,tp_cont=GG.targ_cont,start_cont = GG.start_cont)
     RA.main()
 
     if print_graphs == True:
