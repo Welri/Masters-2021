@@ -1,4 +1,5 @@
 from os import name
+from types import NoneType
 import matplotlib.pyplot as plt
 import numpy as np
 import math
@@ -64,6 +65,7 @@ class path_planner:
             self.paths[1] = path_obj(SCcR,ECcL,PdRL,PaRL,HdiagRL,2*sRL,self.HE,PathLenRL)
         else:
             PathLenRL = np.inf
+            self.paths[1] = path_obj(None,None,None,None,None,None,None,PathLenRL)
         
         # LL - Initial Left Turn, then Left Hand Circuit
         SCcL = self.PS + np.dot(self.CW90,self.HS)*self.R                   # Centre of initial left circle
@@ -100,6 +102,7 @@ class path_planner:
             self.paths[3] = path_obj(SCcL,ECcR,PdLR,PaLR,HdiagLR,2*sLR,self.HE,PathLenLR)
         else:
             PathLenLR = np.inf
+            self.paths[3] = path_obj(None,None,None,None,None,None,None,PathLenRL)
 
         path = self.paths[0]
         self.shortest_path = path
@@ -177,7 +180,7 @@ if __name__ == "__main__":
     PE = np.array([500,500])
     # Start and End headings
     Head_start = 90*math.pi/180
-    Head_end = 0*math.pi/180
+    Head_end = (180+180)*math.pi/180
     start = [PS,Head_start]
     end = [PE,Head_end]
 
@@ -189,18 +192,18 @@ if __name__ == "__main__":
     # plt.show()
 
     # Start and End coordinates
-    PS = np.array([500,500])
-    PE = np.array([0,0])
-    # Start and End headings
-    Head_start = 0*math.pi/180
-    Head_end = 270*math.pi/180
-    start = [PS,Head_start]
-    end = [PE,Head_end]
+    # PS = np.array([500,500])
+    # PE = np.array([0,0])
+    # # Start and End headings
+    # Head_start = 0*math.pi/180
+    # Head_end = 270*math.pi/180
+    # start = [PS,Head_start]
+    # end = [PE,Head_end]
 
-    PP = path_planner(start,end,r_min)
-    PP.shortest_path()
-    print((PP.shortest_path).PathLen)
-    PP.plot_shortest_path('Shortest Path Landing')
-    PP.plot_paths(separate_plots=False)
+    # PP = path_planner(start,end,r_min)
+    # PP.shortest_path()
+    # print((PP.shortest_path).PathLen)
+    # PP.plot_shortest_path('Shortest Path Landing')
+    # PP.plot_paths(separate_plots=False)
 
     plt.show()

@@ -25,6 +25,7 @@ TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 TARGET_FINDING = True # Does path truncation and target printing
 JOIN_REGIONS_FOR_REFUEL = False
+REFUEL_TIME = 100
 
 ''' Mavic Air 2 Camera (Imagine )
     # Height = 350 # m above ground
@@ -145,8 +146,8 @@ class Run_Algorithm:
             elif val>=0:
                 self.n_runs[r] = val
                 val += 1
-        print("n runs = ",self.n_runs)
-        print("n link = " , self.n_link)
+        # print("n runs = ",self.n_runs)
+        # print("n link = " , self.n_link)
     
     def set_continuous(self,rip_sml,rip_cont,tp_cont=[0,0],start_cont = None):
         self.horizontal = 2*DISC_H*self.cols 
@@ -420,30 +421,108 @@ class Run_Algorithm:
             file_log.close()
             
     def primMST(self):
-        # try:
+        try:
             # Run MST algorithm
             pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont,self.n_link,self.n_runs,self.refuels,self.nr_og,self.start_cont)
-            
-            # Generate final waypoints for plotting robot paths
-            for r in range(self.n_r):
-                pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r)
+            self.wait_times = np.zeros(self.n_r)
+            if(self.refuels > 0):
+                r_append = 0 # The waypoint, time and distance arrays get appended in a different order, tracked here
+                for run in range(self.refuels+1):
+                    take_off_total = 0           
+                    for r_og in range(self.nr_og):
+                        r = r_og*(self.refuels+1)+run
+                        if(run == 0):
+                            n = r_og*(self.refuels+1)
+                            take_off_total = take_off_total + pMST.TO_time[n] # Add take-off time to total
+                            pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total)
+                            flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
+                            if(r_og == 0):
+                                # Wait time is zero
+                                self.wait_times[r] = 0
+                                landing_time = flight_time + pMST.LD_time[n] # Time after take-off, flight and landing
+                                landing_time_prev = landing_time
+                            else:
+                                if(flight_time < landing_time_prev):
+                                    # If current robot finishes flight before previous one finishes landing
+                                    wait_time = landing_time_prev - flight_time
+                                    # Wait time has to be multiple of r_min circumference
+                                    circ = 2*np.pi*(r_min)
+                                    multiple = math.ceil(wait_time/circ)
+                                    wait_time = multiple*circ
+                                    self.wait_times[r] = wait_time
+                                else:
+                                    wait_time = 0
+                                    self.wait_times[r] = wait_time
+                                landing_time = flight_time + wait_time + pMST.LD_time[n] # Time after take-off, flight, wait and landing
+                                landing_time_prev = landing_time
+                            
+                        else:
+                            n = r_og*(self.refuels+1)
+                            if(r_og==0):
+                                take_off_total = take_off_total + landing_time_prev + REFUEL_TIME + pMST.TO_time[n] # Time after take-off
+                            else:
+                                take_off_total = take_off_total + pMST.TO_time[n] # Time after take-off
+                            pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total)
+                            flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
+                            if(r_og == 0):
+                                # Wait time is zero
+                                self.wait_times[r] = 0
+                                landing_time = flight_time + pMST.LD_time[n] # Time after take-off, flight and landing
+                                landing_time_prev = landing_time
+                            else:
+                                if(flight_time < landing_time_prev):
+                                    # If current robot finishes flight before previous one finishes landing
+                                    wait_time = landing_time_prev - flight_time
+                                    # Wait time has to be multiple of r_min circumference
+                                    circ = 2*np.pi*(r_min)
+                                    multiple = math.ceil(wait_time/circ)
+                                    wait_time = multiple*circ
+                                    self.wait_times[r] = wait_time
+                                else:
+                                    wait_time = 0
+                                    self.wait_times[r] = 0
+                                landing_time = flight_time + wait_time + pMST.LD_time[n] # Time after take-off, flight, wait and landing
+                                landing_time_prev = landing_time
+                        r_append += 1 
+            elif(self.refuels == 0):
+                for r in range(self.n_r):
+                    pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,0)
+
             print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
             
             # Print STC paths on DARP plot
             if (self.show_grid == True):
                 for r in range(self.n_r):
                     pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r,time_end=pMST.TIME_BREAK)
+                # for r in range(self.n_r):
+                #     pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r)
 
-            data = [["Robot","Time Achieved","Time Limit","Time Difference","Distance","Rotations"]]
-            for r in range(self.n_r):
-                time_ach = pMST.time_totals[r]
-                rot_ach = pMST.rotations[r]
-                dist_ach = pMST.dist_totals[r]
-                data.append([r,round(time_ach,1),round(FLIGHT_TIME,1),round(FLIGHT_TIME - time_ach,1),round(dist_ach,1),round(rot_ach,0)])
-            
+            # Print time tables
+            if (self.refuels > 0):
+                data = [["Robot","Refuel","OG Robot","Take-off","Flight","Wait","Landing","Total Time","Time Limit","Time Diff","Distance","Rotations"]]
+                for r in range(self.n_r):
+                    run = self.n_runs[r]
+                    r_og = self.n_link[r]
+                    take_off = pMST.TO_time[r]
+                    landing = pMST.LD_time[r]
+                    wait = self.wait_times[r]
+                    flight_time = pMST.time_totals[pMST.r_append[r]]
+                    total_time = take_off + flight_time + wait + landing
+                    rot_ach = pMST.rotations[r]
+                    dist_ach = pMST.dist_totals[r]
+                    data.append([r,run,r_og,round(take_off,1),round(flight_time,1),round(wait,1),round(landing,1),round(total_time,1),round(FLIGHT_TIME,1),round(FLIGHT_TIME - total_time,1),round(dist_ach,1),round(rot_ach,0)])
+            else:
+                data = [["Robot","Total Time","Time Limit","Time Diff","Distance","Rotations"]]
+                for r in range(self.n_r):
+                    total_time = pMST.time_totals[pMST.r_append[r]]
+                    rot_ach = pMST.rotations[r]
+                    dist_ach = pMST.dist_totals[r]
+                    data.append([r,round(total_time,1),round(FLIGHT_TIME,1),round(FLIGHT_TIME - total_time,1),round(dist_ach,1),round(rot_ach,0)])
             print(tabulate(data))
-        # except:
-        #     print("Prim algorithm failed to implement...")
+            # TODO: Print out schedules in some way
+
+        except:
+            print("Prim algorithm failed to implement...")
     
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -819,6 +898,7 @@ class Prim_MST_maker:
         self.nr_og = nr_og
         self.refuels = refuels
         self.start_cont = start_cont
+        self.r_append = list()
 
         self.wpnts_final_list = list()
         self.dist_final_list = list()
@@ -920,7 +1000,12 @@ class Prim_MST_maker:
         # Shifting robot initial positions by half cell - p is found during waypoint generation
         if(self.refuels > 0):
             self.head = np.zeros(len(self.rip_cont))
-            self.TO_path_lengths = np.zeros(len(self.rip_cont))
+            # Take-off pathlengths and times
+            self.TO_dist = np.zeros(len(self.rip_cont))
+            self.TO_time = np.zeros(len(self.rip_cont))
+            # Landing pathlengths and times
+            self.LD_dist = np.zeros(len(self.rip_cont))
+            self.LD_time = np.zeros(len(self.rip_cont))
         for r in range(self.n_r):
             if(self.refuels > 0):
                 dx = self.wpnts_cont_list[r][self.p[r]][1] - self.rip[r][1] # x_shift - x_old
@@ -938,7 +1023,7 @@ class Prim_MST_maker:
                     # Heading East
                     head = 0
                 self.head[r] = head
-                ## Peddle planner
+                ## Peddle planner - take-off
                 PS = self.start_cont
                 PE = self.wpnts_cont_list[r][self.p[r]]
                 Head_start = 90*math.pi/180 # Start going North from landing strip
@@ -947,16 +1032,25 @@ class Prim_MST_maker:
                 end = [PE,Head_end]
                 PP = pp.path_planner(start,end,r_min)
                 PP.shortest_path()
-                self.TO_path_lengths[r] = (PP.shortest_path).PathLen
-                # TODO: calculate take off times
-                # TODO: calculate landing distances and times
+                self.TO_dist[r] = (PP.shortest_path).PathLen # Take-off distances
+                self.TO_time[r] = (PP.shortest_path).PathLen / VEL # Take-off times
+                ## Pedddle planner - landing
+                PS = self.wpnts_cont_list[r][self.p[r]]
+                PE = self.start_cont
+                Head_start = head*math.pi/180 # Start at heading it ends circuit with
+                Head_end = 270*math.pi/180 # Landing going South to the landing strip
+                start = [PS,Head_start]
+                end = [PE,Head_end]
+                PP = pp.path_planner(start,end,r_min)
+                PP.shortest_path()
+                self.LD_dist[r] = (PP.shortest_path).PathLen
+                self.LD_time[r] = (PP.shortest_path).PathLen / VEL
                 # TODO: Create schedules
                 # print((PP.shortest_path).PathLen)
                 # PP.plot_shortest_path('Shortest Path Landing',xaxis=2500)
                 # PP.plot_paths(separate_plots=False)
             self.rip_cont[r] = self.wpnts_cont_list[r][self.p[r]]
-            
-
+ 
         # Shifting waypoints to start at robot position and making it closed loop
         if(TARGET_FINDING):
             print("Robot:",self.TARGET_CELL[0],"Ind: ",self.TARGET_CELL[1],"Waypoint: ",self.wpnts_cont_list[self.TARGET_CELL[0]][self.TARGET_CELL[1]],"Target Location: ",self.t_y,self.t_x)
@@ -996,38 +1090,6 @@ class Prim_MST_maker:
             self.wpnts_cont_list[r] = wpnts_updated
             self.wpnts_class_list[r] = wpnts_class_updated
 
-    ''' JAVA MST COMMENTED OUT - indented
-        # def write_input(self,graph,dim):
-        #     # write graphs to file
-        #     file_in = open("MST_Input.txt","w")
-        #     file_in.write(str(dim))
-        #     file_in.write("\n")
-        #     for i in range(dim):
-        #         for j in range(dim):
-        #             file_in.write(str(graph[i][j]))
-        #             file_in.write("\n")
-        #     file_in.close()
-        
-        # def run_subprocess(self):
-        #     # Run the OS appropriate script to run the Java program for Prim's MST Algorithm for individual area searches
-        #     if (os.name == 'nt'):
-        #         # print("The current operating system is WINDOWS")
-        #         subprocess.call([r'pMST_Run_Java.bat'])
-        #     elif (os.name == 'posix'):
-        #         # print("The current operating system is UBUNTU")
-        #         subprocess.call("./pMST_Run_Java.sh")
-        #     else:
-        #         print("WARNING: Unrecognised operating system")
-        
-        # def read_output(self,dim):
-        #     file_out = open("MST_Output.txt","r")
-        #     parents = np.zeros(dim,dtype=int)
-        #     for d in range(dim):
-        #         parents[d] = int(file_out.readline())
-        #     file_out.close()
-        #     return(parents)
-        # '''
-    
     def select_start_node(self,nodes):
         for node in nodes:
             # Select first node with only one edge
@@ -1601,7 +1663,7 @@ class Prim_MST_maker:
                     self.TARGET_CELL = np.array([self.current_r,self.wpnt_ind-1])
                     self.TARGET_FOUND = True
 
-    def waypoint_final_generation(self,wpnts,wpnts_class,r):
+    def waypoint_final_generation(self,wpnts,wpnts_class,r,start_timestamp):
         # Waypoint, distance and time arrays created to describe the path
         # Includes graph drawing for tree and paths
         rotations = 0
@@ -1614,15 +1676,15 @@ class Prim_MST_maker:
         time_break = False
         dist_tot = 0
         time_tot = 0
-        # r_og = self.n_link[r] # Original robot
+        r_og = self.n_link[r] # Original robot
         refuel_run = self.n_runs[r] # Which refuel run the robot is on
 
         # Initialise time_tot to last time on the previous run - further offsets can only be added after the path lengths are known
-        if(refuel_run == 0):
-            start_timestamp = 0
-        elif(refuel_run > 0):
-            # The last element of the previous equivalent robot's time array would represent the total time taken by the same robot in the previous run
-            start_timestamp = self.time_cumulative_list[r-1][-1] 
+        # if(refuel_run == 0):
+        #     start_timestamp = 0
+        # elif(refuel_run > 0):
+        #     # The last element of the previous equivalent robot's time array would represent the total time taken by the same robot in the previous run
+        #     start_timestamp = self.time_cumulative_list[r-1][-1] 
         for w in range(len(wpnts)-1):
             x1 = wpnts[w][1]
             x2 = wpnts[w+1][1]
@@ -1829,6 +1891,7 @@ class Prim_MST_maker:
                     time_break = True
         self.time_final_list.append(time_final)
         self.time_cumulative_list.append(time_cumulative)
+        self.r_append.append(r)
         self.time_totals[r] = time_tot # Total Time for equivalent robot r to complete path
         # Rotations
         self.rotations[r] = rotations
@@ -1870,7 +1933,7 @@ class Prim_MST_maker:
 
         # Plot robot initial positions
         plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
-        plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
+        # plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
 
         # Plot target position
         plt.plot(self.t_x,self.t_y,'xk',markersize=int(MARKERSIZE))

@@ -40,7 +40,9 @@ class refuelling:
         else:
             print("MADNESS! Why so many obstacles? More than 75%% seems a bit crazy.")
     def determine_refuels(self,n_r):
-        cells_per_robot = ( self.rows*self.cols*4 - self.obs*4  ) / n_r
+        SAFETY_FACTOR = 0 
+        # Does not exclude obstacles that get set when robot initial positions are determined
+        cells_per_robot = ( self.rows*self.cols*4 - self.obs*4  ) / n_r + SAFETY_FACTOR
         # calculate path lengths predicted
         dist = max(MAIN.ARC_L,MAIN.DISC_H,MAIN.DISC_V) * cells_per_robot # max distance each robot should fly
         time = dist / MAIN.VEL # time each robot should fly
@@ -94,7 +96,7 @@ class refuelling:
                 if okay == True:
                     self.possible_robots_list.append([r,c])
     def refuel_randomise_start(self,n_r):
-        # try:
+        try:
             # Conservatively calculate the number of refuels needed
             self.refuels = self.determine_refuels(n_r)
             self.n_r = n_r * (self.refuels+1) # equivalent number of robots given the number of refuels
@@ -144,9 +146,9 @@ class refuelling:
                         self.set_obs_rip([[start[0]+coord[0],start[1]+coord[1]]])
                         self.exclude_for_target.append([start[0]+coord[0],start[1]+coord[1]])
             return(True)
-        # except:
-        #     print("An error occurred in the refuelling protocol...")
-        #     return(False)
+        except:
+            print("An error occurred in the refuelling protocol...")
+            return(False)
     def set_target(self):
         while(True):
             found = False
@@ -175,15 +177,15 @@ MAIN.PRINT_CIRCLE_CENTRES = False
 MAIN.JOIN_REGIONS_FOR_REFUEL = True
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-horizontal = 2000.0 # m
-vertical = 2000.0 # m
+horizontal = 2500.0 # m
+vertical = 2500.0 # m
 
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
 GG.centre_obstacles = True # If you want central block of starting region to be viewed as an obstacle, set to True
 
 n_r = 2
-obs_perc = 0
+obs_perc = 10
 
 GG.randomise_obs(obs_perc)
 GG_Success = GG.refuel_randomise_start(n_r)
