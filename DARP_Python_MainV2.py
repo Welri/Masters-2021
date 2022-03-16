@@ -454,7 +454,7 @@ class Run_Algorithm:
                                     # If current robot finishes flight before previous one finishes landing, wait time incurred
                                     wait_time = landing_time_prev - flight_time
                                     # Wait time has to be multiple of r_min circumference
-                                    circ = 2*np.pi*(r_min)
+                                    circ = 2*np.pi*(r_min)/VEL
                                     multiple = math.ceil(wait_time/circ)
                                     wait_time = multiple*circ
                                     self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time
@@ -507,7 +507,7 @@ class Run_Algorithm:
                                     # If current robot finishes flight before previous one finishes landing
                                     wait_time = landing_time_prev - flight_time
                                     # Wait time has to be multiple of r_min circumference
-                                    circ = 2*np.pi*(r_min)
+                                    circ = 2*np.pi*(r_min)/VEL
                                     multiple = math.ceil(wait_time/circ)
                                     wait_time = multiple*circ
                                     self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time

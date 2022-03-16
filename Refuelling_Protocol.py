@@ -177,8 +177,8 @@ MAIN.PRINT_CIRCLE_CENTRES = False
 MAIN.JOIN_REGIONS_FOR_REFUEL = True
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-horizontal = 2000.0 # m
-vertical = 2000.0 # m
+horizontal = 2500.0 # m
+vertical = 2500.0 # m
 
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
