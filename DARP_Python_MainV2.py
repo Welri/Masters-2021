@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as pat
 import matplotlib
+from matplotlib.lines import Line2D
 import pathlib
 import os
 import random
@@ -531,10 +532,8 @@ class Run_Algorithm:
             if (self.show_grid == True):
                 for r in range(self.n_r):
                     pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r,time_end=pMST.TIME_BREAK)
-                # for r in range(self.n_r):
-                #     pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r)
 
-            # Print time tables
+            # Print relevant data in table
             if (self.refuels > 0):
                 data = [["Robot","Refuel","OG Robot","Take-off","Flight","Wait","Landing","Total Time","Time Limit","Time Diff","Distance","Rotations"]]
                 for r in range(self.n_r):
@@ -556,6 +555,8 @@ class Run_Algorithm:
                     dist_ach = pMST.dist_totals[r]
                     data.append([r,round(total_time,1),round(FLIGHT_TIME,1),round(FLIGHT_TIME - total_time,1),round(dist_ach,1),round(rot_ach,0)])
             print(tabulate(data))
+            
+            # Print schedules in data table
             if (self.refuels > 0):
                 data = [['Robot','Refuel','OG Robot','Start Time','After Take-off','After Flight','After Wait','After Landing','After Refuel']]
                 for run in range(self.refuels+1):
@@ -569,6 +570,61 @@ class Run_Algorithm:
                             l.append(round(self.schedule[r][i],1))
                         data.append(l)
                 print(tabulate(data))
+
+            if (self.refuels > 0):
+                plt.rc('font', size=12)
+                plt.rc('axes', titlesize=15)
+                fig,ax = plt.subplots(figsize=(12,1.5*self.nr_og))
+                ax.set_yticks(np.arange(0,self.nr_og))
+                ax.set_xticks(np.linspace(0,np.max(self.schedule),15),minor=False)
+                ax.set_xticks(np.linspace(0,np.max(self.schedule),(15-1)*5+1),minor=True)
+                ax.invert_yaxis()
+                ax.set_ylabel("Robot")
+                ax.set_xlabel("Time in seconds")
+                ax.set_title("Flight Schedule")
+                legend_elements = [ Line2D([0], [0], color="C0",alpha=0.5, lw=4, label='Taking off'),
+                                    Line2D([0], [0], color="C1",alpha=0.5, lw=4, label='Flying'),
+                                    Line2D([0], [0], color="C2",alpha=0.5, lw=4, label='Waiting'),
+                                    Line2D([0], [0], color="C3",alpha=0.5, lw=4, label='Landing'),
+                                    Line2D([0], [0], color="C4",alpha=0.5, lw=4, label='Refuelling')]
+                
+                plt.tight_layout()
+                t_colours = ["C0","C1","C2","C3","C4"]
+                # Plot target finding time
+                plt.plot(np.array([pMST.TIME_BREAK,pMST.TIME_BREAK]),np.array([-0.6,self.nr_og-0.4]),'k',linestyle='dashed',linewidth=1)
+                plt.plot(pMST.TIME_BREAK,self.n_link[pMST.TARGET_CELL[0]],'xk',markersize = int(MARKERSIZE))
+                # Plot schedules
+                for r_og in range(self.nr_og):
+                    # Plot per robot
+                    max_t = 0
+                    min_t = np.inf
+                    for run in range(self.refuels+1):
+                        r = r_og*(self.refuels+1)+run
+                        time_points = self.schedule[r]
+                        if(np.max(time_points) > max_t):
+                            max_t = np.max(time_points)
+                        if(np.min(time_points) < min_t):
+                            min_t = np.min(time_points)
+                        # Plot starting line
+                        t_curr = time_points[0]
+                        plt.plot(np.array([t_curr,t_curr]),np.array([r_og-0.5,r_og+0.5]),'k',linewidth = 0.5)
+                        # Plot other time lines and boxes
+                        for t in range(1,6):
+                            t_prev = time_points[t-1]
+                            t_curr = time_points[t]
+                            plt.plot(np.array([t_curr,t_curr]),np.array([r_og-0.5,r_og+0.5]),'k',linewidth = 0.5)
+                            plt.fill([t_prev,t_curr,t_curr,t_prev],[r_og-0.5,r_og-0.5,r_og+0.5,r_og+0.5],t_colours[t-1],alpha=0.5)
+                    plt.plot([min_t,max_t],[r_og+0.5,r_og+0.5],'k',linewidth=0.5)
+                    plt.plot([min_t,max_t],[r_og-0.5,r_og-0.5],'k',linewidth=0.5)
+                val = max_t*0.04
+                ax.set_xlim(-val,max_t+val*5)
+                # plt.grid(which='major',axis='x', color='k',linewidth=0.1)
+                # plt.grid(which='minor',axis='x', color='k',linestyle='dotted',linewidth=0.1)
+                # plt.xticks(rotation=90)
+                ax.legend(handles = legend_elements,loc="best")
+                            
+
+
         # except:
         #     print("Prim algorithm failed to implement...")
     
