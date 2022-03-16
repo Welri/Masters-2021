@@ -146,8 +146,6 @@ class Run_Algorithm:
             elif val>=0:
                 self.n_runs[r] = val
                 val += 1
-        # print("n runs = ",self.n_runs)
-        # print("n link = " , self.n_link)
     
     def set_continuous(self,rip_sml,rip_cont,tp_cont=[0,0],start_cont = None):
         self.horizontal = 2*DISC_H*self.cols 
@@ -421,55 +419,89 @@ class Run_Algorithm:
             file_log.close()
             
     def primMST(self):
-        try:
+        # try:
             # Run MST algorithm
             pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont,self.n_link,self.n_runs,self.refuels,self.nr_og,self.start_cont)
-            self.wait_times = np.zeros(self.n_r)
+            self.schedule = np.zeros([self.n_r,6])
+            # Scheduling protocol
             if(self.refuels > 0):
                 r_append = 0 # The waypoint, time and distance arrays get appended in a different order, tracked here
                 for run in range(self.refuels+1):
-                    take_off_total = 0           
+                    take_off_total = 0 # Accumulated take-off times          
+                    # Step through a specific run for each of the original robots
+                    # One run must complete for all robots before the first robot can take-off again for the next run
                     for r_og in range(self.nr_og):
                         r = r_og*(self.refuels+1)+run
                         if(run == 0):
-                            n = r_og*(self.refuels+1)
-                            take_off_total = take_off_total + pMST.TO_time[n] # Add take-off time to total
-                            pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total)
+                            self.schedule[r][0] = take_off_total # Start time
+                            take_off_total = take_off_total + pMST.TO_time[r] # Add take-off time to total - this represents the time after take-off
+                            self.schedule[r][1] = take_off_total # Time after take-off
+                            pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total) # Start time is end of take-off
                             flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
+                            self.schedule[r][2] = flight_time # Time after flight
                             if(r_og == 0):
-                                # Wait time is zero
-                                self.wait_times[r] = 0
-                                landing_time = flight_time + pMST.LD_time[n] # Time after take-off, flight and landing
-                                landing_time_prev = landing_time
+                                # Wait time is zero for first robot - it lands first
+                                self.schedule[r][3] = flight_time  # Time after flight and no wait
+                                landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight and landing
+                                self.schedule[r][4] = landing_time # Time after landing
+                                self.schedule[r][5] = landing_time + REFUEL_TIME # Time after refuel
                             else:
+                                # previous r_og
+                                r_prev = (r_og-1)*(self.refuels+1)+run
+                                landing_time_prev = self.schedule[r_prev][4]
                                 if(flight_time < landing_time_prev):
-                                    # If current robot finishes flight before previous one finishes landing
+                                    # If current robot finishes flight before previous one finishes landing, wait time incurred
                                     wait_time = landing_time_prev - flight_time
                                     # Wait time has to be multiple of r_min circumference
                                     circ = 2*np.pi*(r_min)
                                     multiple = math.ceil(wait_time/circ)
                                     wait_time = multiple*circ
-                                    self.wait_times[r] = wait_time
+                                    self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time
                                 else:
-                                    wait_time = 0
-                                    self.wait_times[r] = wait_time
-                                landing_time = flight_time + wait_time + pMST.LD_time[n] # Time after take-off, flight, wait and landing
-                                landing_time_prev = landing_time
-                            
+                                    # wait time is 0
+                                    self.schedule[r][3] = flight_time # time after flight and no wait
+                                landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight, wait and landing
+                                self.schedule[r][4] = landing_time # time after landing
+                                self.schedule[r][5] = landing_time + REFUEL_TIME # Time after refuel
                         else:
-                            n = r_og*(self.refuels+1)
                             if(r_og==0):
-                                take_off_total = take_off_total + landing_time_prev + REFUEL_TIME + pMST.TO_time[n] # Time after take-off
+                                # Current robot, previous run - time after refuel
+                                r_previous_run = r_og*(self.refuels+1)+(run-1)
+                                refuel_end = self.schedule[r_previous_run][5] # Time after r_og finishes previous refuel
+                                # Final robot, previous run - time after land
+                                rf_previous_run = (self.nr_og-1)*(self.refuels+1)+(run-1)
+                                land_end_prev = self.schedule[rf_previous_run][4] # Time after previous robot lands
+                                # Starting time is the landing time of previous robot, unless refuel takes longer than that
+                                self.schedule[r][0] = max(refuel_end,land_end_prev)
+                                take_off_total = self.schedule[r][0] + pMST.TO_time[r]
+                                self.schedule[r][1] = take_off_total # Time after take-off of first robot
                             else:
-                                take_off_total = take_off_total + pMST.TO_time[n] # Time after take-off
+                                # Time after take-off of previous robot
+                                self.schedule[r][0] = take_off_total
+                                # Time after refuel of current robot in previous run
+                                r_previous_run = r_og*(self.refuels+1)+(run-1)
+                                refuel_end = self.schedule[r_previous_run][5] # Time after r_og finishes previous refuel
+                                # Check if it has finished refuelling and adjust take-off if it hasn't
+                                self.schedule[r][0] = max(self.schedule[r][0],refuel_end)
+                                take_off_total = self.schedule[r][0] + pMST.TO_time[r] # Time after take-off
+                                self.schedule[r][1] = take_off_total
                             pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total)
                             flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
+                            self.schedule[r][2] = flight_time # Time after flight
                             if(r_og == 0):
-                                # Wait time is zero
-                                self.wait_times[r] = 0
-                                landing_time = flight_time + pMST.LD_time[n] # Time after take-off, flight and landing
-                                landing_time_prev = landing_time
+                                # Wait time is zero - first robot to land (and take-off)
+                                self.schedule[r][3] = flight_time # Time after flight and no wait
+                                landing_time = flight_time + pMST.LD_time[r] # Time after take-off, flight and landing
+                                self.schedule[r][4] = landing_time # Time after landing
+                                if (run < self.refuels - 1):
+                                    # Not the last run
+                                    self.schedule[r][5] = landing_time + REFUEL_TIME
+                                else:
+                                    # No refuel time
+                                    self.schedule[r][5] = landing_time
                             else:
+                                r_prev = (r_og-1)*(self.refuels)+run
+                                landing_time_prev = self.schedule[r_prev][4]
                                 if(flight_time < landing_time_prev):
                                     # If current robot finishes flight before previous one finishes landing
                                     wait_time = landing_time_prev - flight_time
@@ -477,12 +509,17 @@ class Run_Algorithm:
                                     circ = 2*np.pi*(r_min)
                                     multiple = math.ceil(wait_time/circ)
                                     wait_time = multiple*circ
-                                    self.wait_times[r] = wait_time
+                                    self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time
                                 else:
-                                    wait_time = 0
-                                    self.wait_times[r] = 0
-                                landing_time = flight_time + wait_time + pMST.LD_time[n] # Time after take-off, flight, wait and landing
-                                landing_time_prev = landing_time
+                                    self.schedule[r][3] = flight_time # Time after flight and no wait
+                                landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight, wait and landing
+                                self.schedule[r][4] = landing_time
+                                if (run < self.refuels - 1):
+                                    # Not the last run
+                                    self.schedule[r][5] = landing_time + REFUEL_TIME
+                                else:
+                                    # No refuel time
+                                    self.schedule[r][5] = landing_time
                         r_append += 1 
             elif(self.refuels == 0):
                 for r in range(self.n_r):
@@ -505,8 +542,8 @@ class Run_Algorithm:
                     r_og = self.n_link[r]
                     take_off = pMST.TO_time[r]
                     landing = pMST.LD_time[r]
-                    wait = self.wait_times[r]
-                    flight_time = pMST.time_totals[pMST.r_append[r]]
+                    wait = self.schedule[r][3] - self.schedule[r][2]
+                    flight_time = pMST.time_totals[r] # This is still added to an array using original r value, not appended to a list like cumulative times etc.
                     total_time = take_off + flight_time + wait + landing
                     rot_ach = pMST.rotations[r]
                     dist_ach = pMST.dist_totals[r]
@@ -519,10 +556,21 @@ class Run_Algorithm:
                     dist_ach = pMST.dist_totals[r]
                     data.append([r,round(total_time,1),round(FLIGHT_TIME,1),round(FLIGHT_TIME - total_time,1),round(dist_ach,1),round(rot_ach,0)])
             print(tabulate(data))
-            # TODO: Print out schedules in some way
-
-        except:
-            print("Prim algorithm failed to implement...")
+            if (self.refuels > 0):
+                data = [['Robot','Refuel','OG Robot','Start Time','After Take-off','After Flight','After Wait','After Landing','After Refuel']]
+                for run in range(self.refuels+1):
+                    for r_og in range(self.nr_og):
+                        r = r_og*(self.refuels+1)+run
+                        l = list()
+                        l.append(r_og*(self.refuels+1)+run)
+                        l.append(run)
+                        l.append(r_og)
+                        for i in range(6):
+                            l.append(round(self.schedule[r][i],1))
+                        data.append(l)
+                print(tabulate(data))
+        # except:
+        #     print("Prim algorithm failed to implement...")
     
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
@@ -1006,6 +1054,7 @@ class Prim_MST_maker:
             # Landing pathlengths and times
             self.LD_dist = np.zeros(len(self.rip_cont))
             self.LD_time = np.zeros(len(self.rip_cont))
+        # Shift the robot starting position and caculate take off and landing times if refuelling is happening
         for r in range(self.n_r):
             if(self.refuels > 0):
                 dx = self.wpnts_cont_list[r][self.p[r]][1] - self.rip[r][1] # x_shift - x_old
