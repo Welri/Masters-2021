@@ -494,7 +494,7 @@ class Run_Algorithm:
                                 self.schedule[r][3] = flight_time # Time after flight and no wait
                                 landing_time = flight_time + pMST.LD_time[r] # Time after take-off, flight and landing
                                 self.schedule[r][4] = landing_time # Time after landing
-                                if (run < self.refuels - 1):
+                                if (run < self.refuels):
                                     # Not the last run
                                     self.schedule[r][5] = landing_time + REFUEL_TIME
                                 else:
@@ -515,7 +515,7 @@ class Run_Algorithm:
                                     self.schedule[r][3] = flight_time # Time after flight and no wait
                                 landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight, wait and landing
                                 self.schedule[r][4] = landing_time
-                                if (run < self.refuels - 1):
+                                if (run < self.refuels):
                                     # Not the last run
                                     self.schedule[r][5] = landing_time + REFUEL_TIME
                                 else:
@@ -531,7 +531,8 @@ class Run_Algorithm:
             # Print STC paths on DARP plot
             if (self.show_grid == True):
                 for r in range(self.n_r):
-                    pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r,time_end=pMST.TIME_BREAK)
+                    # pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r,time_end=pMST.TIME_BREAK)
+                    pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r)
 
             # Print relevant data in table
             if (self.refuels > 0):
@@ -571,6 +572,7 @@ class Run_Algorithm:
                         data.append(l)
                 print(tabulate(data))
 
+            # Print schedules graph
             if (self.refuels > 0):
                 plt.rc('font', size=12)
                 plt.rc('axes', titlesize=15)
@@ -622,9 +624,6 @@ class Run_Algorithm:
                 # plt.grid(which='minor',axis='x', color='k',linestyle='dotted',linewidth=0.1)
                 # plt.xticks(rotation=90)
                 ax.legend(handles = legend_elements,loc="best")
-                            
-
-
         # except:
         #     print("Prim algorithm failed to implement...")
     

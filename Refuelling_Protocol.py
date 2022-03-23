@@ -177,15 +177,15 @@ MAIN.PRINT_CIRCLE_CENTRES = False
 MAIN.JOIN_REGIONS_FOR_REFUEL = True
 
 # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-horizontal = 2500.0 # m
-vertical = 2500.0 # m
+horizontal = 4000.0 # m
+vertical = 4000.0 # m
 
 # Establish Small Node size
 GG = refuelling(horizontal,vertical)
 GG.centre_obstacles = True # If you want central block of starting region to be viewed as an obstacle, set to True
 
-n_r = 2
-obs_perc = 10
+n_r = 4
+obs_perc = 5
 
 GG.randomise_obs(obs_perc)
 GG_Success = GG.refuel_randomise_start(n_r)

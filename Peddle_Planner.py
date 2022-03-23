@@ -192,18 +192,18 @@ if __name__ == "__main__":
     # plt.show()
 
     # Start and End coordinates
-    # PS = np.array([500,500])
-    # PE = np.array([0,0])
-    # # Start and End headings
-    # Head_start = 0*math.pi/180
-    # Head_end = 270*math.pi/180
-    # start = [PS,Head_start]
-    # end = [PE,Head_end]
+    PS = np.array([500,500])
+    PE = np.array([0,0])
+    # Start and End headings
+    Head_start = 0*math.pi/180
+    Head_end = 270*math.pi/180
+    start = [PS,Head_start]
+    end = [PE,Head_end]
 
-    # PP = path_planner(start,end,r_min)
-    # PP.shortest_path()
-    # print((PP.shortest_path).PathLen)
-    # PP.plot_shortest_path('Shortest Path Landing')
-    # PP.plot_paths(separate_plots=False)
+    PP = path_planner(start,end,r_min)
+    PP.shortest_path()
+    print((PP.shortest_path).PathLen)
+    PP.plot_shortest_path('Shortest Path Landing')
+    PP.plot_paths(separate_plots=False)
 
     plt.show()
