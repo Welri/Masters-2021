@@ -12,6 +12,13 @@ import math
 from tabulate import tabulate
 import Peddle_Planner as pp
 
+'''Remember to choose the following values
+    * Height
+    * VEL
+    * TAKE OFF HEIGHT (wingtra)
+    * Camera and UAV Parameters
+'''
+
 # Constants
 TREE_COLOR = 'w'
 PATH_COLOR = 'k'
@@ -26,7 +33,7 @@ TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 TARGET_FINDING = True # Does path truncation and target printing
 JOIN_REGIONS_FOR_REFUEL = False
-REFUEL_TIME = 100
+REFUEL_TIME = 100 # Seconds
 
 ''' Mavic Air 2 Camera (Imagine )
     # Height = 350 # m above ground
@@ -47,15 +54,8 @@ REFUEL_TIME = 100
 phi_max = 25 # max bank angle in degrees
 g_acc = 9.81 # m/s
 
-# CHOSEN VALUES
-VEL = 12 # m/s
-Height = 120 # m above ground
-
-# Calculating required values from velocity
-r_min = VEL**2 / ( g_acc * math.tan(phi_max*math.pi/180) ) # m - Minimum turning radius
-
-# CAMERA PARAMETERS
-# Wingtra with Sony RX1R II 
+# UAV and CAMERA PARAMETERS
+# Wingtra with Sony RX1R II (camera with best GSD as payload on this UAV)
 focal_length = 35 # mm
 V = 2
 H = 3
@@ -64,25 +64,67 @@ sensor_width = 35.9 # mm
 sensor_height = 24 # mm
 px_h = 8000
 px_w = 5320
+V_cruise = 16 # m/s
+# V_stall unkown
+TAKE_OFF_HEIGHT = 0 # m (TERRAIN DEPENDANT)
+# Flight time dependent on take-off height
+if(TAKE_OFF_HEIGHT<500):
+    # Value for 0 - 500m take-off
+    FLIGHT_TIME = 59 * 60 # seconds
+else:
+    # Value for 2000m take-off
+    FLIGHT_TIME = 42 * 60 # seconds
 
-# Calculating actual FOV values
+# CALCULATE MAXIMUM ALLOWABLE HEIGHT
+GSD_max = 4 # 4cm/px
+H_max = GSD_max * focal_length * px_w / (100 * sensor_width)
+
+# CHOSEN VALUES
+VEL = 16 # m/s
+Height = 200 # m above ground
+
+# Sanity check for height
+if(Height>H_max):
+    print("Error: Height is too high for required GSD. Maximum allowable height: 200")
+    exit()
+
+# CALCULATING SUGGESTED MAXIMUM VELOCITY AT CHOSEN HEIGHT
+V_max = math.sqrt((Height *sensor_width / (focal_length*(4*math.sqrt(2)-2))) * g_acc * math.tan(phi_max*math.pi/180))
+
+# Sanity check for velocity
+if(VEL>V_max):
+    print("Error: Velocity is too high. Suggested Maximum: ",V_max, " m/s")
+    exit()
+# if(VEL<V_stall):
+# print("Error: Velocity is too low. Stall Velocity: ",V_stall," m/s")
+# exit()
+
+print("USEFUL VALUES")
+print("-------------")
+print("MAXIMUM ALLOWABLE HEIGHT  : ", round(H_max,1), "\tCHOSEN HEIGHT  : ", Height)
+print("SUGGESTED MAXIMUM VELOCITY: ", round(V_max,1), "\tCHOSEN VELOCITY: ", VEL)
+
+# CALCULATING MINIMUM TURNING RADIUS FROM VELOCITY
+r_min = VEL**2 / ( g_acc * math.tan(phi_max*math.pi/180) ) # m - Minimum turning radius
+
+# CALCULATING FOV FROM HIEGHT
 FOV_H = Height * sensor_width / focal_length # result in m
 FOV_V = AR*FOV_H # m
+
 # Conservatively choose square cell values
 # Note: for asymmetric cells FOV_V < FOV_H is a requirement
 DISC_H = math.sqrt(2)/(4-math.sqrt(2)) * FOV_H
 DISC_V = DISC_H
 print("\nDISCRETIZATION SIZE: ", round(DISC_V,2), "X", round(DISC_H,2))
 r_max = DISC_V/2
-v_max = math.sqrt( r_max * g_acc * math.tan(phi_max*math.pi/180) ) # m/s
+# v_max = math.sqrt( r_max * g_acc * math.tan(phi_max*math.pi/180) ) # m/s
 GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
 GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
-CT_Overlap = (DISC_V*(FOV_H -DISC_H)) / (DISC_V*DISC_H) # Crosstack overlap
+CT_Overlap = ((FOV_H -DISC_H)) / (DISC_H) # Crosstack overlap
 
-ARC_L = DISC_V/2 - r_min + r_min*np.pi/2 + DISC_H/2 - r_min
-FLIGHT_TIME = 30 * 60 # seconds
+ARC_L = (DISC_V/2 - r_min) + r_min*np.pi/2 + (DISC_H/2 - r_min) # two straight segments, if there are straight segments, and the arc
 
-print("GSD: ",round(GSD_h,2),"Overlap of: ", round(CT_Overlap,2),"\n")
+print("GSD: ",round(GSD_h,2),"Cross-track overlap: ", round(CT_Overlap,2),"\n")
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -671,9 +713,10 @@ class Run_Algorithm:
         if(GSD_h > 4.0):
             print("WARNING: Ground Sampling Distance is too high for reasonable human detection.\nOPTIONS:\n1. Choose camera with higher RESOLUTION\n2. Reduce flying HEIGHT\n3. Choose a camera with a lower ratio of sensor size to focal length.\n")
             # self.abort = True
-        if(VEL>v_max):
+        if(VEL>V_max):
             print("WARNING: velocity is too high. Cannot make turning radius and have complete coverage.\n")
-    
+        if(Height>H_max):
+            print("WARNING: height is too high for required GSD")
     def write_input(self):
         # Writes relevant inputs for java code to file
         # print(pathlib.Path("Input.txt").absolute())
