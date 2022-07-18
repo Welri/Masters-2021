@@ -1,3 +1,4 @@
+from pickle import TRUE
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,14 +19,23 @@ import Peddle_Planner as pp
     * TAKE OFF HEIGHT (wingtra)
     * Camera and UAV Parameters
 '''
-
-# Constants
+# print("\n\n\n",__import__,"\n\n\n") 
+################################ SETTINGS ################################################################################################################
 TREE_COLOR = 'w'
 PATH_COLOR = 'k'
 PRINT_DARP = True
 PRINT_TREE = False
 PRINT_PATH = True
-PRINT_CIRCLE_CENTRES = False
+
+# Note: You cannot count rotations without half shifts, time and distance measures fall away without dynamic constraints
+# Best combinations of PRINT_HALF_SHIFTS-PRINT_DYNAMIC_CONSTRAINTS are:
+    # False-False : unshifted stright line motions
+    # True-False  : shifted straight line motions
+    # True-True   : shifted with curves
+PRINT_HALF_SHIFTS = True # CAREFUL when changing this
+PRINT_DYNAMIC_CONSTRAINTS = True # CAREFUL when changing this
+PRINT_CIRCLE_CENTRES = False # Only valid with dynamic constraints active
+
 LINEWIDTH = 0.7
 S_MARKERIZE = LINEWIDTH*4
 MARKERSIZE=LINEWIDTH*12
@@ -33,39 +43,27 @@ TICK_SPACING = 1
 FIGURE_TITLE = "DARP Continuous Results"
 TARGET_FINDING = True # Does path truncation and target printing
 JOIN_REGIONS_FOR_REFUEL = False
-REFUEL_TIME = 100 # Seconds
 
-''' Mavic Air 2 Camera (Imagine )
-    # Height = 350 # m above ground
-    # focal_length = 24 # mm
-    # V = 3 
-    # H = 4
-    # AR = V/H # Aspect ratio (V/H)
-    # sensor_width = 6.4 # mm
-    # sensor_height = 4.8 # mm
-    # FOV_H = Height * sensor_width / focal_length # result in m
-    # FOV_V = AR*FOV_H # m
-    # px_h = 4000
-    # px_w = 3000
-    # GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
-    # GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px'''
-
-# GENERAL PARAMETERS
+################################ GENERAL PARAMETERS ################################################################################################
 phi_max = 25 # max bank angle in degrees
 g_acc = 9.81 # m/s
 
-# UAV and CAMERA PARAMETERS
-# Wingtra with Sony RX1R II (camera with best GSD as payload on this UAV)
-focal_length = 35 # mm
+################################ UAV and CAMERA PARAMETERS ################################################################################################
+# Sony RX1R II 
+focal_length = 35.0 # mm
 V = 2
 H = 3
 AR = V/H # Aspect ratio (V/H)
 sensor_width = 35.9 # mm
-sensor_height = 24 # mm
-px_h = 8000
-px_w = 5320
+sensor_height = 24.0 # mm
+px_w = 8000
+px_h = 5320
+
+# Wingtra
 V_cruise = 16 # m/s
 # V_stall unkown
+REFUEL_TIME = 100 # Seconds
+''' !!!!! CHOSEN !!!!! '''
 TAKE_OFF_HEIGHT = 0 # m (TERRAIN DEPENDANT)
 # Flight time dependent on take-off height
 if(TAKE_OFF_HEIGHT<500):
@@ -75,13 +73,15 @@ else:
     # Value for 2000m take-off
     FLIGHT_TIME = 42 * 60 # seconds
 
+################################ HEIGHT AND VELOCITY ################################################################################################
 # CALCULATE MAXIMUM ALLOWABLE HEIGHT
-GSD_max = 4 # 4cm/px
-H_max = GSD_max * focal_length * px_w / (100 * sensor_width)
+GSD_max = 4.0 # 4cm/px
+H_max = GSD_max * focal_length * px_w / (100.0 * sensor_width)
 
 # CHOSEN VALUES
+''' !!!!! CHOSEN !!!!! '''
 VEL = 16 # m/s
-Height = 200 # m above ground
+Height = 250 # m above ground
 
 # Sanity check for height
 if(Height>H_max):
@@ -104,13 +104,14 @@ print("-------------")
 print("MAXIMUM ALLOWABLE HEIGHT  : ", round(H_max,1), "\tCHOSEN HEIGHT  : ", Height)
 print("SUGGESTED MAXIMUM VELOCITY: ", round(V_max,1), "\tCHOSEN VELOCITY: ", VEL)
 
-# CALCULATING MINIMUM TURNING RADIUS FROM VELOCITY
+################################ CALCULATING MINIMUM TURNING RADIUS FROM VELOCITY ################################################################
 r_min = VEL**2 / ( g_acc * math.tan(phi_max*math.pi/180) ) # m - Minimum turning radius
 
-# CALCULATING FOV FROM HIEGHT
+################################ CALCULATING FOV FROM HIEGHT ################################################################################################
 FOV_H = Height * sensor_width / focal_length # result in m
 FOV_V = AR*FOV_H # m
 
+################################ DISCRETISATIONS ################################################################################################
 # Conservatively choose square cell values
 # Note: for asymmetric cells FOV_V < FOV_H is a requirement
 DISC_H = math.sqrt(2)/(4-math.sqrt(2)) * FOV_H
@@ -118,13 +119,15 @@ DISC_V = DISC_H
 print("\nDISCRETIZATION SIZE: ", round(DISC_V,2), "X", round(DISC_H,2))
 r_max = DISC_V/2
 # v_max = math.sqrt( r_max * g_acc * math.tan(phi_max*math.pi/180) ) # m/s
-GSD_h = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_h) # cm/px
-GSD_w = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_w) # cm/px
+GSD_h = Height * 100 * (sensor_height/10) / ((focal_length/10) * px_h) # cm/px
+GSD_w = Height * 100 * (sensor_width/10) / ((focal_length/10) * px_w) # cm/px
 CT_Overlap = ((FOV_H -DISC_H)) / (DISC_H) # Crosstack overlap
 
 ARC_L = (DISC_V/2 - r_min) + r_min*np.pi/2 + (DISC_H/2 - r_min) # two straight segments, if there are straight segments, and the arc
 
-print("GSD: ",round(GSD_h,2),"Cross-track overlap: ", round(CT_Overlap,2),"\n")
+print("GSD: ",round(min(GSD_h,GSD_w),2),"Cross-track overlap: ", round(CT_Overlap,2),"\n")
+
+################################ CLASSES AND FUNCTIONS ################################################################################################
 
 class algorithm_start:
     def __init__(self,recompile=True):
@@ -199,7 +202,7 @@ class Run_Algorithm:
         self.rip_cont = rip_cont # Robot Initial position - continuous
         self.rip_cont_temp = np.zeros([len(self.rip_cont),2])
         self.rip_sml = rip_sml # Robot Initial position - small cells
-        self.start_cont = start_cont
+        self.start_cont = start_cont # Refuelling start
 
         ind = np.zeros([self.n_r],dtype=int)
         rip_sml_temp = np.zeros([self.n_r,2],dtype=int)
@@ -412,6 +415,9 @@ class Run_Algorithm:
         if(self.target_active == True):
             file_log = open(self.target_filename, "a")
             file_log.write("\n")
+            # Constants for rerun (UAV and camera dependent)
+
+            # Further parameters and variables for rerun - Target_case_checker v3.0.py
             file_log.write(str(self.rows))
             file_log.write("\n")
             file_log.write(str(self.cols))
@@ -459,123 +465,147 @@ class Run_Algorithm:
             ripcontstring = ripcontstring.replace(']', '')
             file_log.write(ripcontstring)
             file_log.write("\n")
+            Astring = str(self.A.reshape(1, self.rows*self.cols))
+            Astring = Astring.replace('\n', '')
+            Astring = Astring.replace('[', '')
+            Astring = Astring.replace(']', '')
+            file_log.write(Astring)
+            file_log.write("\n")
+            Ilabelstring = str(self.Ilabel_final.reshape(1, self.n_r*self.rows*self.cols))
+            Ilabelstring = Ilabelstring.replace('\n', '')
+            Ilabelstring = Ilabelstring.replace('[', '')
+            Ilabelstring = Ilabelstring.replace(']', '')
+            file_log.write(Ilabelstring)
+            file_log.write("\n")
             file_log.close()
-            
+    
+    def rerun_MST_only(self,A,Ilabel):
+        # UNTESTED FUNCTION
+        # Requires having run init and set continuous functions
+        self.A = A
+        self.Ilabel_final = Ilabel
+
+        # Print DARP
+        if self.show_grid==True:
+            self.cont_DARP_graph() # prints final graph
+        
+        # PRIM MST SECTION
+        self.primMST()
+
     def primMST(self):
-        # try:
-            # Run MST algorithm
-            pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont,self.n_link,self.n_runs,self.refuels,self.nr_og,self.start_cont)
-            self.schedule = np.zeros([self.n_r,6])
-            # Scheduling protocol
-            if(self.refuels > 0):
-                r_append = 0 # The waypoint, time and distance arrays get appended in a different order, tracked here
-                for run in range(self.refuels+1):
-                    take_off_total = 0 # Accumulated take-off times          
-                    # Step through a specific run for each of the original robots
-                    # One run must complete for all robots before the first robot can take-off again for the next run
-                    for r_og in range(self.nr_og):
-                        r = r_og*(self.refuels+1)+run
-                        if(run == 0):
-                            self.schedule[r][0] = take_off_total # Start time
-                            take_off_total = take_off_total + pMST.TO_time[r] # Add take-off time to total - this represents the time after take-off
-                            self.schedule[r][1] = take_off_total # Time after take-off
-                            pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total) # Start time is end of take-off
-                            flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
-                            self.schedule[r][2] = flight_time # Time after flight
-                            if(r_og == 0):
-                                # Wait time is zero for first robot - it lands first
-                                self.schedule[r][3] = flight_time  # Time after flight and no wait
-                                landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight and landing
-                                self.schedule[r][4] = landing_time # Time after landing
-                                self.schedule[r][5] = landing_time + REFUEL_TIME # Time after refuel
-                            else:
-                                # previous r_og
-                                r_prev = (r_og-1)*(self.refuels+1)+run
-                                landing_time_prev = self.schedule[r_prev][4]
-                                if(flight_time < landing_time_prev):
-                                    # If current robot finishes flight before previous one finishes landing, wait time incurred
-                                    wait_time = landing_time_prev - flight_time
-                                    # Wait time has to be multiple of r_min circumference
-                                    circ = 2*np.pi*(r_min)/VEL
-                                    multiple = math.ceil(wait_time/circ)
-                                    wait_time = multiple*circ
-                                    self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time
-                                else:
-                                    # wait time is 0
-                                    self.schedule[r][3] = flight_time # time after flight and no wait
-                                landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight, wait and landing
-                                self.schedule[r][4] = landing_time # time after landing
-                                self.schedule[r][5] = landing_time + REFUEL_TIME # Time after refuel
+        # Run MST algorithm
+        pMST = Prim_MST_maker(self.A,self.n_r,self.rows,self.cols,self.rip,self.Ilabel_final,self.rip_cont,self.rip_sml,self.tp_cont,self.n_link,self.n_runs,self.refuels,self.nr_og,self.start_cont)
+        self.schedule = np.zeros([self.n_r,6])
+        # Scheduling protocol
+        if(self.refuels > 0):
+            r_append = 0 # The waypoint, time and distance arrays get appended in a different order, tracked here
+            for run in range(self.refuels+1):
+                take_off_total = 0 # Accumulated take-off times          
+                # Step through a specific run for each of the original robots
+                # One run must complete for all robots before the first robot can take-off again for the next run
+                for r_og in range(self.nr_og):
+                    r = r_og*(self.refuels+1)+run
+                    if(run == 0):
+                        self.schedule[r][0] = take_off_total # Start time
+                        take_off_total = take_off_total + pMST.TO_time[r] # Add take-off time to total - this represents the time after take-off
+                        self.schedule[r][1] = take_off_total # Time after take-off
+                        pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total) # Start time is end of take-off
+                        flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
+                        self.schedule[r][2] = flight_time # Time after flight
+                        if(r_og == 0):
+                            # Wait time is zero for first robot - it lands first
+                            self.schedule[r][3] = flight_time  # Time after flight and no wait
+                            landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight and landing
+                            self.schedule[r][4] = landing_time # Time after landing
+                            self.schedule[r][5] = landing_time + REFUEL_TIME # Time after refuel
                         else:
-                            if(r_og==0):
-                                # Current robot, previous run - time after refuel
-                                r_previous_run = r_og*(self.refuels+1)+(run-1)
-                                refuel_end = self.schedule[r_previous_run][5] # Time after r_og finishes previous refuel
-                                # Final robot, previous run - time after land
-                                rf_previous_run = (self.nr_og-1)*(self.refuels+1)+(run-1)
-                                land_end_prev = self.schedule[rf_previous_run][4] # Time after previous robot lands
-                                # Starting time is the landing time of previous robot, unless refuel takes longer than that
-                                self.schedule[r][0] = max(refuel_end,land_end_prev)
-                                take_off_total = self.schedule[r][0] + pMST.TO_time[r]
-                                self.schedule[r][1] = take_off_total # Time after take-off of first robot
+                            # previous r_og
+                            r_prev = (r_og-1)*(self.refuels+1)+run
+                            landing_time_prev = self.schedule[r_prev][4]
+                            if(flight_time < landing_time_prev):
+                                # If current robot finishes flight before previous one finishes landing, wait time incurred
+                                wait_time = landing_time_prev - flight_time
+                                # Wait time has to be multiple of r_min circumference
+                                circ = 2*np.pi*(r_min)/VEL
+                                multiple = math.ceil(wait_time/circ)
+                                wait_time = multiple*circ
+                                self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time
                             else:
-                                # Time after take-off of previous robot
-                                self.schedule[r][0] = take_off_total
-                                # Time after refuel of current robot in previous run
-                                r_previous_run = r_og*(self.refuels+1)+(run-1)
-                                refuel_end = self.schedule[r_previous_run][5] # Time after r_og finishes previous refuel
-                                # Check if it has finished refuelling and adjust take-off if it hasn't
-                                self.schedule[r][0] = max(self.schedule[r][0],refuel_end)
-                                take_off_total = self.schedule[r][0] + pMST.TO_time[r] # Time after take-off
-                                self.schedule[r][1] = take_off_total
-                            pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total)
-                            flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
-                            self.schedule[r][2] = flight_time # Time after flight
-                            if(r_og == 0):
-                                # Wait time is zero - first robot to land (and take-off)
+                                # wait time is 0
+                                self.schedule[r][3] = flight_time # time after flight and no wait
+                            landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight, wait and landing
+                            self.schedule[r][4] = landing_time # time after landing
+                            self.schedule[r][5] = landing_time + REFUEL_TIME # Time after refuel
+                    else:
+                        if(r_og==0):
+                            # Current robot, previous run - time after refuel
+                            r_previous_run = r_og*(self.refuels+1)+(run-1)
+                            refuel_end = self.schedule[r_previous_run][5] # Time after r_og finishes previous refuel
+                            # Final robot, previous run - time after land
+                            rf_previous_run = (self.nr_og-1)*(self.refuels+1)+(run-1)
+                            land_end_prev = self.schedule[rf_previous_run][4] # Time after previous robot lands
+                            # Starting time is the landing time of previous robot, unless refuel takes longer than that
+                            self.schedule[r][0] = max(refuel_end,land_end_prev)
+                            take_off_total = self.schedule[r][0] + pMST.TO_time[r]
+                            self.schedule[r][1] = take_off_total # Time after take-off of first robot
+                        else:
+                            # Time after take-off of previous robot
+                            self.schedule[r][0] = take_off_total
+                            # Time after refuel of current robot in previous run
+                            r_previous_run = r_og*(self.refuels+1)+(run-1)
+                            refuel_end = self.schedule[r_previous_run][5] # Time after r_og finishes previous refuel
+                            # Check if it has finished refuelling and adjust take-off if it hasn't
+                            self.schedule[r][0] = max(self.schedule[r][0],refuel_end)
+                            take_off_total = self.schedule[r][0] + pMST.TO_time[r] # Time after take-off
+                            self.schedule[r][1] = take_off_total
+                        pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,take_off_total)
+                        flight_time = pMST.time_cumulative_list[r_append][-1] # Time after take-off and flight
+                        self.schedule[r][2] = flight_time # Time after flight
+                        if(r_og == 0):
+                            # Wait time is zero - first robot to land (and take-off)
+                            self.schedule[r][3] = flight_time # Time after flight and no wait
+                            landing_time = flight_time + pMST.LD_time[r] # Time after take-off, flight and landing
+                            self.schedule[r][4] = landing_time # Time after landing
+                            if (run < self.refuels):
+                                # Not the last run
+                                self.schedule[r][5] = landing_time + REFUEL_TIME
+                            else:
+                                # No refuel time
+                                self.schedule[r][5] = landing_time
+                        else:
+                            r_prev = (r_og-1)*(self.refuels)+run
+                            landing_time_prev = self.schedule[r_prev][4]
+                            if(flight_time < landing_time_prev):
+                                # If current robot finishes flight before previous one finishes landing
+                                wait_time = landing_time_prev - flight_time
+                                # Wait time has to be multiple of r_min circumference
+                                circ = 2*np.pi*(r_min)/VEL
+                                multiple = math.ceil(wait_time/circ)
+                                wait_time = multiple*circ
+                                self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time
+                            else:
                                 self.schedule[r][3] = flight_time # Time after flight and no wait
-                                landing_time = flight_time + pMST.LD_time[r] # Time after take-off, flight and landing
-                                self.schedule[r][4] = landing_time # Time after landing
-                                if (run < self.refuels):
-                                    # Not the last run
-                                    self.schedule[r][5] = landing_time + REFUEL_TIME
-                                else:
-                                    # No refuel time
-                                    self.schedule[r][5] = landing_time
+                            landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight, wait and landing
+                            self.schedule[r][4] = landing_time
+                            if (run < self.refuels):
+                                # Not the last run
+                                self.schedule[r][5] = landing_time + REFUEL_TIME
                             else:
-                                r_prev = (r_og-1)*(self.refuels)+run
-                                landing_time_prev = self.schedule[r_prev][4]
-                                if(flight_time < landing_time_prev):
-                                    # If current robot finishes flight before previous one finishes landing
-                                    wait_time = landing_time_prev - flight_time
-                                    # Wait time has to be multiple of r_min circumference
-                                    circ = 2*np.pi*(r_min)/VEL
-                                    multiple = math.ceil(wait_time/circ)
-                                    wait_time = multiple*circ
-                                    self.schedule[r][3] = flight_time + wait_time # Time after flight and wait time
-                                else:
-                                    self.schedule[r][3] = flight_time # Time after flight and no wait
-                                landing_time = self.schedule[r][3] + pMST.LD_time[r] # Time after take-off, flight, wait and landing
-                                self.schedule[r][4] = landing_time
-                                if (run < self.refuels):
-                                    # Not the last run
-                                    self.schedule[r][5] = landing_time + REFUEL_TIME
-                                else:
-                                    # No refuel time
-                                    self.schedule[r][5] = landing_time
-                        r_append += 1 
-            elif(self.refuels == 0):
-                for r in range(self.n_r):
-                    pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,0)
+                                # No refuel time
+                                self.schedule[r][5] = landing_time
+                    r_append += 1 
+        elif(self.refuels == 0):
+            for r in range(self.n_r):
+                pMST.waypoint_final_generation(pMST.wpnts_cont_list[r],pMST.wpnts_class_list[r],r,0)
 
-            print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
-            
-            # Print STC paths on DARP plot
-            if (self.show_grid == True):
-                for r in range(self.n_r):
-                    # pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r,time_end=pMST.TIME_BREAK)
-                    pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r)
-
+        print("\nALLOWABLE FLIGHT TIME WITH FUEL CONSTRAINTS: ", FLIGHT_TIME )
+        
+        # Print STC paths on DARP plot
+        if (self.show_grid == True):
+            for r in range(self.n_r):
+                # pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r,time_end=pMST.TIME_BREAK)
+                pMST.print_graph(pMST.free_nodes_list[r],pMST.parents_list[r],self.ax,r)
+        if(PRINT_DYNAMIC_CONSTRAINTS):   
             # Print relevant data in table
             if (self.refuels > 0):
                 data = [["Robot","Refuel","OG Robot","Take-off","Flight","Wait","Landing","Total Time","Time Limit","Time Diff","Distance","Rotations"]]
@@ -666,9 +696,7 @@ class Run_Algorithm:
                 # plt.grid(which='minor',axis='x', color='k',linestyle='dotted',linewidth=0.1)
                 # plt.xticks(rotation=90)
                 ax.legend(handles = legend_elements,loc="best")
-        # except:
-        #     print("Prim algorithm failed to implement...")
-    
+
     def enclosed_space_handler(self):
         # Enclosed spaces (unreachable areas) are classified as obstacles
         ES = enclosed_space_check(
@@ -717,6 +745,7 @@ class Run_Algorithm:
             print("WARNING: velocity is too high. Cannot make turning radius and have complete coverage.\n")
         if(Height>H_max):
             print("WARNING: height is too high for required GSD")
+    
     def write_input(self):
         # Writes relevant inputs for java code to file
         # print(pathlib.Path("Input.txt").absolute())
@@ -1142,8 +1171,8 @@ class Prim_MST_maker:
             # Append waypoints to larger list
             self.wpnts_cont_list.append(self.waypoints_cont)
             self.wpnts_class_list.append(self.waypoint_class)
-        
-        # Shifting robot initial positions by half cell - p is found during waypoint generation
+
+        # Shifting robot initial positions by half cell (if half shifts enabled)- p is found during waypoint generation
         if(self.refuels > 0):
             self.head = np.zeros(len(self.rip_cont))
             # Take-off pathlengths and times
@@ -1197,7 +1226,7 @@ class Prim_MST_maker:
                 # PP.plot_shortest_path('Shortest Path Landing',xaxis=2500)
                 # PP.plot_paths(separate_plots=False)
             self.rip_cont[r] = self.wpnts_cont_list[r][self.p[r]]
- 
+
         # Shifting waypoints to start at robot position and making it closed loop
         if(TARGET_FINDING):
             print("Robot:",self.TARGET_CELL[0],"Ind: ",self.TARGET_CELL[1],"Waypoint: ",self.wpnts_cont_list[self.TARGET_CELL[0]][self.TARGET_CELL[1]],"Target Location: ",self.t_y,self.t_x)
@@ -1352,8 +1381,12 @@ class Prim_MST_maker:
         #  Code that checks if robot starting position is at this waypoint
         if(math.isclose(self.rip_cont[self.current_r][0],y_c))and(math.isclose(self.rip_cont[self.current_r][1],x_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y
-        self.waypoints_cont[self.wpnt_ind][1] = x
+        if(PRINT_HALF_SHIFTS== True):
+            self.waypoints_cont[self.wpnt_ind][0] = y
+            self.waypoints_cont[self.wpnt_ind][1] = x
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y_c
+            self.waypoints_cont[self.wpnt_ind][1] = x_c
         self.waypoint_class[self.wpnt_ind] = 1
         self.wpnt_ind+=1
         if(TARGET_FINDING==True):
@@ -1450,13 +1483,21 @@ class Prim_MST_maker:
             x2_c = (x2_c + 0.5)*DISC_H
         if(math.isclose(self.rip_cont[self.current_r][0],y1_c))and(math.isclose(self.rip_cont[self.current_r][1],x1_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y1
-        self.waypoints_cont[self.wpnt_ind][1] = x1
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y1
+            self.waypoints_cont[self.wpnt_ind][1] = x1
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y1_c
+            self.waypoints_cont[self.wpnt_ind][1] = x1_c
         self.wpnt_ind+=1
         if(math.isclose(self.rip_cont[self.current_r][0],y2_c))and(math.isclose(self.rip_cont[self.current_r][1],x2_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y2
-        self.waypoints_cont[self.wpnt_ind][1] = x2
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y2
+            self.waypoints_cont[self.wpnt_ind][1] = x2
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y2_c
+            self.waypoints_cont[self.wpnt_ind][1] = x2_c
         self.wpnt_ind+=1
         if(TARGET_FINDING==True):
             if(self.TARGET_FOUND == False):
@@ -1590,18 +1631,30 @@ class Prim_MST_maker:
             x3_c = (x3_c + 0.5)*DISC_H
         if(math.isclose(self.rip_cont[self.current_r][0],y1_c))and(math.isclose(self.rip_cont[self.current_r][1],x1_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y1
-        self.waypoints_cont[self.wpnt_ind][1] = x1
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y1
+            self.waypoints_cont[self.wpnt_ind][1] = x1
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y1_c
+            self.waypoints_cont[self.wpnt_ind][1] = x1_c
         self.wpnt_ind+=1
         if(math.isclose(self.rip_cont[self.current_r][0],y2_c))and(math.isclose(self.rip_cont[self.current_r][1],x2_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y2
-        self.waypoints_cont[self.wpnt_ind][1] = x2
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y2
+            self.waypoints_cont[self.wpnt_ind][1] = x2
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y2_c
+            self.waypoints_cont[self.wpnt_ind][1] = x2_c
         self.wpnt_ind+=1
         if(math.isclose(self.rip_cont[self.current_r][0],y3_c))and(math.isclose(self.rip_cont[self.current_r][1],x3_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y3
-        self.waypoints_cont[self.wpnt_ind][1] = x3
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y3
+            self.waypoints_cont[self.wpnt_ind][1] = x3
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y3_c
+            self.waypoints_cont[self.wpnt_ind][1] = x3_c
         self.wpnt_ind+=1
         if(TARGET_FINDING==True):
             if(self.TARGET_FOUND == False):
@@ -1776,23 +1829,39 @@ class Prim_MST_maker:
             y4_c = y4           
         if(math.isclose(self.rip_cont[self.current_r][0],y1_c))and(math.isclose(self.rip_cont[self.current_r][1],x1_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y1
-        self.waypoints_cont[self.wpnt_ind][1] = x1
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y1
+            self.waypoints_cont[self.wpnt_ind][1] = x1
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y1_c
+            self.waypoints_cont[self.wpnt_ind][1] = x1_c
         self.wpnt_ind+=1
         if(math.isclose(self.rip_cont[self.current_r][0],y2_c))and(math.isclose(self.rip_cont[self.current_r][1],x2_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y2
-        self.waypoints_cont[self.wpnt_ind][1] = x2
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y2
+            self.waypoints_cont[self.wpnt_ind][1] = x2
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y2_c
+            self.waypoints_cont[self.wpnt_ind][1] = x2_c
         self.wpnt_ind+=1
         if(math.isclose(self.rip_cont[self.current_r][0],y3_c))and(math.isclose(self.rip_cont[self.current_r][1],x3_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y3
-        self.waypoints_cont[self.wpnt_ind][1] = x3
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y3
+            self.waypoints_cont[self.wpnt_ind][1] = x3
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y3_c
+            self.waypoints_cont[self.wpnt_ind][1] = x3_c
         self.wpnt_ind+=1
         if(math.isclose(self.rip_cont[self.current_r][0],y4_c))and(math.isclose(self.rip_cont[self.current_r][1],x4_c)):
             self.p[self.current_r] = self.wpnt_ind
-        self.waypoints_cont[self.wpnt_ind][0] = y4
-        self.waypoints_cont[self.wpnt_ind][1] = x4
+        if(PRINT_HALF_SHIFTS):
+            self.waypoints_cont[self.wpnt_ind][0] = y4
+            self.waypoints_cont[self.wpnt_ind][1] = x4
+        else:
+            self.waypoints_cont[self.wpnt_ind][0] = y4_c
+            self.waypoints_cont[self.wpnt_ind][1] = x4_c
         self.wpnt_ind+=1
         if(TARGET_FINDING==True):
             if(self.TARGET_FOUND == False):
@@ -1843,210 +1912,226 @@ class Prim_MST_maker:
                 if(y2>y1):
                     # F U
                     rotations += 1 
-                    if(wpnts_class[w+1]==1):
-                    # Bottom - Left Turn (Note: Logic table says that only left turns are different, therefore they are detected using wpnts_class)
-                        ## Long leg (Line waypoint)
-                        wpnts_final.append([x2-r_min,y1]) # End of long line
-                        l1 = DISC_H/2 - r_min # length of long leg
-                        dist_final.append(l1)
-                        ## Circular waypoint
-                        wpnts_final.append([x2-r_min,y1+r_min,2*r_min,270.0]) # Arc
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Short leg (Line waypoint)
-                        if(r_min != r_max): # Radius is smaller than size of square
-                            # This point is equivalent to [x2,y2], which marks the end of an arc, when r_min == r_max
-                            wpnts_final.append([x2,y1+r_min]) # Start of short line
-                            dist_final.append(0) # Distance hasn't increased since end of arc  
-                        wpnts_final.append([x2,y2]) # End of short line
-                        l3 = DISC_V/2 - r_min # length of short leg (same as long leg for square discretisation)
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3                           
-                    else:
-                    # Top - Backtrack / Right
-                        ## Short line
-                        if(r_min != r_max):
-                            wpnts_final.append([x1,y2-r_min]) # End of short line (arc start)
-                            l1 = DISC_V/2 - r_min # short leg length
+                    if(PRINT_DYNAMIC_CONSTRAINTS):
+                        if(wpnts_class[w+1]==1):
+                        # Bottom - Left Turn (Note: Logic table says that only left turns are different, therefore they are detected using wpnts_class)
+                            ## Long leg (Line waypoint)
+                            wpnts_final.append([x2-r_min,y1]) # End of long line
+                            l1 = DISC_H/2 - r_min # length of long leg
                             dist_final.append(l1)
-                        ## Circular Waypoint
-                        wpnts_final.append([x1+r_min,y2-r_min,2*r_min,90.0]) # Arc
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Long line
-                        wpnts_final.append([x1+r_min,y2]) # Start of long line (arc end)
-                        dist_final.append(0)
-                        wpnts_final.append([x2,y2]) # End of long line
-                        l3 = DISC_H/2 - r_min # long leg   length                      
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3
+                            ## Circular waypoint
+                            wpnts_final.append([x2-r_min,y1+r_min,2*r_min,270.0]) # Arc
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Short leg (Line waypoint)
+                            if(r_min != r_max): # Radius is smaller than size of square
+                                # This point is equivalent to [x2,y2], which marks the end of an arc, when r_min == r_max
+                                wpnts_final.append([x2,y1+r_min]) # Start of short line
+                                dist_final.append(0) # Distance hasn't increased since end of arc  
+                            wpnts_final.append([x2,y2]) # End of short line
+                            l3 = DISC_V/2 - r_min # length of short leg (same as long leg for square discretisation)
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3                           
+                        else:
+                        # Top - Backtrack / Right
+                            ## Short line
+                            if(r_min != r_max):
+                                wpnts_final.append([x1,y2-r_min]) # End of short line (arc start)
+                                l1 = DISC_V/2 - r_min # short leg length
+                                dist_final.append(l1)
+                            ## Circular Waypoint
+                            wpnts_final.append([x1+r_min,y2-r_min,2*r_min,90.0]) # Arc
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Long line
+                            wpnts_final.append([x1+r_min,y2]) # Start of long line (arc end)
+                            dist_final.append(0)
+                            wpnts_final.append([x2,y2]) # End of long line
+                            l3 = DISC_H/2 - r_min # long leg   length                      
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3
+                    else:
+                        wpnts_final.append([x2,y2])                
                 elif(y2<y1):
                     # B D
-                    rotations += 1 
-                    if(wpnts_class[w+1]==1):
-                    # Bottom - Left Turn
-                        ## Short line
-                        if(r_min != r_max):
-                            wpnts_final.append([x1,y2+r_min])
-                            l1 = DISC_V/2 - r_min # short line length
-                            dist_final.append(l1)
-                        ## Circular waypoint
-                        wpnts_final.append([x1+r_min,y2+r_min,2*r_min,180.0])
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Long line
-                        wpnts_final.append([x1+r_min,y2]) # Start of long line
-                        dist_final.append(0)
-                        wpnts_final.append([x2,y2]) # End of long line
-                        l3 = DISC_H/2 - r_min # long line length
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3              
-                    else:
-                    # Top - Right Turn / Backtrack
-                        ## Long line
-                        wpnts_final.append([x2-r_min,y1]) # End of long line
-                        l1 = DISC_H/2 - r_min # long line length
-                        dist_final.append(l1)
-                        ## Circular waypoint
-                        wpnts_final.append([x2-r_min,y1-r_min,2*r_min,0.0]) # arc
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Short line
-                        if(r_min != r_max):
-                            wpnts_final.append([x2,y1-r_min]) # Start of short line
+                    rotations += 1
+                    if(PRINT_DYNAMIC_CONSTRAINTS): 
+                        if(wpnts_class[w+1]==1):
+                        # Bottom - Left Turn
+                            ## Short line
+                            if(r_min != r_max):
+                                wpnts_final.append([x1,y2+r_min])
+                                l1 = DISC_V/2 - r_min # short line length
+                                dist_final.append(l1)
+                            ## Circular waypoint
+                            wpnts_final.append([x1+r_min,y2+r_min,2*r_min,180.0])
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Long line
+                            wpnts_final.append([x1+r_min,y2]) # Start of long line
                             dist_final.append(0)
-                        wpnts_final.append([x2,y2]) # End of short line
-                        l3 = DISC_V/2 - r_min # short line length
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3
+                            wpnts_final.append([x2,y2]) # End of long line
+                            l3 = DISC_H/2 - r_min # long line length
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3              
+                        else:
+                        # Top - Right Turn / Backtrack
+                            ## Long line
+                            wpnts_final.append([x2-r_min,y1]) # End of long line
+                            l1 = DISC_H/2 - r_min # long line length
+                            dist_final.append(l1)
+                            ## Circular waypoint
+                            wpnts_final.append([x2-r_min,y1-r_min,2*r_min,0.0]) # arc
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Short line
+                            if(r_min != r_max):
+                                wpnts_final.append([x2,y1-r_min]) # Start of short line
+                                dist_final.append(0)
+                            wpnts_final.append([x2,y2]) # End of short line
+                            l3 = DISC_V/2 - r_min # short line length
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3
+                    else:
+                       wpnts_final.append([x2,y2]) 
                 else: # y2 == y1
                 # Vertical line
                     wpnts_final.append([x2,y2]) # End of vertical line
-                    dist_final.append(DISC_V)
-                    dist_tot = dist_tot + DISC_V
+                    if(PRINT_DYNAMIC_CONSTRAINTS):
+                        dist_final.append(DISC_V)
+                        dist_tot = dist_tot + DISC_V
             elif(x2<x1):
                 if(y2>y1):
                     # B U
-                    rotations += 1 
-                    if(wpnts_class[w+1]==1):
-                    # Top - Left Turn
-                        ## Short line
-                        if(r_min != r_max):
-                            wpnts_final.append([x1,y2-r_min]) # End of short line
-                            l1 = DISC_V/2 - r_min # Short line length
-                            dist_final.append(l1)
-                        ## Circular waypoint
-                        wpnts_final.append([x1-r_min,y2-r_min,2*r_min,0.0])
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Long length
-                        wpnts_final.append([x1-r_min,y2]) # Start of long line
-                        dist_final.append(0)
-                        wpnts_final.append([x2,y2]) # End of long line                       
-                        l3 = DISC_H/2 - r_min # long line length
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3
-                    else:
-                    # Bottom - Right Turn / Backtrack
-                        ## Long line
-                        wpnts_final.append([x2+r_min,y1]) # End of long line
-                        l1 = DISC_H/2 - r_min # long line length
-                        dist_final.append(l1)
-                        ## Circular waypoint
-                        wpnts_final.append([x2+r_min,y1+r_min,2*r_min,180.0]) # arc
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Short line
-                        if(r_min != r_max):
-                            wpnts_final.append([x2,y1+r_min]) # Start of short line
+                    rotations += 1
+                    if(PRINT_DYNAMIC_CONSTRAINTS):
+                        if(wpnts_class[w+1]==1):
+                        # Top - Left Turn
+                            ## Short line
+                            if(r_min != r_max):
+                                wpnts_final.append([x1,y2-r_min]) # End of short line
+                                l1 = DISC_V/2 - r_min # Short line length
+                                dist_final.append(l1)
+                            ## Circular waypoint
+                            wpnts_final.append([x1-r_min,y2-r_min,2*r_min,0.0])
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Long length
+                            wpnts_final.append([x1-r_min,y2]) # Start of long line
                             dist_final.append(0)
-                        wpnts_final.append([x2,y2]) # End of short line                    
-                        l3 = DISC_V/2 - r_min # short line length
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3
+                            wpnts_final.append([x2,y2]) # End of long line                       
+                            l3 = DISC_H/2 - r_min # long line length
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3
+                        else:
+                        # Bottom - Right Turn / Backtrack
+                            ## Long line
+                            wpnts_final.append([x2+r_min,y1]) # End of long line
+                            l1 = DISC_H/2 - r_min # long line length
+                            dist_final.append(l1)
+                            ## Circular waypoint
+                            wpnts_final.append([x2+r_min,y1+r_min,2*r_min,180.0]) # arc
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Short line
+                            if(r_min != r_max):
+                                wpnts_final.append([x2,y1+r_min]) # Start of short line
+                                dist_final.append(0)
+                            wpnts_final.append([x2,y2]) # End of short line                    
+                            l3 = DISC_V/2 - r_min # short line length
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3
+                    else:
+                        wpnts_final.append([x2,y2])
                 elif(y2<y1):
                     # F D
                     rotations += 1 
-                    if(wpnts_class[w+1]==1):
-                    # Top - Left
-                        ## Long line
-                        wpnts_final.append([x2+r_min,y1]) # End of long line
-                        l1 = DISC_H/2 - r_min # long line length
-                        dist_final.append(l1)
-                        ## Circular waypoint
-                        wpnts_final.append([x2+r_min,y1-r_min,2*r_min,90.0]) # Arc
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Short line
-                        if(r_min != r_max):
-                            wpnts_final.append([x2,y1-r_min]) # Start of short line
-                            dist_final.append(0)
-                        wpnts_final.append([x2,y2]) # End of short line
-                        l3 = DISC_V/2 - r_min # short line length
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3
-                    else:
-                    # Bottom - Right Turn / Backtrack      
-                        ## Short line
-                        if(r_min != r_max):
-                            wpnts_final.append([x1,y2+r_min]) # short line end
-                            l1 = DISC_V/2 - r_min # short line length
+                    if(PRINT_DYNAMIC_CONSTRAINTS):
+                        if(wpnts_class[w+1]==1):
+                        # Top - Left
+                            ## Long line
+                            wpnts_final.append([x2+r_min,y1]) # End of long line
+                            l1 = DISC_H/2 - r_min # long line length
                             dist_final.append(l1)
-                        ## Circular waypoint
-                        wpnts_final.append([x1-r_min,y2+r_min,2*r_min,270.0]) # arc
-                        l2 = r_min*np.pi/2 # arc length
-                        dist_final.append(l2)
-                        ## Long line
-                        wpnts_final.append([x1-r_min,y2]) # long line start
-                        dist_final.append(0)
-                        wpnts_final.append([x2,y2]) # long line end
-                        l3 = DISC_H/2 - r_min # long line length
-                        dist_final.append(l3)
-                        dist_tot = dist_tot + l1 + l2 + l3 
+                            ## Circular waypoint
+                            wpnts_final.append([x2+r_min,y1-r_min,2*r_min,90.0]) # Arc
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Short line
+                            if(r_min != r_max):
+                                wpnts_final.append([x2,y1-r_min]) # Start of short line
+                                dist_final.append(0)
+                            wpnts_final.append([x2,y2]) # End of short line
+                            l3 = DISC_V/2 - r_min # short line length
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3
+                        else:
+                        # Bottom - Right Turn / Backtrack      
+                            ## Short line
+                            if(r_min != r_max):
+                                wpnts_final.append([x1,y2+r_min]) # short line end
+                                l1 = DISC_V/2 - r_min # short line length
+                                dist_final.append(l1)
+                            ## Circular waypoint
+                            wpnts_final.append([x1-r_min,y2+r_min,2*r_min,270.0]) # arc
+                            l2 = r_min*np.pi/2 # arc length
+                            dist_final.append(l2)
+                            ## Long line
+                            wpnts_final.append([x1-r_min,y2]) # long line start
+                            dist_final.append(0)
+                            wpnts_final.append([x2,y2]) # long line end
+                            l3 = DISC_H/2 - r_min # long line length
+                            dist_final.append(l3)
+                            dist_tot = dist_tot + l1 + l2 + l3 
+                    else:
+                        wpnts_final.append([x2,y2])
                 else: # y2 == y1
                 # Vertical line
                     wpnts_final.append([x2,y2]) # End of line
-                    dist_final.append(DISC_V)
-                    dist_tot = dist_tot + DISC_V
+                    if(PRINT_DYNAMIC_CONSTRAINTS):
+                        dist_final.append(DISC_V)
+                        dist_tot = dist_tot + DISC_V
             else: # x2 == x1
             # Horizontal line
                 wpnts_final.append([x2,y2]) # End of horizontal line
-                dist_final.append(DISC_H)
-                dist_tot = dist_tot + DISC_H
+                if(PRINT_DYNAMIC_CONSTRAINTS):
+                    dist_final.append(DISC_H)
+                    dist_tot = dist_tot + DISC_H
             if(TARGET_FINDING):
                 if(r==self.TARGET_CELL[0]):
                     # If it's the robot that finds the goal
                     if(w==self.TARGET_CELL[1]):
                         self.DISTANCE_BREAK = dist_tot
-
-        # Distance
         self.wpnts_final_list.append(wpnts_final) # Waypoints array
-        self.dist_final_list.append(dist_final) # Distance array
-        self.dist_totals[r] = dist_tot # Total Distance for robot r
-        dist_tot = 0
-        # Time
-        time_final = np.zeros(len(dist_final))
-        time_cumulative = np.zeros(len(dist_final))
-        for d in range(len(dist_final)):
-            time_final[d] = dist_final[d] / VEL
-            time_tot = time_tot + time_final[d] # start_timestamp represents offset as a result of refuelling
-            time_cumulative[d] = start_timestamp + time_tot
-            if((TARGET_FINDING)and(r==self.TARGET_CELL[0])and(time_break==False)):
-                dist_tot = dist_tot + dist_final[d]
-                if(dist_tot>=self.DISTANCE_BREAK):
-                    self.TIME_BREAK = time_cumulative[d]
-                    time_break = True
-        self.time_final_list.append(time_final)
-        self.time_cumulative_list.append(time_cumulative)
         self.r_append.append(r)
-        self.time_totals[r] = time_tot # Total Time for equivalent robot r to complete path
-        # Rotations
-        self.rotations[r] = rotations
+        if(PRINT_DYNAMIC_CONSTRAINTS):
+            # Distance
+            self.dist_final_list.append(dist_final) # Distance array
+            self.dist_totals[r] = dist_tot # Total Distance for robot r
+            dist_tot = 0
+            # Time
+            time_final = np.zeros(len(dist_final))
+            time_cumulative = np.zeros(len(dist_final))
+            for d in range(len(dist_final)):
+                time_final[d] = dist_final[d] / VEL
+                time_tot = time_tot + time_final[d] # start_timestamp represents offset as a result of refuelling
+                time_cumulative[d] = start_timestamp + time_tot
+                if((TARGET_FINDING)and(r==self.TARGET_CELL[0])and(time_break==False)):
+                    dist_tot = dist_tot + dist_final[d]
+                    if(dist_tot>=self.DISTANCE_BREAK):
+                        self.TIME_BREAK = time_cumulative[d]
+                        time_break = True
+            self.time_final_list.append(time_final)
+            self.time_cumulative_list.append(time_cumulative)
+            self.time_totals[r] = time_tot # Total Time for equivalent robot r to complete path
+        if(PRINT_HALF_SHIFTS):
+            # Rotations
+            self.rotations[r] = rotations
 
     def print_graph(self,nodes,parents,ax,r,time_start=0,time_end=np.Inf):
         # Graph printing
         # Plot spanning tree
-        if(PRINT_TREE==True):
+        if(PRINT_TREE):
             for node in nodes:
                 x = ( (node[1])*2 +1 )*DISC_H
                 y = ( (self.rows - node[0] - 1)*2 + 1 )*DISC_V
@@ -2058,26 +2143,31 @@ class Prim_MST_maker:
                 y1 = ( (self.rows - nodes[parents[i]][0] - 1)*2 + 1 )*DISC_V
                 plt.plot(np.array([x0,x1]),np.array([y0,y1]),"-",linewidth=LINEWIDTH,color=TREE_COLOR)
         # Plot connected waypoints
-        if(PRINT_PATH==True):
-            # The distance and time arrays are the same length as the waypoints array
-            circ_flag = 0
-            for w in range(1,len(self.wpnts_final_list[r])):
-                # dist = self.dist_final_list[r][w]
-                time = self.time_cumulative_list[r][w]
-                if(time >= time_start)and(time <= time_end):
-                    if(len(self.wpnts_final_list[r][w])==2): # line
-                        if(circ_flag == 0):    
-                            plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
-                            plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                        else:
-                            circ_flag = 0
-                    else: # circle
-                        if(PRINT_CIRCLE_CENTRES == True):
-                            plt.plot(self.wpnts_final_list[r][w][0],self.wpnts_final_list[r][w][1],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
-                        e1 = pat.Arc([self.wpnts_final_list[r][w][0],self.wpnts_final_list[r][w][1]],self.wpnts_final_list[r][w][2],self.wpnts_final_list[r][w][2],angle=self.wpnts_final_list[r][w][3],theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
-                        ax.add_patch(e1)
-                        circ_flag = 1
-
+        if(PRINT_DYNAMIC_CONSTRAINTS)and(PRINT_HALF_SHIFTS):
+            if(PRINT_PATH):
+                # The distance and time arrays are the same length as the waypoints array
+                circ_flag = 0
+                for w in range(1,len(self.wpnts_final_list[r])):
+                    # dist = self.dist_final_list[r][w]
+                    time = self.time_cumulative_list[r][w]
+                    if(time >= time_start)and(time <= time_end):
+                        if(len(self.wpnts_final_list[r][w])==2): # line
+                            if(circ_flag == 0):    
+                                plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                                plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                            else:
+                                circ_flag = 0
+                        else: # circle
+                            if(PRINT_CIRCLE_CENTRES == True):
+                                plt.plot(self.wpnts_final_list[r][w][0],self.wpnts_final_list[r][w][1],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
+                            e1 = pat.Arc([self.wpnts_final_list[r][w][0],self.wpnts_final_list[r][w][1]],self.wpnts_final_list[r][w][2],self.wpnts_final_list[r][w][2],angle=self.wpnts_final_list[r][w][3],theta1=0.0,theta2=90.0,linewidth=LINEWIDTH,color=PATH_COLOR) # circle
+                            ax.add_patch(e1)
+                            circ_flag = 1
+        else:
+            if(PRINT_PATH):
+                for w in range(1,len(self.wpnts_final_list[r])):
+                    plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'-',linewidth=LINEWIDTH,color=PATH_COLOR)
+                    plt.plot([self.wpnts_final_list[r][w-1][0],self.wpnts_final_list[r][w][0]],[self.wpnts_final_list[r][w-1][1],self.wpnts_final_list[r][w][1]],'.',markersize=S_MARKERIZE,color=PATH_COLOR)
         # Plot robot initial positions
         plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.k',markersize=int(MARKERSIZE))
         # plt.plot(self.rip_cont[r][1],self.rip_cont[r][0],'.w',markersize=int(MARKERSIZE/3))
@@ -2256,8 +2346,8 @@ if __name__ == "__main__":
 
 ## RUN AN INDIVIDUAL CASE -> CONTINUOUS SPACE##
     # Establish Environment Size - Chooses max horizontal and vertical dimensions and create rectangle
-    horizontal = DISC_H*50 # m
-    vertical = DISC_V*50 # m
+    horizontal = 5000 # m
+    vertical = 5000 # m
 
     # Generate environment grid
     GG = generate_grid(horizontal,vertical)
@@ -2281,7 +2371,7 @@ if __name__ == "__main__":
 
     # RUNNING SIMULATION #
     file_log = "MAIN_LOGGING.txt"
-    target_log = "TARGET_LOG.txt"
+    target_log = "TARGET_LOG_MST.txt"
     EnvironmentGrid = GG.GRID
 
     #  Call this to do directory management and recompile Java files - better to keep separate for when running multple sims

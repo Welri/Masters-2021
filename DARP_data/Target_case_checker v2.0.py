@@ -1,3 +1,9 @@
+'''
+* Does not account for changing constant parameters at present. Hasn't been tested in a while. Wouldn't count on it working.
+* This file reruns the DARP algorithm (first version) with the same inputs, including target position and robot position
+* Due to the random nature of DARP, the solution would likely be different every time
+'''
+
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,6 +12,7 @@ import os
 import sys
 import random
 import time
+
 
 # # DIRECTORY MANAGEMENT FOR DARP IMPORT
 path = pathlib.Path(__file__).parent.absolute()
@@ -122,6 +129,6 @@ if __name__ == "__main__":
 
     TCC = target_case_checker()
     TCC.get_data("TARGET_CASES_v2.0/Case07.txt")
-    TCC.rerun_DARP(show_grid=show_grid,distance_measure=2,recompile=False)
+    TCC.rerun_DARP(show_grid=show_grid,distance_measure=1,recompile=False)
     if (show_grid == True):
         plt.show()

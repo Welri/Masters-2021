@@ -1,3 +1,8 @@
+'''
+* First target checker.
+* Has not been tested in a long time. Would not count on it working.
+'''
+
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt

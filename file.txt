@@ -1,0 +1,16 @@
+# Save these constants and read them into the target logger
+# Figure out how to exclude the top section from the run if it is being run from the target case checker
+
+REFUEL_TIME
+TAKE_OFF_HEIGHT
+FLIGHT_TIME
+VEL
+Height
+r_min
+DISC_H
+DISC_V
+r_max
+ARC_L
+GSD_h
+V_max
+H_max
